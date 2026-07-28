@@ -7,42 +7,296 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AS Yönetim">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0b0a08">
+    <meta name="theme-color" content="#0a0a0a">
     <title>AS — Egzoz, Chiptuning & El Arabası Üretim Yönetimi</title>
     <style>
         :root {
-            --bg: #0b0a08;
-            --surface: #141210;
-            --card: #1c1916;
-            --border: #2f2a24;
-            --accent: #d97731;
-            --accent-dim: #d9773122;
-            --steel: #7d8a94;
-            --white: #f2ede7;
-            --text: #cec6bc;
-            --muted: #8f857a;
-            --green: #6fbf8a;
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-card: #1c1c1c;
+            --border-color: #2a2a2a;
+            --accent: #e8772e;
+            --accent-hover: #f08a46;
+            --accent-dim: #e8772e22;
+            --text-primary: #f0ece6;
+            --text-secondary: #b0a8a0;
+            --text-muted: #6f6a64;
+            --green: #5cb87a;
             --red: #d95353;
             --yellow: #d9a441;
-            --blue: #5f8fc9;
+            --blue: #5b8fc9;
             --purple: #a87fd0;
-            --radius: 12px;
-            --shadow: 0 4px 16px rgba(0,0,0,0.6);
+            --radius: 10px;
+            --shadow: 0 6px 20px rgba(0,0,0,0.7);
+            --transition: all 0.2s ease;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: var(--surface); }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
-        input, select, textarea { font-family: inherit; background: var(--surface); border: 1px solid var(--border); color: var(--white); border-radius: var(--radius); padding: 10px 14px; font-size: 0.9rem; width: 100%; transition: border 0.2s; }
-        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        button { font-family: inherit; cursor: pointer; border: none; background: transparent; color: var(--text); }
-        .fp-fade { animation: fadeIn 0.2s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .card-hover:hover { border-color: #4a4038; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 8px; }
+        input, select, textarea {
+            font-family: inherit;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: var(--radius);
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            width: 100%;
+            transition: var(--transition);
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+        button { font-family: inherit; cursor: pointer; border: none; background: transparent; color: var(--text-primary); transition: var(--transition); }
+        .fp-fade { animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .text-accent { color: var(--accent); }
-        .text-muted { color: var(--muted); }
-        .bg-accent { background: var(--accent); color: #0b0a08; }
+        .text-muted { color: var(--text-muted); }
+        .bg-accent { background: var(--accent); color: #0a0a0a; }
+        .card-hover { transition: var(--transition); }
+        .card-hover:hover { border-color: #3d3d3d; transform: translateY(-2px); box-shadow: var(--shadow); }
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .module-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 24px 20px 20px;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .module-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+        .module-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .module-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+        .module-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        .module-badge {
+            display: inline-block;
+            background: var(--accent-dim);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-top: 10px;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            border-top: 3px solid var(--accent);
+        }
+        .stat-value {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #0a0a0a;
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            font-weight: 700;
+            font-size: 13px;
+            transition: var(--transition);
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: scale(1.02);
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 9px 16px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            transition: var(--transition);
+        }
+        .btn-outline:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+        }
+        .btn-danger {
+            background: transparent;
+            color: var(--red);
+            border: 1px solid var(--red);
+            padding: 7px 14px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            transition: var(--transition);
+        }
+        .btn-danger:hover {
+            background: var(--red);
+            color: #0a0a0a;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .badge-green { background: var(--green)22; color: var(--green); }
+        .badge-yellow { background: var(--yellow)22; color: var(--yellow); }
+        .badge-red { background: var(--red)22; color: var(--red); }
+        .badge-blue { background: var(--blue)22; color: var(--blue); }
+        .badge-purple { background: var(--purple)22; color: var(--purple); }
+        .badge-accent { background: var(--accent-dim); color: var(--accent); }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .flex-gap { display: flex; gap: 8px; flex-wrap: wrap; }
+        .mb-16 { margin-bottom: 16px; }
+        .mb-20 { margin-bottom: 20px; }
+        .mt-8 { margin-top: 8px; }
+        .w-full { width: 100%; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        th { text-align: left; padding: 10px 12px; color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); }
+        td { padding: 12px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 28px;
+            max-height: 90vh;
+            overflow-y: auto;
+            width: min(600px, 96vw);
+            box-shadow: var(--shadow);
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+        .sidebar {
+            width: 220px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 14px;
+            flex-shrink: 0;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+        }
+        .main-content {
+            flex: 1;
+            padding: 24px 32px;
+            max-width: 1280px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13.5px;
+            color: var(--text-muted);
+            transition: var(--transition);
+            margin-bottom: 2px;
+            border: 1px solid transparent;
+        }
+        .nav-item:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        .nav-item.active {
+            background: var(--accent-dim);
+            color: var(--text-primary);
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+        .nav-icon { font-size: 18px; width: 28px; text-align: center; }
+        .section-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+        .section-sub {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; padding: 12px 8px; }
+            .sidebar .nav-label { display: none; }
+            .sidebar .brand-text { display: none; }
+            .main-content { padding: 16px; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .stat-grid { grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -53,16 +307,16 @@
 <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
 
 <script>
-const { useState, useEffect, useMemo, useRef } = React;
+const { useState, useEffect } = React;
 const RC = window.Recharts || {};
 const { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } = RC;
 
-// --- Sabitler & Stiller ---
+// --- Sabitler ---
 const C = {
-    bg: "#0b0a08", surface: "#141210", card: "#1c1916", border: "#2f2a24",
-    accent: "#d97731", steel: "#7d8a94", white: "#f2ede7", text: "#cec6bc",
-    muted: "#8f857a", green: "#6fbf8a", red: "#d95353", yellow: "#d9a441",
-    blue: "#5f8fc9", purple: "#a87fd0"
+    bg: "#0a0a0a", surface: "#141414", card: "#1c1c1c", border: "#2a2a2a",
+    accent: "#e8772e", accentHover: "#f08a46", white: "#f0ece6", text: "#b0a8a0",
+    muted: "#6f6a64", green: "#5cb87a", red: "#d95353", yellow: "#d9a441",
+    blue: "#5b8fc9", purple: "#a87fd0"
 };
 
 const HIZMET_TIP_LABEL = {
@@ -102,9 +356,8 @@ const DEFAULT_SETTINGS = {
 const getSettings = () => ({ ...DEFAULT_SETTINGS, ...LS.get("ayarlar", {}) });
 const saveSettings = (s) => LS.set("ayarlar", s);
 
-// --- Örnek Veri (seed) ---
 function seedVeri() {
-    if (localStorage.getItem("as_seed_v1")) return;
+    if (localStorage.getItem("as_seed_v2")) return;
     LS.set("cariler", [
         { id: "c1", ad: "Mehmet Yılmaz", tel: "0532 111 22 33", adres: "Akhisar, Manisa" },
         { id: "c2", ad: "Kaya Nakliyat Ltd.", tel: "0533 222 33 44", adres: "Salihli, Manisa" },
@@ -113,193 +366,139 @@ function seedVeri() {
     LS.set("servisIsleri", [
         { id: "s1", tarih: today(), musteriId: "c1", aracPlaka: "45 ABC 123", aracModel: "Ford Transit", hizmetTuru: "egzoz_degisim", aciklama: "Arka egzoz komple değişim", tutar: 3800, durum: "tamamlandi", odendi: true },
         { id: "s2", tarih: today(), musteriId: "c2", aracPlaka: "35 XYZ 456", aracModel: "Mercedes Actros", hizmetTuru: "chiptuning", aciklama: "Stage 1 chiptuning + EGR off", tutar: 9500, durum: "devam", odendi: false },
-        { id: "s3", tarih: today(), musteriId: "c3", aracPlaka: "45 DEF 789", aracModel: "Fiat Doblo", hizmetTuru: "egr_partikul", aciklama: "EGR valf temizliği ve partikül filtresi rejenerasyon", tutar: 2200, durum: "bekliyor", odendi: false }
+        { id: "s3", tarih: today(), musteriId: "c3", aracPlaka: "45 DEF 789", aracModel: "Fiat Doblo", hizmetTuru: "egr_partikul", aciklama: "EGR valf temizliği", tutar: 2200, durum: "bekliyor", odendi: false }
     ]);
     LS.set("uretimKayitlari", [
         { id: "u1", tarih: today(), tip: "kantarli", adet: 8, aciklama: "Haftalık üretim" },
         { id: "u2", tarih: today(), tip: "kantarsiz", adet: 12, aciklama: "Haftalık üretim" }
     ]);
     LS.set("satislar", []);
-    LS.set("kasaHareketleri", []);
-    localStorage.setItem("as_seed_v1", "1");
+    LS.set("stokHareketleri", []);
+    LS.set("personeller", [
+        { id: "p1", ad: "Ali Usta", unvan: "Egzoz Uzmanı", maas: 18000, iseBaslama: "2023-01-15" },
+        { id: "p2", ad: "Caner Tekin", unvan: "Chiptuning Uzmanı", maas: 22000, iseBaslama: "2022-06-01" }
+    ]);
+    LS.set("tedarikciler", [
+        { id: "t1", ad: "Egzoz Malzeme Ltd.", tel: "0535 111 22 33", adres: "İzmir" },
+        { id: "t2", ad: "Yedek Parça Merkezi", tel: "0536 222 33 44", adres: "Manisa" }
+    ]);
+    LS.set("giderler", [
+        { id: "g1", tarih: today(), kategori: "kira", aciklama: "Atölye kirası", tutar: 5000 },
+        { id: "g2", tarih: today(), kategori: "elektrik", aciklama: "Elektrik faturası", tutar: 1200 }
+    ]);
+    localStorage.setItem("as_seed_v2", "1");
 }
-
-// --- Stil Nesneleri (S) ---
-const S = {
-    app: { display: "flex", minHeight: "100vh" },
-    sidebar: { width: 220, background: C.surface, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", padding: "20px 14px", flexShrink: 0 },
-    main: { flex: 1, padding: "24px 32px", maxWidth: 1280, margin: "0 auto", width: "100%" },
-    card: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, marginBottom: 18, transition: "border 0.2s" },
-    navBtn: (active) => ({ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, cursor: "pointer", fontSize: 13.5, marginBottom: 4, color: active ? C.white : C.muted, background: active ? C.accent + "22" : "transparent", border: active ? `1px solid ${C.accent}55` : "1px solid transparent", fontWeight: active ? 600 : 400 }),
-    btn: (bg = C.accent) => ({ background: bg, color: "#0b0a08", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "opacity 0.2s" }),
-    btnO: { background: "transparent", color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer" },
-    btnR: { background: "transparent", color: C.red, border: `1px solid ${C.red}55`, borderRadius: 8, padding: "7px 12px", fontSize: 12, cursor: "pointer" },
-    th: { textAlign: "left", padding: "10px 12px", fontSize: 11.5, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${C.border}` },
-    td: { padding: "12px 12px", fontSize: 13.5, borderBottom: `1px solid ${C.border}55`, color: C.text },
-    tbl: { width: "100%", borderCollapse: "collapse" },
-    secTitle: { fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 16, letterSpacing: -0.2 },
-    modal: { position: "fixed", inset: 0, background: "#000000bb", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16, backdropFilter: "blur(3px)" },
-    mbox: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, maxHeight: "88vh", overflowY: "auto", width: "min(560px,94vw)", boxShadow: "0 12px 40px rgba(0,0,0,0.8)" },
-    badge: (c) => ({ display: "inline-block", padding: "4px 12px", borderRadius: 24, fontSize: 11, fontWeight: 700, background: c + "22", color: c }),
-    grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
-    grid4: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 16, marginBottom: 18 },
-};
 
 // --- Bileşenler ---
-function FG({ label, children }) {
-    return React.createElement("div", { style: { marginBottom: 16 } },
-        React.createElement("label", { style: { display: "block", fontSize: 12, color: C.muted, marginBottom: 5, fontWeight: 500 } }, label),
-        children
-    );
-}
-
-function StatCard({ color, value, label, sub, icon }) {
-    return React.createElement("div", { style: { ...S.card, marginBottom: 0, borderTop: `3px solid ${color}`, padding: "18px 18px 14px" } },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
-            React.createElement("div", null,
-                React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: C.white, lineHeight: 1.2 } }, value),
-                React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 4 } }, label),
-                sub && React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, sub)
-            ),
-            icon && React.createElement("div", { style: { fontSize: 28, opacity: 0.7 } }, icon)
-        )
-    );
-}
-
 function Badge({ d, map = DURUM_LABEL, renk = DURUM_RENK }) {
-    return React.createElement("span", { style: S.badge(renk[d] || C.muted) }, map[d] || d);
+    const colorMap = { bekliyor: "yellow", devam: "blue", tamamlandi: "green", iptal: "red" };
+    const cls = `badge-${colorMap[d] || 'accent'}`;
+    return React.createElement("span", { className: `badge ${cls}` }, map[d] || d);
 }
 
-function Modal({ title, onClose, width = 520, children }) {
-    return React.createElement("div", { style: S.modal, onClick: (e) => e.target === e.currentTarget && onClose() },
-        React.createElement("div", { style: { ...S.mbox, width: `min(${width}px,94vw)` } },
-            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 } },
-                React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: C.white } }, title),
-                React.createElement("button", { onClick: onClose, style: { color: C.muted, fontSize: 22 } }, "✕")
-            ),
-            children
-        )
-    );
-}
-
-function Grid2({ children }) { return React.createElement("div", { style: S.grid2 }, children); }
-function Grid4({ children }) { return React.createElement("div", { style: S.grid4 }, children); }
-
-function TabBar({ tabs, active, onChange }) {
-    return React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" } },
-        tabs.map(([k, l]) =>
-            React.createElement("button", { key: k, onClick: () => onChange(k), style: { ...S.btn(active === k ? C.accent : "transparent"), color: active === k ? "#0b0a08" : C.muted, border: `1px solid ${active === k ? C.accent : C.border}`, padding: "8px 16px", fontWeight: active === k ? 700 : 400 } }, l)
+function Modal({ title, onClose, children }) {
+    return React.createElement("div", { className: "modal-overlay", onClick: (e) => e.target === e.currentTarget && onClose() },
+        React.createElement("div", { className: "modal-box" },
+            React.createElement("div", { className: "modal-title" }, title),
+            children,
+            React.createElement("div", { className: "flex-gap", style: { marginTop: 20, justifyContent: "flex-end" } },
+                React.createElement("button", { className: "btn-outline", onClick: onClose }, "İptal"),
+                React.createElement("button", { className: "btn-primary", onClick: onClose }, "Kapat")
+            )
         )
     );
 }
 
 function cariAd(cariler, id) { return (cariler.find(c => c.id === id) || {}).ad || "—"; }
 
-// --- Sayfa Bileşenleri ---
+// --- Modül Kartı ---
+function ModuleCard({ icon, title, desc, badge, onClick }) {
+    return React.createElement("div", { className: "module-card", onClick: onClick },
+        React.createElement("span", { className: "module-icon" }, icon),
+        React.createElement("div", { className: "module-title" }, title),
+        React.createElement("div", { className: "module-desc" }, desc),
+        badge && React.createElement("span", { className: "module-badge" }, badge)
+    );
+}
 
-function Dashboard() {
+function StatCard({ color, value, label, sub }) {
+    return React.createElement("div", { className: "stat-card", style: { borderTopColor: color || C.accent } },
+        React.createElement("div", { className: "stat-value" }, value),
+        React.createElement("div", { className: "stat-label" }, label),
+        sub && React.createElement("div", { className: "stat-sub" }, sub)
+    );
+}
+
+// --- Ana Sayfa: Dashboard (Modül Paneli) ---
+function Dashboard({ setPage }) {
     const [servisler] = useState(LS.get("servisIsleri"));
     const [uretim] = useState(LS.get("uretimKayitlari"));
     const [satislar] = useState(LS.get("satislar"));
-    const [cariler] = useState(LS.get("cariler"));
+    const [personeller] = useState(LS.get("personeller"));
+    const [giderler] = useState(LS.get("giderler"));
 
-    const acikServisSayisi = servisler.filter(s => s.durum !== "tamamlandi" && s.durum !== "iptal").length;
+    const acikServis = servisler.filter(s => s.durum !== "tamamlandi" && s.durum !== "iptal").length;
     const buAyGelir = servisler.filter(s => s.tarih && s.tarih.startsWith(today().slice(0,7)) && s.durum === "tamamlandi").reduce((t,s) => t + (+s.tutar || 0), 0)
         + satislar.filter(s => s.tarih && s.tarih.startsWith(today().slice(0,7))).reduce((t,s) => t + (+s.toplam || 0), 0);
-    const odenmemis = servisler.filter(s => !s.odendi && s.durum === "tamamlandi").reduce((t,s) => t + (+s.tutar || 0), 0);
+    const buAyGider = giderler.filter(g => g.tarih && g.tarih.startsWith(today().slice(0,7))).reduce((t,g) => t + (+g.tutar || 0), 0);
+    const personelSayisi = personeller.length;
 
     const stokHesapla = (tip) => uretim.filter(u => u.tip === tip).reduce((t,u) => t + (+u.adet || 0), 0)
         - satislar.filter(s => s.tip === tip).reduce((t,s) => t + (+s.adet || 0), 0);
-    const kantarliStok = stokHesapla("kantarli");
-    const kantarsizStok = stokHesapla("kantarsiz");
+    const toplamStok = stokHesapla("kantarli") + stokHesapla("kantarsiz");
 
-    const hizmetDagilimi = Object.entries(
-        servisler.reduce((acc, s) => {
-            const l = HIZMET_TIP_LABEL[s.hizmetTuru] || s.hizmetTuru;
-            acc[l] = (acc[l] || 0) + 1;
-            return acc;
-        }, {})
-    ).map(([name, value]) => ({ name, value }));
-    const renkler = [C.accent, C.blue, C.green, C.yellow, C.purple];
+    const moduller = [
+        { id: "servis", icon: "🔧", title: "Servis İşlemleri", desc: "Egzoz, EGR, partikül ve chiptuning servis takibi", badge: `${acikServis} açık iş` },
+        { id: "uretim", icon: "🏭", title: "Üretim & Stok", desc: "El arabası üretim girişi, stok yönetimi ve satış", badge: `${toplamStok} adet stok` },
+        { id: "cari", icon: "👥", title: "Müşteri Yönetimi", desc: "Müşteri ekleme, düzenleme ve işlem geçmişi" },
+        { id: "personel", icon: "👨‍🔧", title: "Personel Takibi", desc: "Personel bilgileri, maaş ve performans" },
+        { id: "tedarikci", icon: "📦", title: "Tedarikçiler", desc: "Tedarikçi yönetimi ve iletişim bilgileri" },
+        { id: "muhasebe", icon: "💰", title: "Muhasebe & Rapor", desc: "Gelir-gider, kâr-zarar ve detaylı raporlar" },
+        { id: "gider", icon: "💳", title: "Gider Takibi", desc: "Kira, elektrik, malzeme giderlerini kaydet" },
+        { id: "ayarlar", icon: "⚙️", title: "Ayarlar", desc: "Firma bilgileri, fiyatlar ve veri yönetimi" }
+    ];
 
     return React.createElement("div", { className: "fp-fade" },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 } },
-            React.createElement("div", { style: { fontSize: 22, fontWeight: 800, color: C.white } }, "📊 Genel Bakış"),
-            React.createElement("div", { style: { fontSize: 13, color: C.muted } }, new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }))
-        ),
-        React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 20 } }, "AS — Egzoz, Chiptuning & El Arabası Üretim"),
-        React.createElement(Grid4, null,
-            React.createElement(StatCard, { color: C.accent, icon: "🔧", value: acikServisSayisi, label: "Açık Servis İşi" }),
-            React.createElement(StatCard, { color: C.green, icon: "💰", value: fmtTL(buAyGelir), label: "Bu Ay Gelir" }),
-            React.createElement(StatCard, { color: C.red, icon: "⏳", value: fmtTL(odenmemis), label: "Tahsil Edilecek" }),
-            React.createElement(StatCard, { color: C.blue, icon: "🛒", value: `${kantarliStok + kantarsizStok} adet`, label: "Toplam El Arabası Stoku", sub: `${kantarliStok} kantarlı · ${kantarsizStok} kantarsız` })
-        ),
-        React.createElement(Grid2, null,
-            React.createElement("div", { style: S.card },
-                React.createElement("div", { style: S.secTitle }, "⚖️ Stok Durumu"),
-                [["kantarli", kantarliStok], ["kantarsiz", kantarsizStok]].map(([tip, adet]) =>
-                    React.createElement("div", { key: tip, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: C.surface, borderRadius: 10, marginBottom: 8 } },
-                        React.createElement("span", { style: { fontSize: 13, color: C.text } }, EL_ARABASI_TIP_LABEL[tip]),
-                        React.createElement("span", { style: { fontSize: 18, fontWeight: 800, color: adet <= 3 ? C.red : C.white } }, adet, " adet")
-                    )
-                ),
-                (kantarliStok <= 3 || kantarsizStok <= 3) &&
-                React.createElement("div", { style: { marginTop: 12, padding: "10px 16px", background: C.red + "18", borderRadius: 8, fontSize: 12, color: C.red } }, "⚠️ Stok kritik seviyede — üretim planlamayı düşünün.")
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "📊 Genel Bakış"),
+                React.createElement("div", { className: "section-sub" }, "AS — Egzoz, Chiptuning & El Arabası Üretim Yönetimi")
             ),
-            React.createElement("div", { style: S.card },
-                React.createElement("div", { style: S.secTitle }, "📈 Hizmet Türü Dağılımı"),
-                RC.PieChart && hizmetDagilimi.length > 0 ?
-                    React.createElement(ResponsiveContainer, { width: "100%", height: 200 },
-                        React.createElement(PieChart, null,
-                            React.createElement(Pie, { data: hizmetDagilimi, dataKey: "value", nameKey: "name", cx: "50%", cy: "50%", innerRadius: 45, outerRadius: 78, paddingAngle: 2, label: ({ name, value }) => `${name}: ${value}` },
-                                hizmetDagilimi.map((e, i) => React.createElement(Cell, { key: i, fill: renkler[i % renkler.length] }))
-                            ),
-                            React.createElement(Tooltip, { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 } })
-                        )
-                    ) :
-                    React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Henüz veri yok.")
+            React.createElement("div", null,
+                React.createElement("span", { className: "text-muted", style: { fontSize: 13 } }, new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }))
             )
         ),
-        React.createElement("div", { style: S.card },
-            React.createElement("div", { style: S.secTitle }, "🕐 Son Servis İşleri"),
-            servisler.length === 0 ?
-                React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Henüz kayıt yok.") :
-                React.createElement("table", { style: S.tbl },
-                    React.createElement("thead", null,
-                        React.createElement("tr", null,
-                            React.createElement("th", { style: S.th }, "Tarih"),
-                            React.createElement("th", { style: S.th }, "Müşteri"),
-                            React.createElement("th", { style: S.th }, "Araç"),
-                            React.createElement("th", { style: S.th }, "Hizmet"),
-                            React.createElement("th", { style: S.th }, "Tutar"),
-                            React.createElement("th", { style: S.th }, "Durum")
-                        )
-                    ),
-                    React.createElement("tbody", null,
-                        [...servisler].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || "")).slice(0,6).map(s =>
-                            React.createElement("tr", { key: s.id },
-                                React.createElement("td", { style: S.td }, fmtDate(s.tarih)),
-                                React.createElement("td", { style: S.td }, cariAd(cariler, s.musteriId)),
-                                React.createElement("td", { style: S.td }, s.aracPlaka),
-                                React.createElement("td", { style: S.td }, HIZMET_TIP_LABEL[s.hizmetTuru]),
-                                React.createElement("td", { style: S.td }, fmtTL(s.tutar)),
-                                React.createElement("td", { style: S.td }, React.createElement(Badge, { d: s.durum }))
-                            )
-                        )
-                    )
-                )
+        React.createElement("div", { className: "stat-grid" },
+            React.createElement(StatCard, { color: C.accent, value: acikServis, label: "Açık Servis İşi" }),
+            React.createElement(StatCard, { color: C.green, value: fmtTL(buAyGelir), label: "Bu Ay Gelir" }),
+            React.createElement(StatCard, { color: C.red, value: fmtTL(buAyGider), label: "Bu Ay Gider" }),
+            React.createElement(StatCard, { color: C.blue, value: `${toplamStok} adet`, label: "Toplam Stok", sub: "Kantarlı + Kantarsız" }),
+            React.createElement(StatCard, { color: C.purple, value: personelSayisi, label: "Personel Sayısı" }),
+            React.createElement(StatCard, { color: C.yellow, value: fmtTL(buAyGelir - buAyGider), label: "Tahmini Net Kâr" })
+        ),
+        React.createElement("div", { className: "module-grid" },
+            moduller.map(m =>
+                React.createElement(ModuleCard, {
+                    key: m.id,
+                    icon: m.icon,
+                    title: m.title,
+                    desc: m.desc,
+                    badge: m.badge,
+                    onClick: () => setPage(m.id)
+                })
+            )
         )
     );
 }
 
-function ServisIsleri() {
+// --- Servis İşlemleri Modülü ---
+function ServisModulu() {
     const [cariler, setCariler] = useState(LS.get("cariler"));
     const [liste, setListe] = useState(LS.get("servisIsleri"));
     const [modalAcik, setModalAcik] = useState(false);
     const [form, setForm] = useState({});
     const [hata, setHata] = useState("");
     const [durumFiltre, setDurumFiltre] = useState("tumu");
-    const [yeniCariAcik, setYeniCariAcik] = useState(false);
 
     const kaydet = () => {
         if (!form.musteriId) { setHata("Müşteri seçimi zorunludur."); return; }
@@ -320,85 +519,118 @@ function ServisIsleri() {
     const gosterilecek = durumFiltre === "tumu" ? liste : liste.filter(s => s.durum === durumFiltre);
 
     return React.createElement("div", { className: "fp-fade" },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } },
-            React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "🔧 Servis İşleri"),
-            React.createElement("button", { style: S.btn(), onClick: () => { setForm({ tarih: today(), durum: "bekliyor" }); setHata(""); setModalAcik(true); } }, "➕ Yeni Servis İşi")
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "🔧 Servis İşlemleri"),
+                React.createElement("div", { className: "section-sub" }, "Egzoz, EGR, partikül ve chiptuning servis takibi")
+            ),
+            React.createElement("button", { className: "btn-primary", onClick: () => { setForm({ tarih: today(), durum: "bekliyor" }); setHata(""); setModalAcik(true); } }, "➕ Yeni Servis İşi")
         ),
-        React.createElement(TabBar, { tabs: [["tumu","Tümü"],["bekliyor","Bekliyor"],["devam","Devam Ediyor"],["tamamlandi","Tamamlandı"]], active: durumFiltre, onChange: setDurumFiltre }),
-        React.createElement("div", { style: S.card },
-            React.createElement("table", { style: S.tbl },
+        React.createElement("div", { className: "flex-gap mb-16" },
+            ["tumu","bekliyor","devam","tamamlandi"].map(k =>
+                React.createElement("button", {
+                    key: k,
+                    className: durumFiltre === k ? "btn-primary" : "btn-outline",
+                    onClick: () => setDurumFiltre(k)
+                }, DURUM_LABEL[k] || "Tümü")
+            )
+        ),
+        React.createElement("div", { className: "table-wrap", style: { background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 4 } },
+            React.createElement("table", null,
                 React.createElement("thead", null,
                     React.createElement("tr", null,
-                        React.createElement("th", { style: S.th }, "Tarih"), React.createElement("th", { style: S.th }, "Müşteri"), React.createElement("th", { style: S.th }, "Araç"),
-                        React.createElement("th", { style: S.th }, "Hizmet"), React.createElement("th", { style: S.th }, "Tutar"),
-                        React.createElement("th", { style: S.th }, "Ödeme"), React.createElement("th", { style: S.th }, "Durum"), React.createElement("th", { style: S.th })
+                        React.createElement("th", null, "Tarih"), React.createElement("th", null, "Müşteri"),
+                        React.createElement("th", null, "Araç"), React.createElement("th", null, "Hizmet"),
+                        React.createElement("th", null, "Tutar"), React.createElement("th", null, "Ödeme"),
+                        React.createElement("th", null, "Durum"), React.createElement("th", null)
                     )
                 ),
                 React.createElement("tbody", null,
-                    gosterilecek.length === 0 ? React.createElement("tr", null, React.createElement("td", { style: S.td, colSpan: 8 }, React.createElement("div", { style: { textAlign: "center", color: C.muted, padding: 20 } }, "Kayıt bulunamadı."))) :
-                    [...gosterilecek].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || "")).map(s =>
-                        React.createElement("tr", { key: s.id },
-                            React.createElement("td", { style: S.td }, fmtDate(s.tarih)),
-                            React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, s.musteriId))),
-                            React.createElement("td", { style: S.td }, s.aracPlaka, s.aracModel ? ` · ${s.aracModel}` : ""),
-                            React.createElement("td", { style: S.td }, HIZMET_TIP_LABEL[s.hizmetTuru]),
-                            React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.accent } }, fmtTL(s.tutar))),
-                            React.createElement("td", { style: S.td }, s.odendi ? React.createElement(Badge, { d: "tamamlandi", map: { tamamlandi: "Ödendi" }, renk: { tamamlandi: C.green } }) :
-                                React.createElement("button", { style: { ...S.btnO, padding: "4px 10px", fontSize: 11 }, onClick: () => odendiIsaretle(s.id) }, "Ödendi İşaretle")),
-                            React.createElement("td", { style: S.td }, React.createElement(Badge, { d: s.durum })),
-                            React.createElement("td", { style: S.td },
-                                React.createElement("div", { style: { display: "flex", gap: 6 } },
-                                    React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(s); setHata(""); setModalAcik(true); } }, "✏️"),
-                                    React.createElement("button", { style: S.btnR, onClick: () => sil(s.id) }, "🗑️")
+                    gosterilecek.length === 0 ?
+                        React.createElement("tr", null, React.createElement("td", { colSpan: 8, style: { textAlign: "center", padding: 30, color: C.muted } }, "Kayıt bulunamadı.")) :
+                        [...gosterilecek].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || "")).map(s =>
+                            React.createElement("tr", { key: s.id },
+                                React.createElement("td", null, fmtDate(s.tarih)),
+                                React.createElement("td", null, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, s.musteriId))),
+                                React.createElement("td", null, s.aracPlaka, s.aracModel ? ` · ${s.aracModel}` : ""),
+                                React.createElement("td", null, HIZMET_TIP_LABEL[s.hizmetTuru]),
+                                React.createElement("td", null, React.createElement("strong", { className: "text-accent" }, fmtTL(s.tutar))),
+                                React.createElement("td", null, s.odendi ?
+                                    React.createElement("span", { className: "badge badge-green" }, "Ödendi") :
+                                    React.createElement("button", { className: "btn-outline", style: { padding: "4px 12px", fontSize: 11 }, onClick: () => odendiIsaretle(s.id) }, "Ödendi İşaretle")),
+                                React.createElement("td", null, React.createElement(Badge, { d: s.durum })),
+                                React.createElement("td", null,
+                                    React.createElement("div", { className: "flex-gap" },
+                                        React.createElement("button", { className: "btn-outline", style: { padding: "4px 10px", fontSize: 12 }, onClick: () => { setForm(s); setHata(""); setModalAcik(true); } }, "✏️"),
+                                        React.createElement("button", { className: "btn-danger", onClick: () => sil(s.id) }, "🗑️")
+                                    )
                                 )
                             )
                         )
+                )
+            )
+        ),
+        modalAcik && React.createElement(Modal, { title: form.id ? "Servis İşini Düzenle" : "Yeni Servis İşi", onClose: () => setModalAcik(false) },
+            React.createElement("div", { className: "grid-2" },
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Tarih"),
+                    React.createElement("input", { type: "date", value: form.tarih || "", onChange: (e) => setForm(f => ({ ...f, tarih: e.target.value })) })
+                ),
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Hizmet Türü"),
+                    React.createElement("select", { value: form.hizmetTuru || "", onChange: (e) => setForm(f => ({ ...f, hizmetTuru: e.target.value })) },
+                        React.createElement("option", { value: "" }, "— Seçiniz —"),
+                        Object.entries(HIZMET_TIP_LABEL).map(([k,l]) => React.createElement("option", { key: k, value: k }, l))
                     )
                 )
-            )
-        ),
-        modalAcik && React.createElement(Modal, { title: form.id ? "Servis İşini Düzenle" : "Yeni Servis İşi", onClose: () => setModalAcik(false), width: 560 },
-            React.createElement(Grid2, null,
-                React.createElement(FG, { label: "Tarih" }, React.createElement("input", { type: "date", style: { ...S.inp }, value: form.tarih || "", onChange: (e) => setForm(f => ({ ...f, tarih: e.target.value })) })),
-                React.createElement(FG, { label: "Hizmet Türü" }, React.createElement("select", { style: { ...S.inp }, value: form.hizmetTuru || "", onChange: (e) => setForm(f => ({ ...f, hizmetTuru: e.target.value })) },
-                    React.createElement("option", { value: "" }, "— Seçiniz —"),
-                    Object.entries(HIZMET_TIP_LABEL).map(([k,l]) => React.createElement("option", { key: k, value: k }, l))
-                ))
             ),
-            React.createElement(FG, { label: "Müşteri" },
-                React.createElement("div", { style: { display: "flex", gap: 8 } },
-                    React.createElement("select", { style: { ...S.inp }, value: form.musteriId || "", onChange: (e) => setForm(f => ({ ...f, musteriId: e.target.value })) },
-                        React.createElement("option", { value: "" }, "— Seçiniz —"),
-                        cariler.map(c => React.createElement("option", { key: c.id, value: c.id }, c.ad))
-                    ),
-                    React.createElement("button", { type: "button", style: S.btnO, onClick: () => setYeniCariAcik(true) }, "➕ Yeni")
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Müşteri"),
+                React.createElement("select", { value: form.musteriId || "", onChange: (e) => setForm(f => ({ ...f, musteriId: e.target.value })) },
+                    React.createElement("option", { value: "" }, "— Seçiniz —"),
+                    cariler.map(c => React.createElement("option", { key: c.id, value: c.id }, c.ad))
                 )
             ),
-            React.createElement(Grid2, null,
-                React.createElement(FG, { label: "Araç Plakası" }, React.createElement("input", { style: { ...S.inp }, value: form.aracPlaka || "", onChange: (e) => setForm(f => ({ ...f, aracPlaka: e.target.value })), placeholder: "45 ABC 123" })),
-                React.createElement(FG, { label: "Araç Modeli" }, React.createElement("input", { style: { ...S.inp }, value: form.aracModel || "", onChange: (e) => setForm(f => ({ ...f, aracModel: e.target.value })), placeholder: "Ford Transit" }))
+            React.createElement("div", { className: "grid-2", style: { marginTop: 12 } },
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Araç Plakası"),
+                    React.createElement("input", { value: form.aracPlaka || "", onChange: (e) => setForm(f => ({ ...f, aracPlaka: e.target.value })), placeholder: "45 ABC 123" })
+                ),
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Araç Modeli"),
+                    React.createElement("input", { value: form.aracModel || "", onChange: (e) => setForm(f => ({ ...f, aracModel: e.target.value })), placeholder: "Ford Transit" })
+                )
             ),
-            React.createElement(FG, { label: "Açıklama" }, React.createElement("textarea", { style: { ...S.inp, minHeight: 70 }, value: form.aciklama || "", onChange: (e) => setForm(f => ({ ...f, aciklama: e.target.value })) })),
-            React.createElement(Grid2, null,
-                React.createElement(FG, { label: "Tutar (₺)" }, React.createElement("input", { type: "number", style: { ...S.inp }, value: form.tutar || "", onChange: (e) => setForm(f => ({ ...f, tutar: +e.target.value })) })),
-                React.createElement(FG, { label: "Durum" }, React.createElement("select", { style: { ...S.inp }, value: form.durum || "bekliyor", onChange: (e) => setForm(f => ({ ...f, durum: e.target.value })) },
-                    Object.entries(DURUM_LABEL).filter(([k]) => k !== "iptal").map(([k,l]) => React.createElement("option", { key: k, value: k }, l))
-                ))
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Açıklama"),
+                React.createElement("textarea", { style: { minHeight: 60 }, value: form.aciklama || "", onChange: (e) => setForm(f => ({ ...f, aciklama: e.target.value })) })
             ),
-            hata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "⚠️ ", hata),
-            React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 } },
-                React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"),
-                React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet")
+            React.createElement("div", { className: "grid-2", style: { marginTop: 12 } },
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Tutar (₺)"),
+                    React.createElement("input", { type: "number", value: form.tutar || "", onChange: (e) => setForm(f => ({ ...f, tutar: +e.target.value })) })
+                ),
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Durum"),
+                    React.createElement("select", { value: form.durum || "bekliyor", onChange: (e) => setForm(f => ({ ...f, durum: e.target.value })) },
+                        Object.entries(DURUM_LABEL).filter(([k]) => k !== "iptal").map(([k,l]) => React.createElement("option", { key: k, value: k }, l))
+                    )
+                )
+            ),
+            hata && React.createElement("div", { style: { color: C.red, fontSize: 13, marginTop: 12 } }, "⚠️ ", hata),
+            React.createElement("div", { className: "flex-gap", style: { marginTop: 16, justifyContent: "flex-end" } },
+                React.createElement("button", { className: "btn-outline", onClick: () => setModalAcik(false) }, "İptal"),
+                React.createElement("button", { className: "btn-primary", onClick: kaydet }, "Kaydet")
             )
-        ),
-        yeniCariAcik && React.createElement(HizliCariEkle, { onClose: () => setYeniCariAcik(false), onEklendi: (yeni, tumCariler) => { setCariler(tumCariler); setForm(f => ({ ...f, musteriId: yeni.id })); setYeniCariAcik(false); } })
+        )
     );
 }
 
-function UretimStok() {
+// --- Üretim & Stok Modülü ---
+function UretimModulu() {
     const [uretim, setUretim] = useState(LS.get("uretimKayitlari"));
     const [satislar, setSatislar] = useState(LS.get("satislar"));
-    const [cariler, setCariler] = useState(LS.get("cariler"));
+    const [cariler] = useState(LS.get("cariler"));
     const [sekme, setSekme] = useState("stok");
     const [uretimModal, setUretimModal] = useState(false);
     const [satisModal, setSatisModal] = useState(false);
@@ -430,151 +662,149 @@ function UretimStok() {
         setHata("");
         const birimFiyat = +sForm.birimFiyat || (sForm.tip === "kantarli" ? settings.kantarliFiyat : settings.kantarsizFiyat);
         const toplam = birimFiyat * +sForm.adet;
-        const kayit = { ...sForm, id: uid(), tarih: sForm.tarih || today(), birimFiyat, toplam, durum: "tamamlandi" };
+        const kayit = { ...sForm, id: uid(), tarih: sForm.tarih || today(), birimFiyat, toplam };
         const yeni = [...satislar, kayit];
         LS.set("satislar", yeni);
         setSatislar(yeni);
         setSatisModal(false);
     };
 
-    const uretimSil = (id) => { if (!confirm("Bu üretim kaydı silinsin mi?")) return; const yeni = uretim.filter(x => x.id !== id); LS.set("uretimKayitlari", yeni); setUretim(yeni); };
-    const satisSil = (id) => { if (!confirm("Bu satış kaydı silinsin mi? (stok geri eklenir)")) return; const yeni = satislar.filter(x => x.id !== id); LS.set("satislar", yeni); setSatislar(yeni); };
-
     return React.createElement("div", { className: "fp-fade" },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } },
-            React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "🛒 Üretim & Stok — El Arabası"),
-            React.createElement("div", { style: { display: "flex", gap: 8 } },
-                React.createElement("button", { style: S.btnO, onClick: () => { setUForm({ tarih: today(), tip: "kantarli" }); setHata(""); setUretimModal(true); } }, "🏭 Üretim Girişi"),
-                React.createElement("button", { style: S.btn(), onClick: () => { setSForm({ tarih: today(), tip: "kantarli" }); setHata(""); setSatisModal(true); } }, "💰 Satış Yap")
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "🏭 Üretim & Stok Yönetimi"),
+                React.createElement("div", { className: "section-sub" }, "El arabası üretim, stok takibi ve satış işlemleri")
+            ),
+            React.createElement("div", { className: "flex-gap" },
+                React.createElement("button", { className: "btn-outline", onClick: () => { setUForm({ tarih: today(), tip: "kantarli" }); setHata(""); setUretimModal(true); } }, "📦 Üretim Girişi"),
+                React.createElement("button", { className: "btn-primary", onClick: () => { setSForm({ tarih: today(), tip: "kantarli" }); setHata(""); setSatisModal(true); } }, "💰 Satış Yap")
             )
         ),
-        React.createElement(Grid4, null,
-            React.createElement(StatCard, { color: C.blue, icon: "⚖️", value: `${stokHesapla("kantarli")} adet`, label: "Kantarlı Stok" }),
-            React.createElement(StatCard, { color: C.purple, icon: "🛒", value: `${stokHesapla("kantarsiz")} adet`, label: "Kantarsız Stok" }),
-            React.createElement(StatCard, { color: C.green, icon: "🏭", value: uretim.reduce((t,u) => t + (+u.adet || 0), 0), label: "Toplam Üretilen" }),
-            React.createElement(StatCard, { color: C.accent, icon: "💰", value: fmtTL(satislar.reduce((t,s) => t + (+s.toplam || 0), 0)), label: "Toplam Satış Geliri" })
+        React.createElement("div", { className: "stat-grid" },
+            React.createElement(StatCard, { color: C.blue, value: `${stokHesapla("kantarli")} adet`, label: "Kantarlı Stok" }),
+            React.createElement(StatCard, { color: C.purple, value: `${stokHesapla("kantarsiz")} adet`, label: "Kantarsız Stok" }),
+            React.createElement(StatCard, { color: C.green, value: uretim.reduce((t,u) => t + (+u.adet || 0), 0), label: "Toplam Üretilen" }),
+            React.createElement(StatCard, { color: C.accent, value: fmtTL(satislar.reduce((t,s) => t + (+s.toplam || 0), 0)), label: "Toplam Satış Geliri" })
         ),
-        React.createElement(TabBar, { tabs: [["stok","⚖️ Stok Özeti"],["uretim","🏭 Üretim Kayıtları"],["satis","💰 Satış Kayıtları"]], active: sekme, onChange: setSekme }),
-        sekme === "stok" && React.createElement("div", { style: S.card },
-            React.createElement("div", { style: S.secTitle }, "Anlık Stok Durumu"),
+        React.createElement("div", { className: "flex-gap mb-16" },
+            ["stok","uretim","satis"].map(k =>
+                React.createElement("button", {
+                    key: k,
+                    className: sekme === k ? "btn-primary" : "btn-outline",
+                    onClick: () => setSekme(k)
+                }, k === "stok" ? "⚖️ Stok Özeti" : k === "uretim" ? "📦 Üretim Kayıtları" : "💰 Satış Kayıtları")
+            )
+        ),
+        sekme === "stok" && React.createElement("div", { style: { background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 20 } },
             ["kantarli", "kantarsiz"].map(tip => {
                 const stok = stokHesapla(tip);
-                return React.createElement("div", { key: tip, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", background: C.surface, borderRadius: 10, marginBottom: 10 } },
+                return React.createElement("div", { key: tip, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: C.surface, borderRadius: 8, marginBottom: 8 } },
                     React.createElement("div", null,
-                        React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.white } }, EL_ARABASI_TIP_LABEL[tip]),
-                        React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Varsayılan satış fiyatı: ", fmtTL(tip === "kantarli" ? settings.kantarliFiyat : settings.kantarsizFiyat))
+                        React.createElement("div", { style: { fontWeight: 700, color: C.white } }, EL_ARABASI_TIP_LABEL[tip]),
+                        React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "Varsayılan fiyat: ", fmtTL(tip === "kantarli" ? settings.kantarliFiyat : settings.kantarsizFiyat))
                     ),
-                    React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: stok <= 3 ? C.red : C.white } }, stok, " ", React.createElement("span", { style: { fontSize: 12, color: C.muted, fontWeight: 400 } }, "adet"))
+                    React.createElement("div", { style: { fontSize: 22, fontWeight: 800, color: stok <= 3 ? C.red : C.white } }, stok, " adet")
                 );
             })
         ),
-        sekme === "uretim" && React.createElement("div", { style: S.card },
-            React.createElement("table", { style: S.tbl },
+        (sekme === "uretim" || sekme === "satis") && React.createElement("div", { className: "table-wrap", style: { background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 4 } },
+            React.createElement("table", null,
                 React.createElement("thead", null,
                     React.createElement("tr", null,
-                        React.createElement("th", { style: S.th }, "Tarih"), React.createElement("th", { style: S.th }, "Tip"),
-                        React.createElement("th", { style: S.th }, "Adet"), React.createElement("th", { style: S.th }, "Açıklama"), React.createElement("th", { style: S.th })
+                        sekme === "uretim" ?
+                            [React.createElement("th", { key: "t" }, "Tarih"), React.createElement("th", { key: "tip" }, "Tip"), React.createElement("th", { key: "adet" }, "Adet"), React.createElement("th", { key: "acik" }, "Açıklama"), React.createElement("th", { key: "islem" })] :
+                            [React.createElement("th", { key: "t" }, "Tarih"), React.createElement("th", { key: "m" }, "Müşteri"), React.createElement("th", { key: "tip" }, "Tip"), React.createElement("th", { key: "adet" }, "Adet"), React.createElement("th", { key: "fiyat" }, "Birim Fiyat"), React.createElement("th", { key: "top" }, "Toplam"), React.createElement("th", { key: "islem" })]
                     )
                 ),
                 React.createElement("tbody", null,
-                    uretim.length === 0 ? React.createElement("tr", null, React.createElement("td", { style: S.td, colSpan: 5 }, React.createElement("div", { style: { textAlign: "center", color: C.muted, padding: 20 } }, "Kayıt yok."))) :
-                    [...uretim].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || "")).map(u =>
-                        React.createElement("tr", { key: u.id },
-                            React.createElement("td", { style: S.td }, fmtDate(u.tarih)),
-                            React.createElement("td", { style: S.td }, EL_ARABASI_TIP_LABEL[u.tip]),
-                            React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.green } }, "+", u.adet)),
-                            React.createElement("td", { style: S.td }, u.aciklama || "—"),
-                            React.createElement("td", { style: S.td }, React.createElement("button", { style: S.btnR, onClick: () => uretimSil(u.id) }, "🗑️"))
+                    sekme === "uretim" ?
+                        (uretim.length === 0 ? React.createElement("tr", null, React.createElement("td", { colSpan: 5, style: { textAlign: "center", padding: 30, color: C.muted } }, "Kayıt yok.")) :
+                            [...uretim].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || "")).map(u =>
+                                React.createElement("tr", { key: u.id },
+                                    React.createElement("td", null, fmtDate(u.tarih)),
+                                    React.createElement("td", null, EL_ARABASI_TIP_LABEL[u.tip]),
+                                    React.createElement("td", null, React.createElement("strong", { style: { color: C.green } }, "+", u.adet)),
+                                    React.createElement("td", null, u.aciklama || "—"),
+                                    React.createElement("td", null, React.createElement("button", { className: "btn-danger", onClick: () => { if (confirm("Silinsin mi?")) { const yeni = uretim.filter(x => x.id !== u.id); LS.set("uretimKayitlari", yeni); setUretim(yeni); } } }, "🗑️"))
+                                )
+                            )
+                        ) :
+                        (satislar.length === 0 ? React.createElement("tr", null, React.createElement("td", { colSpan: 7, style: { textAlign: "center", padding: 30, color: C.muted } }, "Kayıt yok.")) :
+                            [...satislar].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || "")).map(s =>
+                                React.createElement("tr", { key: s.id },
+                                    React.createElement("td", null, fmtDate(s.tarih)),
+                                    React.createElement("td", null, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, s.musteriId))),
+                                    React.createElement("td", null, EL_ARABASI_TIP_LABEL[s.tip]),
+                                    React.createElement("td", null, s.adet),
+                                    React.createElement("td", null, fmtTL(s.birimFiyat)),
+                                    React.createElement("td", null, React.createElement("strong", { className: "text-accent" }, fmtTL(s.toplam))),
+                                    React.createElement("td", null, React.createElement("button", { className: "btn-danger", onClick: () => { if (confirm("Silinsin mi?")) { const yeni = satislar.filter(x => x.id !== s.id); LS.set("satislar", yeni); setSatislar(yeni); } } }, "🗑️"))
+                                )
+                            )
                         )
-                    )
                 )
             )
         ),
-        sekme === "satis" && React.createElement("div", { style: S.card },
-            React.createElement("table", { style: S.tbl },
-                React.createElement("thead", null,
-                    React.createElement("tr", null,
-                        React.createElement("th", { style: S.th }, "Tarih"), React.createElement("th", { style: S.th }, "Müşteri"),
-                        React.createElement("th", { style: S.th }, "Tip"), React.createElement("th", { style: S.th }, "Adet"),
-                        React.createElement("th", { style: S.th }, "Birim Fiyat"), React.createElement("th", { style: S.th }, "Toplam"), React.createElement("th", { style: S.th })
-                    )
-                ),
-                React.createElement("tbody", null,
-                    satislar.length === 0 ? React.createElement("tr", null, React.createElement("td", { style: S.td, colSpan: 7 }, React.createElement("div", { style: { textAlign: "center", color: C.muted, padding: 20 } }, "Kayıt yok."))) :
-                    [...satislar].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || "")).map(s =>
-                        React.createElement("tr", { key: s.id },
-                            React.createElement("td", { style: S.td }, fmtDate(s.tarih)),
-                            React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, s.musteriId))),
-                            React.createElement("td", { style: S.td }, EL_ARABASI_TIP_LABEL[s.tip]),
-                            React.createElement("td", { style: S.td }, s.adet),
-                            React.createElement("td", { style: S.td }, fmtTL(s.birimFiyat)),
-                            React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.accent } }, fmtTL(s.toplam))),
-                            React.createElement("td", { style: S.td }, React.createElement("button", { style: S.btnR, onClick: () => satisSil(s.id) }, "🗑️"))
-                        )
-                    )
+        uretimModal && React.createElement(Modal, { title: "📦 Üretim Girişi", onClose: () => setUretimModal(false) },
+            React.createElement("div", null,
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Tarih"),
+                React.createElement("input", { type: "date", value: uForm.tarih || "", onChange: (e) => setUForm(f => ({ ...f, tarih: e.target.value })) })
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Tip"),
+                React.createElement("select", { value: uForm.tip || "kantarli", onChange: (e) => setUForm(f => ({ ...f, tip: e.target.value })) },
+                    Object.entries(EL_ARABASI_TIP_LABEL).map(([k,l]) => React.createElement("option", { key: k, value: k }, l))
                 )
-            )
-        ),
-        uretimModal && React.createElement(Modal, { title: "🏭 Üretim Girişi", onClose: () => setUretimModal(false) },
-            React.createElement(FG, { label: "Tarih" }, React.createElement("input", { type: "date", style: { ...S.inp }, value: uForm.tarih || "", onChange: (e) => setUForm(f => ({ ...f, tarih: e.target.value })) })),
-            React.createElement(FG, { label: "Tip" }, React.createElement("select", { style: { ...S.inp }, value: uForm.tip || "kantarli", onChange: (e) => setUForm(f => ({ ...f, tip: e.target.value })) },
-                Object.entries(EL_ARABASI_TIP_LABEL).map(([k,l]) => React.createElement("option", { key: k, value: k }, l))
-            )),
-            React.createElement(FG, { label: "Üretilen Adet" }, React.createElement("input", { type: "number", style: { ...S.inp }, value: uForm.adet || "", onChange: (e) => setUForm(f => ({ ...f, adet: +e.target.value })) })),
-            React.createElement(FG, { label: "Açıklama (opsiyonel)" }, React.createElement("input", { style: { ...S.inp }, value: uForm.aciklama || "", onChange: (e) => setUForm(f => ({ ...f, aciklama: e.target.value })) })),
-            hata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "⚠️ ", hata),
-            React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } },
-                React.createElement("button", { style: S.btnO, onClick: () => setUretimModal(false) }, "İptal"),
-                React.createElement("button", { style: S.btn(), onClick: uretimKaydet }, "Kaydet")
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Üretilen Adet"),
+                React.createElement("input", { type: "number", value: uForm.adet || "", onChange: (e) => setUForm(f => ({ ...f, adet: +e.target.value })) })
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Açıklama (opsiyonel)"),
+                React.createElement("input", { value: uForm.aciklama || "", onChange: (e) => setUForm(f => ({ ...f, aciklama: e.target.value })) })
+            ),
+            hata && React.createElement("div", { style: { color: C.red, fontSize: 13, marginTop: 12 } }, "⚠️ ", hata),
+            React.createElement("div", { className: "flex-gap", style: { marginTop: 16, justifyContent: "flex-end" } },
+                React.createElement("button", { className: "btn-outline", onClick: () => setUretimModal(false) }, "İptal"),
+                React.createElement("button", { className: "btn-primary", onClick: uretimKaydet }, "Kaydet")
             )
         ),
         satisModal && React.createElement(Modal, { title: "💰 Satış Yap", onClose: () => setSatisModal(false) },
-            React.createElement(FG, { label: "Müşteri" }, React.createElement("select", { style: { ...S.inp }, value: sForm.musteriId || "", onChange: (e) => setSForm(f => ({ ...f, musteriId: e.target.value })) },
-                React.createElement("option", { value: "" }, "— Seçiniz —"),
-                cariler.map(c => React.createElement("option", { key: c.id, value: c.id }, c.ad))
-            )),
-            React.createElement(Grid2, null,
-                React.createElement(FG, { label: "Tip" }, React.createElement("select", { style: { ...S.inp }, value: sForm.tip || "kantarli", onChange: (e) => setSForm(f => ({ ...f, tip: e.target.value })) },
-                    Object.entries(EL_ARABASI_TIP_LABEL).map(([k,l]) => React.createElement("option", { key: k, value: k }, l, " (", stokHesapla(k), " adet var)"))
-                )),
-                React.createElement(FG, { label: "Adet" }, React.createElement("input", { type: "number", style: { ...S.inp }, value: sForm.adet || "", onChange: (e) => setSForm(f => ({ ...f, adet: +e.target.value })) }))
+            React.createElement("div", null,
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Müşteri"),
+                React.createElement("select", { value: sForm.musteriId || "", onChange: (e) => setSForm(f => ({ ...f, musteriId: e.target.value })) },
+                    React.createElement("option", { value: "" }, "— Seçiniz —"),
+                    cariler.map(c => React.createElement("option", { key: c.id, value: c.id }, c.ad))
+                )
             ),
-            React.createElement(FG, { label: `Birim Fiyat (₺) — boş bırakılırsa varsayılan (${fmtTL(sForm.tip === "kantarsiz" ? settings.kantarsizFiyat : settings.kantarliFiyat)}) kullanılır` },
-                React.createElement("input", { type: "number", style: { ...S.inp }, value: sForm.birimFiyat || "", onChange: (e) => setSForm(f => ({ ...f, birimFiyat: +e.target.value })) })
+            React.createElement("div", { className: "grid-2", style: { marginTop: 12 } },
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Tip"),
+                    React.createElement("select", { value: sForm.tip || "kantarli", onChange: (e) => setSForm(f => ({ ...f, tip: e.target.value })) },
+                        Object.entries(EL_ARABASI_TIP_LABEL).map(([k,l]) => React.createElement("option", { key: k, value: k }, l, " (", stokHesapla(k), " adet var)"))
+                    )
+                ),
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Adet"),
+                    React.createElement("input", { type: "number", value: sForm.adet || "", onChange: (e) => setSForm(f => ({ ...f, adet: +e.target.value })) })
+                )
             ),
-            hata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "⚠️ ", hata),
-            React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } },
-                React.createElement("button", { style: S.btnO, onClick: () => setSatisModal(false) }, "İptal"),
-                React.createElement("button", { style: S.btn(), onClick: satisKaydet }, "Kaydet")
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, `Birim Fiyat (₺) — boş bırakılırsa varsayılan (${fmtTL(sForm.tip === "kantarsiz" ? settings.kantarsizFiyat : settings.kantarliFiyat)}) kullanılır`),
+                React.createElement("input", { type: "number", value: sForm.birimFiyat || "", onChange: (e) => setSForm(f => ({ ...f, birimFiyat: +e.target.value })) })
+            ),
+            hata && React.createElement("div", { style: { color: C.red, fontSize: 13, marginTop: 12 } }, "⚠️ ", hata),
+            React.createElement("div", { className: "flex-gap", style: { marginTop: 16, justifyContent: "flex-end" } },
+                React.createElement("button", { className: "btn-outline", onClick: () => setSatisModal(false) }, "İptal"),
+                React.createElement("button", { className: "btn-primary", onClick: satisKaydet }, "Kaydet")
             )
         )
     );
 }
 
-function HizliCariEkle({ onClose, onEklendi }) {
-    const [ad, setAd] = useState("");
-    const [tel, setTel] = useState("");
-    const [adres, setAdres] = useState("");
-    const kaydet = () => {
-        if (!ad.trim()) { alert("Müşteri adı zorunludur."); return; }
-        const mevcut = LS.get("cariler");
-        const yeni = { id: uid(), ad: ad.trim(), tel: tel.trim(), adres: adres.trim() };
-        const tumu = [...mevcut, yeni];
-        LS.set("cariler", tumu);
-        onEklendi(yeni, tumu);
-    };
-    return React.createElement(Modal, { title: "➕ Hızlı Müşteri Ekle", onClose, width: 420 },
-        React.createElement(FG, { label: "Müşteri / Firma Adı" }, React.createElement("input", { style: { ...S.inp }, value: ad, onChange: (e) => setAd(e.target.value), autoFocus: true })),
-        React.createElement(FG, { label: "Telefon" }, React.createElement("input", { style: { ...S.inp }, value: tel, onChange: (e) => setTel(e.target.value) })),
-        React.createElement(FG, { label: "Adres" }, React.createElement("input", { style: { ...S.inp }, value: adres, onChange: (e) => setAdres(e.target.value) })),
-        React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } },
-            React.createElement("button", { style: S.btnO, onClick: onClose }, "İptal"),
-            React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet")
-        )
-    );
-}
-
-function Cariler() {
+// --- Müşteri Yönetimi Modülü ---
+function CariModulu() {
     const [liste, setListe] = useState(LS.get("cariler"));
     const [servisler] = useState(LS.get("servisIsleri"));
     const [satislar] = useState(LS.get("satislar"));
@@ -592,93 +822,341 @@ function Cariler() {
 
     const sil = (id) => {
         if (servisler.some(s => s.musteriId === id) || satislar.some(s => s.musteriId === id)) {
-            alert("Bu müşteriye ait kayıtlar var, önce onları düzenleyin/silin.");
+            alert("Bu müşteriye ait kayıtlar var, önce onları silin.");
             return;
         }
-        if (!confirm("Bu müşteri silinsin mi?")) return;
+        if (!confirm("Silinsin mi?")) return;
         const yeni = liste.filter(x => x.id !== id);
         LS.set("cariler", yeni);
         setListe(yeni);
     };
 
-    const harcama = (id) => servisler.filter(s => s.musteriId === id).reduce((t,s) => t + (+s.tutar || 0), 0)
-        + satislar.filter(s => s.musteriId === id).reduce((t,s) => t + (+s.toplam || 0), 0);
-
     return React.createElement("div", { className: "fp-fade" },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 } },
-            React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "👥 Müşteriler"),
-            React.createElement("button", { style: S.btn(), onClick: () => { setForm({}); setModalAcik(true); } }, "➕ Yeni Müşteri")
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "👥 Müşteri Yönetimi"),
+                React.createElement("div", { className: "section-sub" }, "Müşteri ekleme, düzenleme ve işlem geçmişi")
+            ),
+            React.createElement("button", { className: "btn-primary", onClick: () => { setForm({}); setModalAcik(true); } }, "➕ Yeni Müşteri")
         ),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 } },
-            liste.length === 0 && React.createElement("div", { style: { color: C.muted } }, "Henüz müşteri yok."),
+        React.createElement("div", { className: "module-grid" },
+            liste.length === 0 ? React.createElement("div", { style: { color: C.muted, gridColumn: "1/-1", textAlign: "center", padding: 40 } }, "Henüz müşteri yok.") :
             liste.map(c =>
-                React.createElement("div", { key: c.id, style: S.card },
-                    React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 4 } }, c.ad),
-                    React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 2 } }, c.tel || "Telefon yok"),
-                    React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, c.adres || "Adres yok"),
-                    React.createElement("div", { style: { fontSize: 12, color: C.accent, fontWeight: 700, marginBottom: 12 } }, "Toplam işlem: ", fmtTL(harcama(c.id))),
-                    React.createElement("div", { style: { display: "flex", gap: 8 } },
-                        React.createElement("button", { style: { ...S.btnO, flex: 1 }, onClick: () => { setForm(c); setModalAcik(true); } }, "✏️ Düzenle"),
-                        React.createElement("button", { style: S.btnR, onClick: () => sil(c.id) }, "🗑️")
+                React.createElement("div", { key: c.id, className: "module-card" },
+                    React.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: C.white } }, c.ad),
+                    React.createElement("div", { style: { fontSize: 13, color: C.text, marginTop: 4 } }, c.tel || "Telefon yok"),
+                    React.createElement("div", { style: { fontSize: 12, color: C.muted } }, c.adres || "Adres yok"),
+                    React.createElement("div", { className: "flex-gap", style: { marginTop: 12 } },
+                        React.createElement("button", { className: "btn-outline", style: { flex: 1 }, onClick: () => { setForm(c); setModalAcik(true); } }, "✏️ Düzenle"),
+                        React.createElement("button", { className: "btn-danger", onClick: () => sil(c.id) }, "🗑️")
                     )
                 )
             )
         ),
-        modalAcik && React.createElement(Modal, { title: form.id ? "Müşteriyi Düzenle" : "Yeni Müşteri", onClose: () => setModalAcik(false), width: 420 },
-            React.createElement(FG, { label: "Müşteri / Firma Adı" }, React.createElement("input", { style: { ...S.inp }, value: form.ad || "", onChange: (e) => setForm(f => ({ ...f, ad: e.target.value })), autoFocus: true })),
-            React.createElement(FG, { label: "Telefon" }, React.createElement("input", { style: { ...S.inp }, value: form.tel || "", onChange: (e) => setForm(f => ({ ...f, tel: e.target.value })) })),
-            React.createElement(FG, { label: "Adres" }, React.createElement("input", { style: { ...S.inp }, value: form.adres || "", onChange: (e) => setForm(f => ({ ...f, adres: e.target.value })) })),
-            React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } },
-                React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"),
-                React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet")
+        modalAcik && React.createElement(Modal, { title: form.id ? "Müşteriyi Düzenle" : "Yeni Müşteri", onClose: () => setModalAcik(false) },
+            React.createElement("div", null,
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Müşteri / Firma Adı"),
+                React.createElement("input", { value: form.ad || "", onChange: (e) => setForm(f => ({ ...f, ad: e.target.value })), autoFocus: true })
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Telefon"),
+                React.createElement("input", { value: form.tel || "", onChange: (e) => setForm(f => ({ ...f, tel: e.target.value })) })
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Adres"),
+                React.createElement("input", { value: form.adres || "", onChange: (e) => setForm(f => ({ ...f, adres: e.target.value })) })
+            ),
+            React.createElement("div", { className: "flex-gap", style: { marginTop: 16, justifyContent: "flex-end" } },
+                React.createElement("button", { className: "btn-outline", onClick: () => setModalAcik(false) }, "İptal"),
+                React.createElement("button", { className: "btn-primary", onClick: kaydet }, "Kaydet")
             )
         )
     );
 }
 
-function Muhasebe() {
-    const [servisler] = useState(LS.get("servisIsleri"));
-    const [satislar] = useState(LS.get("satislar"));
-    const [cariler] = useState(LS.get("cariler"));
+// --- Personel Takibi Modülü ---
+function PersonelModulu() {
+    const [liste, setListe] = useState(LS.get("personeller"));
+    const [modalAcik, setModalAcik] = useState(false);
+    const [form, setForm] = useState({});
 
-    const tumIslemler = [
-        ...servisler.map(s => ({ id: s.id, tarih: s.tarih, musteriId: s.musteriId, aciklama: `${HIZMET_TIP_LABEL[s.hizmetTuru] || ""} — ${s.aracPlaka || ""}`, tutar: s.tutar, odendi: s.odendi, tur: "servis" })),
-        ...satislar.map(s => ({ id: s.id, tarih: s.tarih, musteriId: s.musteriId, aciklama: `${EL_ARABASI_TIP_LABEL[s.tip] || ""} satışı (${s.adet} adet)`, tutar: s.toplam, odendi: true, tur: "satis" }))
-    ].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || ""));
+    const kaydet = () => {
+        if (!(form.ad || "").trim()) { alert("Personel adı zorunludur."); return; }
+        const kayit = { ...form, id: form.id || uid() };
+        const yeni = form.id ? liste.map(x => x.id === form.id ? kayit : x) : [...liste, kayit];
+        LS.set("personeller", yeni);
+        setListe(yeni);
+        setModalAcik(false);
+    };
 
-    const toplamGelir = tumIslemler.reduce((t, i) => t + (+i.tutar || 0), 0);
-    const tahsilEdilecek = tumIslemler.filter(i => !i.odendi).reduce((t, i) => t + (+i.tutar || 0), 0);
-    const buAy = tumIslemler.filter(i => i.tarih && i.tarih.startsWith(today().slice(0,7))).reduce((t, i) => t + (+i.tutar || 0), 0);
+    const sil = (id) => { if (!confirm("Silinsin mi?")) return; const yeni = liste.filter(x => x.id !== id); LS.set("personeller", yeni); setListe(yeni); };
 
     return React.createElement("div", { className: "fp-fade" },
-        React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white, marginBottom: 16 } }, "💰 Muhasebe Özeti"),
-        React.createElement(Grid4, null,
-            React.createElement(StatCard, { color: C.accent, icon: "💰", value: fmtTL(toplamGelir), label: "Toplam Gelir (Tüm Zamanlar)" }),
-            React.createElement(StatCard, { color: C.green, icon: "📅", value: fmtTL(buAy), label: "Bu Ay Gelir" }),
-            React.createElement(StatCard, { color: C.red, icon: "⏳", value: fmtTL(tahsilEdilecek), label: "Tahsil Edilecek" }),
-            React.createElement(StatCard, { color: C.blue, icon: "🧾", value: tumIslemler.length, label: "Toplam İşlem Sayısı" })
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "👨‍🔧 Personel Takibi"),
+                React.createElement("div", { className: "section-sub" }, "Personel bilgileri, maaş ve performans yönetimi")
+            ),
+            React.createElement("button", { className: "btn-primary", onClick: () => { setForm({}); setModalAcik(true); } }, "➕ Yeni Personel")
         ),
-        React.createElement("div", { style: S.card },
-            React.createElement("div", { style: S.secTitle }, "Tüm İşlemler"),
-            React.createElement("table", { style: S.tbl },
+        React.createElement("div", { className: "module-grid" },
+            liste.length === 0 ? React.createElement("div", { style: { color: C.muted, gridColumn: "1/-1", textAlign: "center", padding: 40 } }, "Henüz personel yok.") :
+            liste.map(p =>
+                React.createElement("div", { key: p.id, className: "module-card" },
+                    React.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: C.white } }, p.ad),
+                    React.createElement("div", { style: { fontSize: 13, color: C.text } }, p.unvan || "Unvan belirtilmemiş"),
+                    React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "Maaş: ", fmtTL(p.maas || 0)),
+                    React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "İşe Başlama: ", fmtDate(p.iseBaslama)),
+                    React.createElement("div", { className: "flex-gap", style: { marginTop: 12 } },
+                        React.createElement("button", { className: "btn-outline", style: { flex: 1 }, onClick: () => { setForm(p); setModalAcik(true); } }, "✏️ Düzenle"),
+                        React.createElement("button", { className: "btn-danger", onClick: () => sil(p.id) }, "🗑️")
+                    )
+                )
+            )
+        ),
+        modalAcik && React.createElement(Modal, { title: form.id ? "Personel Düzenle" : "Yeni Personel", onClose: () => setModalAcik(false) },
+            React.createElement("div", null,
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Personel Adı"),
+                React.createElement("input", { value: form.ad || "", onChange: (e) => setForm(f => ({ ...f, ad: e.target.value })), autoFocus: true })
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Unvan"),
+                React.createElement("input", { value: form.unvan || "", onChange: (e) => setForm(f => ({ ...f, unvan: e.target.value })) })
+            ),
+            React.createElement("div", { className: "grid-2", style: { marginTop: 12 } },
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Maaş (₺)"),
+                    React.createElement("input", { type: "number", value: form.maas || "", onChange: (e) => setForm(f => ({ ...f, maas: +e.target.value })) })
+                ),
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "İşe Başlama Tarihi"),
+                    React.createElement("input", { type: "date", value: form.iseBaslama || "", onChange: (e) => setForm(f => ({ ...f, iseBaslama: e.target.value })) })
+                )
+            ),
+            React.createElement("div", { className: "flex-gap", style: { marginTop: 16, justifyContent: "flex-end" } },
+                React.createElement("button", { className: "btn-outline", onClick: () => setModalAcik(false) }, "İptal"),
+                React.createElement("button", { className: "btn-primary", onClick: kaydet }, "Kaydet")
+            )
+        )
+    );
+}
+
+// --- Tedarikçiler Modülü ---
+function TedarikciModulu() {
+    const [liste, setListe] = useState(LS.get("tedarikciler"));
+    const [modalAcik, setModalAcik] = useState(false);
+    const [form, setForm] = useState({});
+
+    const kaydet = () => {
+        if (!(form.ad || "").trim()) { alert("Tedarikçi adı zorunludur."); return; }
+        const kayit = { ...form, id: form.id || uid() };
+        const yeni = form.id ? liste.map(x => x.id === form.id ? kayit : x) : [...liste, kayit];
+        LS.set("tedarikciler", yeni);
+        setListe(yeni);
+        setModalAcik(false);
+    };
+
+    const sil = (id) => { if (!confirm("Silinsin mi?")) return; const yeni = liste.filter(x => x.id !== id); LS.set("tedarikciler", yeni); setListe(yeni); };
+
+    return React.createElement("div", { className: "fp-fade" },
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "📦 Tedarikçiler"),
+                React.createElement("div", { className: "section-sub" }, "Tedarikçi yönetimi ve iletişim bilgileri")
+            ),
+            React.createElement("button", { className: "btn-primary", onClick: () => { setForm({}); setModalAcik(true); } }, "➕ Yeni Tedarikçi")
+        ),
+        React.createElement("div", { className: "module-grid" },
+            liste.length === 0 ? React.createElement("div", { style: { color: C.muted, gridColumn: "1/-1", textAlign: "center", padding: 40 } }, "Henüz tedarikçi yok.") :
+            liste.map(t =>
+                React.createElement("div", { key: t.id, className: "module-card" },
+                    React.createElement("div", { style: { fontSize: 17, fontWeight: 700, color: C.white } }, t.ad),
+                    React.createElement("div", { style: { fontSize: 13, color: C.text } }, t.tel || "Telefon yok"),
+                    React.createElement("div", { style: { fontSize: 12, color: C.muted } }, t.adres || "Adres yok"),
+                    React.createElement("div", { className: "flex-gap", style: { marginTop: 12 } },
+                        React.createElement("button", { className: "btn-outline", style: { flex: 1 }, onClick: () => { setForm(t); setModalAcik(true); } }, "✏️ Düzenle"),
+                        React.createElement("button", { className: "btn-danger", onClick: () => sil(t.id) }, "🗑️")
+                    )
+                )
+            )
+        ),
+        modalAcik && React.createElement(Modal, { title: form.id ? "Tedarikçi Düzenle" : "Yeni Tedarikçi", onClose: () => setModalAcik(false) },
+            React.createElement("div", null,
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Tedarikçi Adı"),
+                React.createElement("input", { value: form.ad || "", onChange: (e) => setForm(f => ({ ...f, ad: e.target.value })), autoFocus: true })
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Telefon"),
+                React.createElement("input", { value: form.tel || "", onChange: (e) => setForm(f => ({ ...f, tel: e.target.value })) })
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Adres"),
+                React.createElement("input", { value: form.adres || "", onChange: (e) => setForm(f => ({ ...f, adres: e.target.value })) })
+            ),
+            React.createElement("div", { className: "flex-gap", style: { marginTop: 16, justifyContent: "flex-end" } },
+                React.createElement("button", { className: "btn-outline", onClick: () => setModalAcik(false) }, "İptal"),
+                React.createElement("button", { className: "btn-primary", onClick: kaydet }, "Kaydet")
+            )
+        )
+    );
+}
+
+// --- Gider Takibi Modülü ---
+function GiderModulu() {
+    const [liste, setListe] = useState(LS.get("giderler"));
+    const [modalAcik, setModalAcik] = useState(false);
+    const [form, setForm] = useState({});
+    const [hata, setHata] = useState("");
+
+    const kaydet = () => {
+        if (!(form.aciklama || "").trim()) { setHata("Açıklama zorunludur."); return; }
+        if (!(+form.tutar > 0)) { setHata("Tutar 0'dan büyük olmalıdır."); return; }
+        if (!form.kategori) { setHata("Kategori seçimi zorunludur."); return; }
+        setHata("");
+        const kayit = { ...form, id: form.id || uid(), tarih: form.tarih || today() };
+        const yeni = form.id ? liste.map(x => x.id === form.id ? kayit : x) : [...liste, kayit];
+        LS.set("giderler", yeni);
+        setListe(yeni);
+        setModalAcik(false);
+    };
+
+    const sil = (id) => { if (!confirm("Silinsin mi?")) return; const yeni = liste.filter(x => x.id !== id); LS.set("giderler", yeni); setListe(yeni); };
+
+    const kategoriMap = { kira: "🏢 Kira", elektrik: "⚡ Elektrik", su: "💧 Su", dogalgaz: "🔥 Doğalgaz", malzeme: "📦 Malzeme", diger: "📌 Diğer" };
+
+    return React.createElement("div", { className: "fp-fade" },
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "💳 Gider Takibi"),
+                React.createElement("div", { className: "section-sub" }, "Kira, elektrik, malzeme ve diğer giderleri kaydet")
+            ),
+            React.createElement("button", { className: "btn-primary", onClick: () => { setForm({ tarih: today() }); setHata(""); setModalAcik(true); } }, "➕ Yeni Gider")
+        ),
+        React.createElement("div", { className: "stat-grid" },
+            React.createElement(StatCard, { color: C.red, value: fmtTL(liste.reduce((t,g) => t + (+g.tutar || 0), 0)), label: "Toplam Gider" }),
+            React.createElement(StatCard, { color: C.yellow, value: fmtTL(liste.filter(g => g.tarih && g.tarih.startsWith(today().slice(0,7))).reduce((t,g) => t + (+g.tutar || 0), 0)), label: "Bu Ay Gider" })
+        ),
+        React.createElement("div", { className: "table-wrap", style: { background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 4 } },
+            React.createElement("table", null,
                 React.createElement("thead", null,
                     React.createElement("tr", null,
-                        React.createElement("th", { style: S.th }, "Tarih"), React.createElement("th", { style: S.th }, "Müşteri"),
-                        React.createElement("th", { style: S.th }, "Açıklama"), React.createElement("th", { style: S.th }, "Tür"),
-                        React.createElement("th", { style: S.th }, "Tutar"), React.createElement("th", { style: S.th }, "Durum")
+                        React.createElement("th", null, "Tarih"), React.createElement("th", null, "Kategori"),
+                        React.createElement("th", null, "Açıklama"), React.createElement("th", null, "Tutar"), React.createElement("th", null)
                     )
                 ),
                 React.createElement("tbody", null,
-                    tumIslemler.length === 0 ? React.createElement("tr", null, React.createElement("td", { style: S.td, colSpan: 6 }, React.createElement("div", { style: { textAlign: "center", color: C.muted, padding: 20 } }, "Kayıt yok."))) :
+                    liste.length === 0 ? React.createElement("tr", null, React.createElement("td", { colSpan: 5, style: { textAlign: "center", padding: 30, color: C.muted } }, "Kayıt yok.")) :
+                    [...liste].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || "")).map(g =>
+                        React.createElement("tr", { key: g.id },
+                            React.createElement("td", null, fmtDate(g.tarih)),
+                            React.createElement("td", null, kategoriMap[g.kategori] || g.kategori),
+                            React.createElement("td", null, g.aciklama),
+                            React.createElement("td", null, React.createElement("strong", { style: { color: C.red } }, fmtTL(g.tutar))),
+                            React.createElement("td", null,
+                                React.createElement("div", { className: "flex-gap" },
+                                    React.createElement("button", { className: "btn-outline", style: { padding: "4px 10px", fontSize: 12 }, onClick: () => { setForm(g); setHata(""); setModalAcik(true); } }, "✏️"),
+                                    React.createElement("button", { className: "btn-danger", onClick: () => sil(g.id) }, "🗑️")
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+        modalAcik && React.createElement(Modal, { title: form.id ? "Gider Düzenle" : "Yeni Gider", onClose: () => setModalAcik(false) },
+            React.createElement("div", { className: "grid-2" },
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Tarih"),
+                    React.createElement("input", { type: "date", value: form.tarih || "", onChange: (e) => setForm(f => ({ ...f, tarih: e.target.value })) })
+                ),
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Kategori"),
+                    React.createElement("select", { value: form.kategori || "", onChange: (e) => setForm(f => ({ ...f, kategori: e.target.value })) },
+                        React.createElement("option", { value: "" }, "— Seçiniz —"),
+                        Object.entries(kategoriMap).map(([k,l]) => React.createElement("option", { key: k, value: k }, l))
+                    )
+                )
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Açıklama"),
+                React.createElement("input", { value: form.aciklama || "", onChange: (e) => setForm(f => ({ ...f, aciklama: e.target.value })) })
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Tutar (₺)"),
+                React.createElement("input", { type: "number", value: form.tutar || "", onChange: (e) => setForm(f => ({ ...f, tutar: +e.target.value })) })
+            ),
+            hata && React.createElement("div", { style: { color: C.red, fontSize: 13, marginTop: 12 } }, "⚠️ ", hata),
+            React.createElement("div", { className: "flex-gap", style: { marginTop: 16, justifyContent: "flex-end" } },
+                React.createElement("button", { className: "btn-outline", onClick: () => setModalAcik(false) }, "İptal"),
+                React.createElement("button", { className: "btn-primary", onClick: kaydet }, "Kaydet")
+            )
+        )
+    );
+}
+
+// --- Muhasebe & Rapor Modülü ---
+function MuhasebeModulu() {
+    const [servisler] = useState(LS.get("servisIsleri"));
+    const [satislar] = useState(LS.get("satislar"));
+    const [giderler] = useState(LS.get("giderler"));
+    const [cariler] = useState(LS.get("cariler"));
+
+    const toplamGelir = servisler.filter(s => s.durum === "tamamlandi").reduce((t,s) => t + (+s.tutar || 0), 0)
+        + satislar.reduce((t,s) => t + (+s.toplam || 0), 0);
+    const toplamGider = giderler.reduce((t,g) => t + (+g.tutar || 0), 0);
+    const netKar = toplamGelir - toplamGider;
+
+    const buAyGelir = servisler.filter(s => s.tarih && s.tarih.startsWith(today().slice(0,7)) && s.durum === "tamamlandi").reduce((t,s) => t + (+s.tutar || 0), 0)
+        + satislar.filter(s => s.tarih && s.tarih.startsWith(today().slice(0,7))).reduce((t,s) => t + (+s.toplam || 0), 0);
+    const buAyGider = giderler.filter(g => g.tarih && g.tarih.startsWith(today().slice(0,7))).reduce((t,g) => t + (+g.tutar || 0), 0);
+
+    const tumIslemler = [
+        ...servisler.map(s => ({ id: s.id, tarih: s.tarih, aciklama: `${HIZMET_TIP_LABEL[s.hizmetTuru] || ""} — ${s.aracPlaka || ""}`, tutar: s.tutar, tur: "servis", durum: s.durum })),
+        ...satislar.map(s => ({ id: s.id, tarih: s.tarih, aciklama: `${EL_ARABASI_TIP_LABEL[s.tip] || ""} satışı (${s.adet} adet)`, tutar: s.toplam, tur: "satis", durum: "tamamlandi" })),
+        ...giderler.map(g => ({ id: g.id, tarih: g.tarih, aciklama: g.aciklama, tutar: -g.tutar, tur: "gider", durum: "gider" }))
+    ].sort((a,b) => (b.tarih || "").localeCompare(a.tarih || ""));
+
+    return React.createElement("div", { className: "fp-fade" },
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "💰 Muhasebe & Raporlar"),
+                React.createElement("div", { className: "section-sub" }, "Gelir-gider, kâr-zarar ve detaylı finansal raporlar")
+            )
+        ),
+        React.createElement("div", { className: "stat-grid" },
+            React.createElement(StatCard, { color: C.green, value: fmtTL(toplamGelir), label: "Toplam Gelir" }),
+            React.createElement(StatCard, { color: C.red, value: fmtTL(toplamGider), label: "Toplam Gider" }),
+            React.createElement(StatCard, { color: C.accent, value: fmtTL(netKar), label: "Net Kâr" }),
+            React.createElement(StatCard, { color: C.blue, value: fmtTL(buAyGelir), label: "Bu Ay Gelir" }),
+            React.createElement(StatCard, { color: C.yellow, value: fmtTL(buAyGider), label: "Bu Ay Gider" }),
+            React.createElement(StatCard, { color: C.purple, value: fmtTL(buAyGelir - buAyGider), label: "Bu Ay Net Kâr" })
+        ),
+        React.createElement("div", { className: "table-wrap", style: { background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 4 } },
+            React.createElement("table", null,
+                React.createElement("thead", null,
+                    React.createElement("tr", null,
+                        React.createElement("th", null, "Tarih"), React.createElement("th", null, "Açıklama"),
+                        React.createElement("th", null, "Tür"), React.createElement("th", null, "Tutar"), React.createElement("th", null, "Durum")
+                    )
+                ),
+                React.createElement("tbody", null,
+                    tumIslemler.length === 0 ? React.createElement("tr", null, React.createElement("td", { colSpan: 5, style: { textAlign: "center", padding: 30, color: C.muted } }, "Kayıt yok.")) :
                     tumIslemler.map(i =>
                         React.createElement("tr", { key: i.tur + i.id },
-                            React.createElement("td", { style: S.td }, fmtDate(i.tarih)),
-                            React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, i.musteriId))),
-                            React.createElement("td", { style: S.td }, i.aciklama),
-                            React.createElement("td", { style: S.td }, i.tur === "servis" ? "🔧 Servis" : "🛒 Satış"),
-                            React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.accent } }, fmtTL(i.tutar))),
-                            React.createElement("td", { style: S.td }, i.odendi ? React.createElement(Badge, { d: "tamamlandi", map: { tamamlandi: "Ödendi" }, renk: { tamamlandi: C.green } }) :
-                                React.createElement(Badge, { d: "bekliyor", map: { bekliyor: "Bekliyor" }, renk: { bekliyor: C.yellow } }))
+                            React.createElement("td", null, fmtDate(i.tarih)),
+                            React.createElement("td", null, i.aciklama),
+                            React.createElement("td", null,
+                                i.tur === "servis" ? "🔧 Servis" :
+                                i.tur === "satis" ? "🛒 Satış" : "💳 Gider"
+                            ),
+                            React.createElement("td", null,
+                                React.createElement("strong", { style: { color: i.tutar < 0 ? C.red : C.green } }, fmtTL(i.tutar))
+                            ),
+                            React.createElement("td", null,
+                                i.tur === "gider" ? React.createElement("span", { className: "badge badge-red" }, "Gider") :
+                                i.durum === "tamamlandi" ? React.createElement("span", { className: "badge badge-green" }, "Tamamlandı") :
+                                React.createElement("span", { className: "badge badge-yellow" }, "Devam Ediyor")
+                            )
                         )
                     )
                 )
@@ -687,45 +1165,67 @@ function Muhasebe() {
     );
 }
 
-function Ayarlar() {
+// --- Ayarlar Modülü ---
+function AyarlarModulu() {
     const [form, setForm] = useState(getSettings());
     const [kaydedildi, setKaydedildi] = useState(false);
+
     const kaydet = () => { saveSettings(form); setKaydedildi(true); setTimeout(() => setKaydedildi(false), 2000); };
 
     return React.createElement("div", { className: "fp-fade" },
-        React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white, marginBottom: 16 } }, "⚙️ Ayarlar"),
-        React.createElement("div", { style: S.card },
-            React.createElement("div", { style: S.secTitle }, "🏢 Firma Bilgileri"),
-            React.createElement(FG, { label: "Firma Adı" }, React.createElement("input", { style: { ...S.inp }, value: form.firmaAdi || "", onChange: (e) => setForm(f => ({ ...f, firmaAdi: e.target.value })) })),
-            React.createElement(Grid2, null,
-                React.createElement(FG, { label: "Telefon" }, React.createElement("input", { style: { ...S.inp }, value: form.firmaTel || "", onChange: (e) => setForm(f => ({ ...f, firmaTel: e.target.value })) })),
-                React.createElement(FG, { label: "KDV Oranı (%)" }, React.createElement("input", { type: "number", style: { ...S.inp }, value: form.kdvOrani || "", onChange: (e) => setForm(f => ({ ...f, kdvOrani: +e.target.value })) }))
-            ),
-            React.createElement(FG, { label: "Adres" }, React.createElement("input", { style: { ...S.inp }, value: form.firmaAdres || "", onChange: (e) => setForm(f => ({ ...f, firmaAdres: e.target.value })) }))
-        ),
-        React.createElement("div", { style: S.card },
-            React.createElement("div", { style: S.secTitle }, "🛒 El Arabası Varsayılan Fiyatlar"),
-            React.createElement(Grid2, null,
-                React.createElement(FG, { label: "Kantarlı El Arabası (₺)" }, React.createElement("input", { type: "number", style: { ...S.inp }, value: form.kantarliFiyat || "", onChange: (e) => setForm(f => ({ ...f, kantarliFiyat: +e.target.value })) })),
-                React.createElement(FG, { label: "Kantarsız El Arabası (₺)" }, React.createElement("input", { type: "number", style: { ...S.inp }, value: form.kantarsizFiyat || "", onChange: (e) => setForm(f => ({ ...f, kantarsizFiyat: +e.target.value })) }))
+        React.createElement("div", { className: "flex-between mb-16" },
+            React.createElement("div", null,
+                React.createElement("div", { className: "section-title" }, "⚙️ Ayarlar"),
+                React.createElement("div", { className: "section-sub" }, "Firma bilgileri, fiyatlar ve veri yönetimi")
             )
         ),
-        React.createElement("div", { style: S.card },
-            React.createElement("div", { style: S.secTitle }, "💾 Veri Yönetimi"),
-            React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Tüm verilerinizi tek bir dosya olarak indirin veya geri yükleyin."),
-            React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" } },
-                React.createElement("button", { style: S.btnO, onClick: () => {
+        React.createElement("div", { style: { background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 } },
+            React.createElement("div", { style: { fontWeight: 700, color: C.white, marginBottom: 12 } }, "🏢 Firma Bilgileri"),
+            React.createElement("div", null,
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Firma Adı"),
+                React.createElement("input", { value: form.firmaAdi || "", onChange: (e) => setForm(f => ({ ...f, firmaAdi: e.target.value })) })
+            ),
+            React.createElement("div", { className: "grid-2", style: { marginTop: 12 } },
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Telefon"),
+                    React.createElement("input", { value: form.firmaTel || "", onChange: (e) => setForm(f => ({ ...f, firmaTel: e.target.value })) })
+                ),
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "KDV Oranı (%)"),
+                    React.createElement("input", { type: "number", value: form.kdvOrani || "", onChange: (e) => setForm(f => ({ ...f, kdvOrani: +e.target.value })) })
+                )
+            ),
+            React.createElement("div", { style: { marginTop: 12 } },
+                React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Adres"),
+                React.createElement("input", { value: form.firmaAdres || "", onChange: (e) => setForm(f => ({ ...f, firmaAdres: e.target.value })) })
+            )
+        ),
+        React.createElement("div", { style: { background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 } },
+            React.createElement("div", { style: { fontWeight: 700, color: C.white, marginBottom: 12 } }, "🛒 El Arabası Varsayılan Fiyatlar"),
+            React.createElement("div", { className: "grid-2" },
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Kantarlı El Arabası (₺)"),
+                    React.createElement("input", { type: "number", value: form.kantarliFiyat || "", onChange: (e) => setForm(f => ({ ...f, kantarliFiyat: +e.target.value })) })
+                ),
+                React.createElement("div", null,
+                    React.createElement("label", { className: "text-muted", style: { fontSize: 12, display: "block", marginBottom: 4 } }, "Kantarsız El Arabası (₺)"),
+                    React.createElement("input", { type: "number", value: form.kantarsizFiyat || "", onChange: (e) => setForm(f => ({ ...f, kantarsizFiyat: +e.target.value })) })
+                )
+            )
+        ),
+        React.createElement("div", { style: { background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 } },
+            React.createElement("div", { style: { fontWeight: 700, color: C.white, marginBottom: 12 } }, "💾 Veri Yönetimi"),
+            React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Tüm verileri yedekleyin veya geri yükleyin."),
+            React.createElement("div", { className: "flex-gap" },
+                React.createElement("button", { className: "btn-outline", onClick: () => {
                     const veri = {};
-                    ["cariler","servisIsleri","uretimKayitlari","satislar","ayarlar"].forEach(k => veri[k] = k === "ayarlar" ? getSettings() : LS.get(k));
+                    ["cariler","servisIsleri","uretimKayitlari","satislar","personeller","tedarikciler","giderler","ayarlar"].forEach(k => veri[k] = k === "ayarlar" ? getSettings() : LS.get(k));
                     const blob = new Blob([JSON.stringify(veri, null, 2)], { type: "application/json" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `as-yedek-${today()}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    a.href = url; a.download = `as-yedek-${today()}.json`; a.click(); URL.revokeObjectURL(url);
                 } }, "⬇️ Yedeği İndir"),
-                React.createElement("label", { style: { ...S.btnO, cursor: "pointer" } },
+                React.createElement("label", { className: "btn-outline", style: { cursor: "pointer" } },
                     "⬆️ Yedek Yükle",
                     React.createElement("input", { type: "file", accept: ".json", style: { display: "none" }, onChange: (e) => {
                         const dosya = e.target.files[0];
@@ -744,48 +1244,66 @@ function Ayarlar() {
                 )
             )
         ),
-        React.createElement("button", { style: S.btn(), onClick: kaydet }, "💾 Ayarları Kaydet"),
+        React.createElement("button", { className: "btn-primary", onClick: kaydet }, "💾 Ayarları Kaydet"),
         kaydedildi && React.createElement("span", { style: { marginLeft: 12, color: C.green, fontSize: 13 } }, "✓ Kaydedildi")
     );
 }
 
-// --- Sayfa Tanımları ---
-const SAYFALAR = [
-    { id: "dashboard", label: "Genel Bakış", icon: "📊", comp: Dashboard },
-    { id: "servis", label: "Servis İşleri", icon: "🔧", comp: ServisIsleri },
-    { id: "uretim", label: "Üretim & Stok", icon: "🛒", comp: UretimStok },
-    { id: "cariler", label: "Müşteriler", icon: "👥", comp: Cariler },
-    { id: "muhasebe", label: "Muhasebe", icon: "💰", comp: Muhasebe },
-    { id: "ayarlar", label: "Ayarlar", icon: "⚙️", comp: Ayarlar }
-];
-
-// --- Ana Uygulama ---
+// --- Sayfa Yönlendirme ---
 function App() {
     seedVeri();
-    const [sayfa, setSayfa] = useState(() => location.hash.replace("#", "") || "dashboard");
-    useEffect(() => { location.hash = sayfa; }, [sayfa]);
+    const [page, setPage] = useState(() => location.hash.replace("#", "") || "dashboard");
 
-    const AktifBilesen = (SAYFALAR.find(s => s.id === sayfa) || SAYFALAR[0]).comp;
+    useEffect(() => { location.hash = page; }, [page]);
 
-    return React.createElement("div", { style: S.app },
-        React.createElement("div", { style: S.sidebar },
-            React.createElement("div", { style: { padding: "6px 10px 20px" } },
+    const pageComponents = {
+        dashboard: Dashboard,
+        servis: ServisModulu,
+        uretim: UretimModulu,
+        cari: CariModulu,
+        personel: PersonelModulu,
+        tedarikci: TedarikciModulu,
+        muhasebe: MuhasebeModulu,
+        gider: GiderModulu,
+        ayarlar: AyarlarModulu
+    };
+
+    const AktifPage = pageComponents[page] || Dashboard;
+    const navItems = [
+        { id: "dashboard", label: "Genel Bakış", icon: "📊" },
+        { id: "servis", label: "Servis İşlemleri", icon: "🔧" },
+        { id: "uretim", label: "Üretim & Stok", icon: "🏭" },
+        { id: "cari", label: "Müşteriler", icon: "👥" },
+        { id: "personel", label: "Personel", icon: "👨‍🔧" },
+        { id: "tedarikci", label: "Tedarikçiler", icon: "📦" },
+        { id: "muhasebe", label: "Muhasebe", icon: "💰" },
+        { id: "gider", label: "Gider Takibi", icon: "💳" },
+        { id: "ayarlar", label: "Ayarlar", icon: "⚙️" }
+    ];
+
+    return React.createElement("div", { className: "app-layout" },
+        React.createElement("div", { className: "sidebar" },
+            React.createElement("div", { style: { padding: "0 4px 20px" } },
                 React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: C.white, letterSpacing: -0.3 } }, "🔧 AS"),
-                React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Egzoz · Chiptuning · Üretim")
+                React.createElement("div", { className: "brand-text", style: { fontSize: 11, color: C.muted } }, "Yönetim Paneli")
             ),
-            SAYFALAR.map(s =>
-                React.createElement("div", { key: s.id, style: S.navBtn(sayfa === s.id), onClick: () => setSayfa(s.id) },
-                    React.createElement("span", null, s.icon),
-                    React.createElement("span", null, s.label)
+            navItems.map(item =>
+                React.createElement("div", {
+                    key: item.id,
+                    className: `nav-item ${page === item.id ? 'active' : ''}`,
+                    onClick: () => setPage(item.id)
+                },
+                    React.createElement("span", { className: "nav-icon" }, item.icon),
+                    React.createElement("span", { className: "nav-label" }, item.label)
                 )
             ),
             React.createElement("div", { style: { flex: 1 } }),
-            React.createElement("div", { style: { padding: "12px 10px", fontSize: 10.5, color: C.muted, borderTop: `1px solid ${C.border}`, marginTop: 12, paddingTop: 14 } },
-                "AS Yönetim v1.0 · Yerel veri"
+            React.createElement("div", { style: { padding: "12px 4px", fontSize: 10.5, color: C.muted, borderTop: `1px solid ${C.border}`, marginTop: 12 } },
+                "AS v1.0 · Yerel Veri"
             )
         ),
-        React.createElement("div", { style: S.main },
-            React.createElement(AktifBilesen, null)
+        React.createElement("div", { className: "main-content" },
+            React.createElement(AktifPage, { setPage: setPage })
         )
     );
 }
