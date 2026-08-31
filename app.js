@@ -1835,7 +1835,12 @@ function Ayarlar() {
       }
     };
     okuyucu.readAsText(dosya);
-  } })))), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "\u{1F4BE} Ayarlar\u0131 Kaydet"), kaydedildi && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 12, color: C.green, fontSize: 13 } }, "\u2713 Kaydedildi"));
+  } })))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, border: `1px solid ${C.red}55` } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, color: C.red } }, "\u26A0\uFE0F Tehlikeli B\xF6lge"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Bu cihazdaki t\xFCm m\xFC\u015Fteri, ara\xE7, servis i\u015Fi, \xFCr\xFCn, fatura ve ayar verilerini kal\u0131c\u0131 olarak siler. Ba\u015Fka bir cihazda bulut senkronizasyonu a\xE7\u0131ksa oradaki veriler etkilenmez, ama bu cihazdan tekrar senkronize edilirse orada da silinebilir. \u0130\u015Flem geri al\u0131namaz."), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnR, padding: "9px 16px", fontSize: 13 }, onClick: () => {
+    if (!confirm("T\xDCM veriler (m\xFC\u015Fteriler, ara\xE7lar, servis i\u015Fleri, \xFCr\xFCnler, faturalar, ayarlar vb.) kal\u0131c\u0131 olarak silinecek. Bu i\u015Flem GER\u0130 AL\u0131NAMAZ. Devam etmeden \xF6nce Veri Y\xF6netimi'nden yedek indirmenizi \xF6neririz. Devam edilsin mi?")) return;
+    if (!confirm("Son kez soruyoruz: t\xFCm veriler s\u0131f\u0131rlans\u0131n m\u0131?")) return;
+    localStorage.clear();
+    window.location.reload();
+  } }, "\u{1F5D1}\uFE0F T\xFCm Verileri S\u0131f\u0131rla")), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "\u{1F4BE} Ayarlar\u0131 Kaydet"), kaydedildi && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 12, color: C.green, fontSize: 13 } }, "\u2713 Kaydedildi"));
 }
 function MalzemeStok() {
   const [liste, setListe] = useState(LS.get("malzemeler"));
