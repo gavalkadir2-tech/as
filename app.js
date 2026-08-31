@@ -140,6 +140,14 @@ async function aiSor(promptMetni) {
 const ALL_DATA_KEYS = ["cariler", "servisIsleri", "urunler", "uretimKayitlari", "satislar", "faturalar", "giderler", "malzemeler", "personel", "araclar", "hesaplar", "kasaHareketleri", "cekSenetler"];
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const today = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+function dosyaOku(dosya) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(dosya);
+  });
+}
 const fmtDate = (d) => {
   if (!d) return "\u2014";
   const [y, m, g] = d.split("-");
@@ -438,8 +446,9 @@ function ServisIsleri() {
   const [form, setForm] = useState({});
   const [hata, setHata] = useState("");
   const [durumFiltre, setDurumFiltre] = useState("acik");
-  const [yeniCariAcik, setYeniCariAcik] = useState(false);
   const [yeniAracAcik, setYeniAracAcik] = useState(false);
+  const [sahipDuzenAcik, setSahipDuzenAcik] = useState(false);
+  const [sahipForm, setSahipForm] = useState({});
   const [arama, setArama] = useState("");
   const [odemeModal, setOdemeModal] = useState(null);
   const [odemeHesapId, setOdemeHesapId] = useState("");
@@ -495,12 +504,12 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
   const formToplam = (form.kalemler || []).reduce((t, k) => t + (+k.tutar || 0), 0);
 
   const kaydet = () => {
-    if (!form.musteriId) {
-      setHata("M\xFC\u015Fteri se\xE7imi zorunludur.");
+    if (!form.aracId) {
+      setHata("Ara\xE7 se\xE7imi zorunludur.");
       return;
     }
-    if (!form.aracId) {
-      setHata("Ara\xE7/\xFCr\xFCn se\xE7imi zorunludur.");
+    if (!form.musteriId) {
+      setHata("Bu ara\xE7\u0131n sahibi tan\u0131ml\u0131 de\u011Fil \u2014 \xF6nce sahibini d\xFCzenleyin.");
       return;
     }
     if (!form.hizmetTuru) {
@@ -620,7 +629,37 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     return a ? `${a.plaka}${a.marka ? " \xB7 " + a.marka + " " + (a.model || "") : ""}` : s.aracPlaka || "\u2014";
   };
   const gosterilecek = !aramaMetni ? durumaGoreFiltreli : durumaGoreFiltreli.filter((s) => (cariAd(cariler, s.musteriId) + " " + aracEtiket(s) + " " + (s.aciklama || "") + " " + (s.isEmriNo || "")).toLocaleLowerCase("tr-TR").includes(aramaMetni));
-  const musteriAraclari = form.musteriId ? araclar.filter((a) => a.musteriId === form.musteriId) : araclar;
+  const araclarSirali = [...araclar].sort((a, b) => (a.plaka || "").localeCompare(b.plaka || ""));
+  const secilenArac = form.aracId ? araclar.find((a) => a.id === form.aracId) : null;
+  const secilenAracSahibi = secilenArac ? cariler.find((c) => c.id === secilenArac.musteriId) : null;
+  const aracSec = (aracId) => {
+    const a = araclar.find((x) => x.id === aracId);
+    setForm((f) => ({ ...f, aracId, musteriId: a ? a.musteriId : "" }));
+  };
+  const sahipKaydet = () => {
+    if (!(sahipForm.ad || "").trim()) {
+      alert("M\xFCşteri / Firma adı zorunludur.");
+      return;
+    }
+    if (!secilenArac) return;
+    const mevcutCariler = LS.get("cariler");
+    let cariId = secilenArac.musteriId;
+    let yeniCariler;
+    if (cariId && mevcutCariler.some((c) => c.id === cariId)) {
+      yeniCariler = mevcutCariler.map((c) => c.id === cariId ? { ...c, ad: sahipForm.ad.trim(), tel: (sahipForm.tel || "").trim(), adres: (sahipForm.adres || "").trim() } : c);
+    } else {
+      const yeniCari = { id: uid(), ad: sahipForm.ad.trim(), tel: (sahipForm.tel || "").trim(), adres: (sahipForm.adres || "").trim() };
+      cariId = yeniCari.id;
+      yeniCariler = [...mevcutCariler, yeniCari];
+    }
+    LS.set("cariler", yeniCariler);
+    setCariler(yeniCariler);
+    const yeniAraclar = araclar.map((a) => a.id === secilenArac.id ? { ...a, musteriId: cariId } : a);
+    LS.set("araclar", yeniAraclar);
+    setAraclar(yeniAraclar);
+    setForm((f) => ({ ...f, musteriId: cariId }));
+    setSahipDuzenAcik(false);
+  };
   const garantiDurumu = (s) => {
     if (!s.garantili || !s.garantiBitis) return null;
     const kalanGun = Math.ceil((new Date(s.garantiBitis) - new Date(today())) / 864e5);
@@ -737,18 +776,21 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
         React.createElement(FG, { label: "Tahmini Teslim Tarihi (opsiyonel)" }, React.createElement("input", { type: "date", style: S.inp, value: form.teslimTarihi || "", onChange: (e) => setForm((f) => ({ ...f, teslimTarihi: e.target.value })) }))
       ),
       React.createElement(FG, { label: "Hizmet T\xFCr\xFC" }, React.createElement("select", { style: S.sel, value: form.hizmetTuru || "", onChange: (e) => setForm((f) => ({ ...f, hizmetTuru: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), Object.entries(HIZMET_TIP_LABEL).map(([k, l]) => React.createElement("option", { key: k, value: k }, l)))),
-      React.createElement(FG, { label: "M\xFC\u015Fteri" }, React.createElement(
+      React.createElement(FG, { label: "Ara\xE7 (Plaka)" }, React.createElement(
         "div",
         { style: { display: "flex", gap: 8 } },
-        React.createElement("select", { style: S.sel, value: form.musteriId || "", onChange: (e) => setForm((f) => ({ ...f, musteriId: e.target.value, aracId: "" })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), cariler.map((c) => React.createElement("option", { key: c.id, value: c.id }, c.ad))),
-        React.createElement("button", { type: "button", style: S.btnO, onClick: () => setYeniCariAcik(true) }, "\u2795 Yeni")
+        React.createElement("select", { style: S.sel, value: form.aracId || "", onChange: (e) => aracSec(e.target.value) }, React.createElement("option", { value: "" }, "\u2014 Plaka se\xE7iniz \u2014"), araclarSirali.map((a) => React.createElement("option", { key: a.id, value: a.id }, a.plaka, a.marka ? ` \xB7 ${a.marka} ${a.model || ""}` : "", " ", `(${cariAd(cariler, a.musteriId)})`))),
+        React.createElement("button", { type: "button", style: S.btnO, onClick: () => setYeniAracAcik(true) }, "\u2795 Yeni Ara\xE7")
       )),
-      React.createElement(FG, { label: "Ara\xE7/\xDCr\xFCn" }, React.createElement(
+      secilenArac && React.createElement(
         "div",
-        { style: { display: "flex", gap: 8 } },
-        React.createElement("select", { style: S.sel, value: form.aracId || "", onChange: (e) => setForm((f) => ({ ...f, aracId: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), musteriAraclari.map((a) => React.createElement("option", { key: a.id, value: a.id }, a.plaka, a.marka ? ` \xB7 ${a.marka} ${a.model || ""}` : ""))),
-        React.createElement("button", { type: "button", style: S.btnO, onClick: () => setYeniAracAcik(true) }, "\u2795 Yeni")
-      ), !form.musteriId && React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 6 } }, "\xD6nce m\xFC\u015Fteri se\xE7erseniz sadece onun ara\xE7lar\u0131 listelenir.")),
+        { style: { background: C.surface, borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 12.5, color: C.text } },
+        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, React.createElement("strong", { style: { color: C.white } }, "\u{1F464} Ara\xE7 Sahibi"), React.createElement("button", { type: "button", style: { ...S.btnO, padding: "3px 10px", fontSize: 11 }, onClick: () => {
+          setSahipForm({ ad: secilenAracSahibi ? secilenAracSahibi.ad : "", tel: secilenAracSahibi ? secilenAracSahibi.tel : "", adres: secilenAracSahibi ? secilenAracSahibi.adres : "" });
+          setSahipDuzenAcik(true);
+        } }, "\u270F\uFE0F D\xFCzenle")),
+        secilenAracSahibi ? React.createElement(React.Fragment, null, React.createElement("div", { style: { marginTop: 6 } }, secilenAracSahibi.ad), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.tel || "Telefon yok"), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.adres || "Adres yok")) : React.createElement("div", { style: { color: C.yellow, marginTop: 6 } }, "\u26A0\uFE0F Bu ara\xE7\u0131n sahibi tan\u0131ml\u0131 de\u011Fil, l\xFCtfen d\xFCzenleyin.")
+      ),
       React.createElement(FG, { label: "Sorumlu Personel (opsiyonel)" }, React.createElement(
         "div",
         { style: { display: "flex", gap: 8 } },
@@ -803,16 +845,20 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
         React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet")
       )
     ),
-    yeniCariAcik && React.createElement(HizliCariEkle, { onClose: () => setYeniCariAcik(false), onEklendi: (yeni, tumCariler) => {
-      setCariler(tumCariler);
-      setForm((f) => ({ ...f, musteriId: yeni.id }));
-      setYeniCariAcik(false);
-    } }),
-    yeniAracAcik && React.createElement(Modal, { title: "\u2795 H\u0131zl\u0131 Ara\xE7 Ekle", onClose: () => setYeniAracAcik(false), width: 420 }, React.createElement(HizliAracFormu, { musteriId: form.musteriId, onClose: () => setYeniAracAcik(false), onEklendi: (yeni, tumAraclar) => {
+    yeniAracAcik && React.createElement(Modal, { title: "\u2795 Yeni Ara\xE7 Ekle", onClose: () => setYeniAracAcik(false), width: 460 }, React.createElement(HizliAracFormu, { onClose: () => setYeniAracAcik(false), onEklendi: (yeni, tumAraclar, tumCariler) => {
       setAraclar(tumAraclar);
-      setForm((f) => ({ ...f, aracId: yeni.id }));
+      setCariler(tumCariler);
+      setForm((f) => ({ ...f, aracId: yeni.id, musteriId: yeni.musteriId }));
       setYeniAracAcik(false);
     } })),
+    sahipDuzenAcik && React.createElement(
+      Modal,
+      { title: "\u270f\ufe0f Ara\xE7 Sahibini D\xFCzenle", onClose: () => setSahipDuzenAcik(false), width: 420 },
+      React.createElement(FG, { label: "M\xFC\u015fteri / Firma Ad\u0131" }, React.createElement("input", { style: S.inp, value: sahipForm.ad || "", onChange: (e) => setSahipForm((f) => ({ ...f, ad: e.target.value })), autoFocus: true })),
+      React.createElement(FG, { label: "Telefon" }, React.createElement("input", { style: S.inp, value: sahipForm.tel || "", onChange: (e) => setSahipForm((f) => ({ ...f, tel: e.target.value })) })),
+      React.createElement(FG, { label: "Adres" }, React.createElement("input", { style: S.inp, value: sahipForm.adres || "", onChange: (e) => setSahipForm((f) => ({ ...f, adres: e.target.value })) })),
+      React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setSahipDuzenAcik(false) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: sahipKaydet }, "Kaydet"))
+    ),
     odemeModal && React.createElement(
       Modal,
       { title: "\u{1F4B0} \xD6deme Al", onClose: () => setOdemeModal(null), width: 400 },
@@ -834,22 +880,45 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     )
   );
 }
-function HizliAracFormu({ musteriId, onClose, onEklendi }) {
+function HizliAracFormu({ onClose, onEklendi }) {
   const [plaka, setPlaka] = useState("");
   const [marka, setMarka] = useState("");
   const [model, setModel] = useState("");
+  const [musteriAdi, setMusteriAdi] = useState("");
+  const [tel, setTel] = useState("");
+  const [adres, setAdres] = useState("");
+  const [hata, setHata] = useState("");
   const kaydet = () => {
     if (!plaka.trim()) {
-      alert("Plaka zorunludur.");
+      setHata("Plaka zorunludur.");
       return;
     }
-    const mevcut = LS.get("araclar");
-    const yeni = { id: uid(), musteriId: musteriId || null, plaka: plaka.trim().toUpperCase(), marka: marka.trim(), model: model.trim() };
-    const tumu = [...mevcut, yeni];
-    LS.set("araclar", tumu);
-    onEklendi(yeni, tumu);
+    if (!musteriAdi.trim()) {
+      setHata("M\xFC\u015Fteri / Firma ad\u0131 zorunludur.");
+      return;
+    }
+    setHata("");
+    const cariler = LS.get("cariler");
+    const yeniCari = { id: uid(), ad: musteriAdi.trim(), tel: tel.trim(), adres: adres.trim() };
+    const tumCariler = [...cariler, yeniCari];
+    LS.set("cariler", tumCariler);
+    const araclar = LS.get("araclar");
+    const yeniArac = { id: uid(), musteriId: yeniCari.id, plaka: plaka.trim().toUpperCase(), marka: marka.trim(), model: model.trim() };
+    const tumAraclar = [...araclar, yeniArac];
+    LS.set("araclar", tumAraclar);
+    onEklendi(yeniArac, tumAraclar, tumCariler);
   };
-  return /* @__PURE__ */ React.createElement(React.Fragment, null, !musteriId && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.yellow, marginBottom: 12 } }, "\u26A0\uFE0F \xD6nce bir m\xFC\u015Fteri se\xE7mediniz \u2014 bu ara\xE7 sahipsiz eklenecek, sonra d\xFCzenleyebilirsiniz."), /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: plaka, onChange: (e) => setPlaka(e.target.value), autoFocus: true, placeholder: "45 ABC 123" })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Marka" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: marka, onChange: (e) => setMarka(e.target.value) })), /* @__PURE__ */ React.createElement(FG, { label: "Model" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: model, onChange: (e) => setModel(e.target.value) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: onClose }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet")));
+  return /* @__PURE__ */ React.createElement(
+    React.Fragment,
+    null,
+    /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: plaka, onChange: (e) => setPlaka(e.target.value), autoFocus: true, placeholder: "45 ABC 123" })),
+    /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Marka" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: marka, onChange: (e) => setMarka(e.target.value) })), /* @__PURE__ */ React.createElement(FG, { label: "Model" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: model, onChange: (e) => setModel(e.target.value) }))),
+    /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "\u{1F464} Ara\xE7 Sahibi"),
+    /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: musteriAdi, onChange: (e) => setMusteriAdi(e.target.value) })),
+    /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: tel, onChange: (e) => setTel(e.target.value) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: adres, onChange: (e) => setAdres(e.target.value) }))),
+    hata && /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26A0\uFE0F ", hata),
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: onClose }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))
+  );
 }
 function UretimStok() {
   const [urunler, setUrunler] = useState(LS.get("urunler"));
@@ -1246,23 +1315,6 @@ function UretimStok() {
       )
     )
   );
-}
-function HizliCariEkle({ onClose, onEklendi }) {
-  const [ad, setAd] = useState("");
-  const [tel, setTel] = useState("");
-  const [adres, setAdres] = useState("");
-  const kaydet = () => {
-    if (!ad.trim()) {
-      alert("M\xFC\u015Fteri ad\u0131 zorunludur.");
-      return;
-    }
-    const mevcut = LS.get("cariler");
-    const yeni = { id: uid(), ad: ad.trim(), tel: tel.trim(), adres: adres.trim() };
-    const tumu = [...mevcut, yeni];
-    LS.set("cariler", tumu);
-    onEklendi(yeni, tumu);
-  };
-  return /* @__PURE__ */ React.createElement(Modal, { title: "\u2795 H\u0131zl\u0131 M\xFC\u015Fteri Ekle", onClose, width: 420 }, /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: ad, onChange: (e) => setAd(e.target.value), autoFocus: true })), /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: tel, onChange: (e) => setTel(e.target.value) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: adres, onChange: (e) => setAdres(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: onClose }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet")));
 }
 function Cariler() {
   const [liste, setListe] = useState(LS.get("cariler"));
@@ -1895,15 +1947,33 @@ function Araclar() {
   const [servisler] = useState(LS.get("servisIsleri"));
   const [modalAcik, setModalAcik] = useState(false);
   const [form, setForm] = useState({});
-  const [gecmisAracId, setGecmisAracId] = useState(null);
-  const [yeniCariAcik, setYeniCariAcik] = useState(false);
+  const [detayAracId, setDetayAracId] = useState(null);
   const [arama, setArama] = useState("");
   const kaydet = () => {
     if (!(form.plaka || "").trim()) {
       alert("Plaka zorunludur.");
       return;
     }
-    const kayit = { ...form, id: form.id || uid(), plaka: form.plaka.trim().toUpperCase() };
+    if (!(form.musteriAdi || "").trim()) {
+      alert("Müşteri / Firma adı zorunludur.");
+      return;
+    }
+    let cariId = form.musteriId;
+    const cariBilgisi = { ad: form.musteriAdi.trim(), tel: (form.musteriTel || "").trim(), adres: (form.musteriAdres || "").trim() };
+    let yeniCariler;
+    if (cariId && cariler.some((c) => c.id === cariId)) {
+      yeniCariler = cariler.map((c) => c.id === cariId ? { ...c, ...cariBilgisi } : c);
+    } else {
+      const yeniCari = { id: uid(), ...cariBilgisi };
+      cariId = yeniCari.id;
+      yeniCariler = [...cariler, yeniCari];
+    }
+    LS.set("cariler", yeniCariler);
+    setCariler(yeniCariler);
+    const kayit = { ...form, id: form.id || uid(), plaka: form.plaka.trim().toUpperCase(), musteriId: cariId };
+    delete kayit.musteriAdi;
+    delete kayit.musteriTel;
+    delete kayit.musteriAdres;
     const yeni = form.id ? liste.map((x) => x.id === form.id ? kayit : x) : [...liste, kayit];
     LS.set("araclar", yeni);
     setListe(yeni);
@@ -1911,34 +1981,70 @@ function Araclar() {
   };
   const sil = (id) => {
     if (servisler.some((s) => s.aracId === id)) {
-      alert("Bu araca ait servis kay\u0131tlar\u0131 var, \xF6nce onlar\u0131 d\xFCzenleyin/silin.");
+      alert("Bu araca ait servis kayıtları var, önce onları düzenleyin/silin.");
       return;
     }
-    if (!confirm("Bu ara\xE7 silinsin mi?")) return;
+    if (!confirm("Bu araç silinsin mi?")) return;
     const yeni = liste.filter((x) => x.id !== id);
+    LS.set("araclar", yeni);
+    setListe(yeni);
+  };
+  const aracDuzenle = (a) => {
+    const sahip = cariler.find((c) => c.id === a.musteriId) || {};
+    setForm({ ...a, musteriAdi: sahip.ad || "", musteriTel: sahip.tel || "", musteriAdres: sahip.adres || "" });
+    setModalAcik(true);
+  };
+  const aracGuncelle = (aracId, patch) => {
+    const yeni = liste.map((x) => x.id === aracId ? { ...x, ...patch } : x);
     LS.set("araclar", yeni);
     setListe(yeni);
   };
   const aracServisleri = (aracId) => servisler.filter((s) => s.aracId === aracId).sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""));
   const aramaMetni = arama.trim().toLocaleLowerCase("tr-TR");
   const filtreli = !aramaMetni ? liste : liste.filter((a) => (a.plaka + " " + (a.marka || "") + " " + (a.model || "") + " " + cariAd(cariler, a.musteriId)).toLocaleLowerCase("tr-TR").includes(aramaMetni));
-  const gecmisArac = gecmisAracId && liste.find((a) => a.id === gecmisAracId);
-  return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F697} Ara\xE7 Kay\u0131tlar\u0131"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => {
+  const detayArac = detayAracId ? liste.find((a) => a.id === detayAracId) : null;
+  return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "🚗 Araç Kayıtları"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => {
     setForm({});
     setModalAcik(true);
-  } }, "\u2795 Yeni Ara\xE7")), /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, marginBottom: 16, maxWidth: 360 }, placeholder: "\u{1F50D} Plaka, marka veya m\xFC\u015Fteri ara\u2026", value: arama, onChange: (e) => setArama(e.target.value) }), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("table", { style: S.tbl }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: S.th }, "Plaka"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Marka/Model"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Y\u0131l"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Sahibi"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Servis Ge\xE7mi\u015Fi"), /* @__PURE__ */ React.createElement("th", { style: S.th }))), /* @__PURE__ */ React.createElement("tbody", null, filtreli.length === 0 ? /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", { style: S.td, colSpan: 6 }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: C.muted, padding: 20 } }, "Kay\u0131t bulunamad\u0131."))) : filtreli.map((a) => {
+  } }, "➕ Yeni Araç")), /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, marginBottom: 16, maxWidth: 360 }, placeholder: "🔍 Plaka, marka veya müşteri ara…", value: arama, onChange: (e) => setArama(e.target.value) }), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("table", { style: S.tbl }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: S.th }, "Plaka"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Marka/Model"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Yıl"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Sahibi"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Servis Geçmişi"), /* @__PURE__ */ React.createElement("th", { style: S.th }))), /* @__PURE__ */ React.createElement("tbody", null, filtreli.length === 0 ? /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", { style: S.td, colSpan: 6 }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: C.muted, padding: 20 } }, "Kayıt bulunamadı."))) : filtreli.map((a) => {
     const gecmis = aracServisleri(a.id);
-    return /* @__PURE__ */ React.createElement("tr", { key: a.id }, /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement("strong", { style: { color: C.white } }, a.plaka)), /* @__PURE__ */ React.createElement("td", { style: S.td }, a.marka, " ", a.model), /* @__PURE__ */ React.createElement("td", { style: S.td }, a.yil || "\u2014"), /* @__PURE__ */ React.createElement("td", { style: S.td }, cariAd(cariler, a.musteriId)), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.blue), cursor: "pointer" }, onClick: () => setGecmisAracId(a.id) }, gecmis.length, " servis kayd\u0131")), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => {
-      setForm(a);
-      setModalAcik(true);
-    } }, "\u270F\uFE0F"), /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(a.id) }, "\u{1F5D1}\uFE0F"))));
-  })))), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Arac\u0131 D\xFCzenle" : "Yeni Ara\xE7", onClose: () => setModalAcik(false), width: 480 }, /* @__PURE__ */ React.createElement(FG, { label: "Sahibi (M\xFC\u015Fteri)" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.musteriId || "", onChange: (e) => setForm((f) => ({ ...f, musteriId: e.target.value })) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), cariler.map((c) => /* @__PURE__ */ React.createElement("option", { key: c.id, value: c.id }, c.ad))), /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btnO, onClick: () => setYeniCariAcik(true) }, "\u2795 Yeni"))), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.plaka || "", onChange: (e) => setForm((f) => ({ ...f, plaka: e.target.value })), placeholder: "45 ABC 123" })), /* @__PURE__ */ React.createElement(FG, { label: "Y\u0131l" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.yil || "", onChange: (e) => setForm((f) => ({ ...f, yil: +e.target.value })) }))), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Marka" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.marka || "", onChange: (e) => setForm((f) => ({ ...f, marka: e.target.value })), placeholder: "Ford" })), /* @__PURE__ */ React.createElement(FG, { label: "Model" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.model || "", onChange: (e) => setForm((f) => ({ ...f, model: e.target.value })), placeholder: "Transit" }))), /* @__PURE__ */ React.createElement(FG, { label: "\u015Easi No (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.sasiNo || "", onChange: (e) => setForm((f) => ({ ...f, sasiNo: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Notlar" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.notlar || "", onChange: (e) => setForm((f) => ({ ...f, notlar: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), yeniCariAcik && /* @__PURE__ */ React.createElement(HizliCariEkle, { onClose: () => setYeniCariAcik(false), onEklendi: (yeni, tumCariler) => {
-    setCariler(tumCariler);
-    setForm((f) => ({ ...f, musteriId: yeni.id }));
-    setYeniCariAcik(false);
-  } }), gecmisArac && /* @__PURE__ */ React.createElement(Modal, { title: `\u{1F697} ${gecmisArac.plaka} \u2014 Servis Ge\xE7mi\u015Fi`, onClose: () => setGecmisAracId(null), width: 640 }, aracServisleri(gecmisArac.id).length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Bu araca ait servis kayd\u0131 yok.") : /* @__PURE__ */ React.createElement("table", { style: S.tbl }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tarih"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Hizmet"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tutar"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Durum"))), /* @__PURE__ */ React.createElement("tbody", null, aracServisleri(gecmisArac.id).map(
-    (s) => /* @__PURE__ */ React.createElement("tr", { key: s.id }, /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtDate(s.tarih)), /* @__PURE__ */ React.createElement("td", { style: S.td }, HIZMET_TIP_LABEL[s.hizmetTuru], s.aciklama ? ` \u2014 ${s.aciklama}` : ""), /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtTL(s.tutar)), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement(Badge, { d: s.durum })))
-  )))));
+    return /* @__PURE__ */ React.createElement("tr", { key: a.id }, /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement("strong", { style: { color: C.accent, cursor: "pointer", textDecoration: "underline" }, title: "Araç sicilini görüntüle (fotoğraf, belge, servis geçmişi)", onClick: () => setDetayAracId(a.id) }, a.plaka)), /* @__PURE__ */ React.createElement("td", { style: S.td }, a.marka, " ", a.model), /* @__PURE__ */ React.createElement("td", { style: S.td }, a.yil || "—"), /* @__PURE__ */ React.createElement("td", { style: S.td }, cariAd(cariler, a.musteriId)), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.blue), cursor: "pointer" }, onClick: () => setDetayAracId(a.id) }, gecmis.length, " servis kaydı")), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => aracDuzenle(a) }, "✏️"), /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(a.id) }, "🗑️"))));
+  })))), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Aracı Düzenle" : "Yeni Araç", onClose: () => setModalAcik(false), width: 480 }, /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.plaka || "", onChange: (e) => setForm((f) => ({ ...f, plaka: e.target.value })), placeholder: "45 ABC 123", autoFocus: true })), /* @__PURE__ */ React.createElement(FG, { label: "Yıl" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.yil || "", onChange: (e) => setForm((f) => ({ ...f, yil: +e.target.value })) }))), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Marka" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.marka || "", onChange: (e) => setForm((f) => ({ ...f, marka: e.target.value })), placeholder: "Ford" })), /* @__PURE__ */ React.createElement(FG, { label: "Model" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.model || "", onChange: (e) => setForm((f) => ({ ...f, model: e.target.value })), placeholder: "Transit" }))), /* @__PURE__ */ React.createElement(FG, { label: "Şasi No (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.sasiNo || "", onChange: (e) => setForm((f) => ({ ...f, sasiNo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "👤 Araç Sahibi (Müşteri/Firma)"), /* @__PURE__ */ React.createElement(FG, { label: "Müşteri / Firma Adı" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdi || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdi: e.target.value })) })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriTel || "", onChange: (e) => setForm((f) => ({ ...f, musteriTel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdres || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdres: e.target.value })) }))), /* @__PURE__ */ React.createElement(FG, { label: "Notlar" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.notlar || "", onChange: (e) => setForm((f) => ({ ...f, notlar: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), detayArac && /* @__PURE__ */ React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: aracServisleri(detayArac.id), onClose: () => setDetayAracId(null), onGuncelle: (patch) => aracGuncelle(detayArac.id, patch) }));
+}
+function AracDetayModal({ arac, cariler, servisler, onClose, onGuncelle }) {
+  const [sekme, setSekme] = useState("servis");
+  const sahip = cariler.find((c) => c.id === arac.musteriId);
+  const fotoEkle = async (e) => {
+    const dosyalar = Array.from(e.target.files || []);
+    if (dosyalar.length === 0) return;
+    const okunanlar = await Promise.all(dosyalar.map(async (d) => ({ id: uid(), ad: d.name, veri: await dosyaOku(d), tarih: today() })));
+    onGuncelle({ fotograflar: [...(arac.fotograflar || []), ...okunanlar] });
+    e.target.value = "";
+  };
+  const fotoSil = (id) => {
+    onGuncelle({ fotograflar: (arac.fotograflar || []).filter((f) => f.id !== id) });
+  };
+  const belgeEkle = async (e) => {
+    const dosyalar = Array.from(e.target.files || []);
+    if (dosyalar.length === 0) return;
+    const okunanlar = await Promise.all(dosyalar.map(async (d) => ({ id: uid(), ad: d.name, tip: d.type, veri: await dosyaOku(d), tarih: today() })));
+    onGuncelle({ belgeler: [...(arac.belgeler || []), ...okunanlar] });
+    e.target.value = "";
+  };
+  const belgeSil = (id) => {
+    onGuncelle({ belgeler: (arac.belgeler || []).filter((b) => b.id !== id) });
+  };
+  return /* @__PURE__ */ React.createElement(
+    Modal,
+    { title: `🚗 ${arac.plaka} — Araç Sicili`, onClose, width: 720 },
+    /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 6 } }, "Araç"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.white } }, arac.marka || "—", " ", arac.model || "", arac.yil ? ` (${arac.yil})` : ""), arac.sasiNo && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginTop: 4 } }, "Şasi: ", arac.sasiNo), arac.notlar && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginTop: 4 } }, arac.notlar)), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 6 } }, "👤 Müşteri / Firma"), sahip ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.white } }, sahip.ad), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginTop: 4 } }, sahip.tel || "Telefon yok"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginTop: 2 } }, sahip.adres || "Adres yok")) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: C.yellow } }, "⚠️ Sahip bilgisi tanımlı değil."))),
+    /* @__PURE__ */ React.createElement(TabBar, { tabs: [["servis", `🧾 Servis Geçmişi (${servisler.length})`], ["foto", `🖼️ Fotoğraflar (${(arac.fotograflar || []).length})`], ["belge", `📎 Belgeler (${(arac.belgeler || []).length})`]], active: sekme, onChange: setSekme }),
+    sekme === "servis" && (servisler.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Bu araca ait servis kaydı yok.") : /* @__PURE__ */ React.createElement("table", { style: S.tbl }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tarih"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Hizmet"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tutar"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Durum"))), /* @__PURE__ */ React.createElement("tbody", null, servisler.map(
+      (s) => /* @__PURE__ */ React.createElement("tr", { key: s.id }, /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtDate(s.tarih)), /* @__PURE__ */ React.createElement("td", { style: S.td }, HIZMET_TIP_LABEL[s.hizmetTuru], s.aciklama ? ` — ${s.aciklama}` : ""), /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtTL(s.tutar)), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement(Badge, { d: s.durum })))
+    )))),
+    sekme === "foto" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { ...S.btnO, display: "inline-block", marginBottom: 14, cursor: "pointer" } }, "➕ Fotoğraf Ekle", /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", multiple: true, style: { display: "none" }, onChange: fotoEkle })), (arac.fotograflar || []).length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Henüz fotoğraf eklenmedi.") : /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10 } }, (arac.fotograflar || []).map((f) => /* @__PURE__ */ React.createElement("div", { key: f.id, style: { position: "relative", border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("img", { src: f.veri, alt: f.ad, style: { width: "100%", height: 110, objectFit: "cover", display: "block" } }), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnR, position: "absolute", top: 4, right: 4, padding: "2px 6px", fontSize: 10, background: C.card }, onClick: () => fotoSil(f.id) }, "🗑️"))))),
+    sekme === "belge" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { ...S.btnO, display: "inline-block", marginBottom: 14, cursor: "pointer" } }, "➕ Belge Ekle", /* @__PURE__ */ React.createElement("input", { type: "file", multiple: true, style: { display: "none" }, onChange: belgeEkle })), (arac.belgeler || []).length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Henüz belge eklenmedi.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, (arac.belgeler || []).map((b) => /* @__PURE__ */ React.createElement("div", { key: b.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: C.surface, borderRadius: 8 } }, /* @__PURE__ */ React.createElement("a", { href: b.veri, download: b.ad, style: { color: C.blue, fontSize: 12.5, textDecoration: "none" } }, "📄 ", b.ad), /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => belgeSil(b.id) }, "🗑️")))))
+  );
 }
 function GirisEkrani({ onGiris }) {
   const butonRef = useRef(null);
