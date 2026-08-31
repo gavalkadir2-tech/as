@@ -77,6 +77,17 @@ button{font-family:inherit;}
     max-width:100% !important;
   }
   .fp-grid2{grid-template-columns:1fr !important;}
+
+  /* Modallar telefonda alttan açılan tam genişlikte panel olsun,
+     ve her zaman alt gezinme çubuğunun ÜSTÜNDE görünsün. */
+  .fp-modal-overlay{align-items:flex-end !important; padding:0 !important;}
+  .fp-mbox{
+    width:100% !important;
+    max-width:100% !important;
+    max-height:85vh !important;
+    border-radius:16px 16px 0 0 !important;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom)) !important;
+  }
 }
 
 /* Tabloların dar ekranlarda taşmaması */
