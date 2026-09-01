@@ -81,6 +81,7 @@ function Ayarlar() {
     a.download = `atolyepro-yedek-${today()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    localStorage.setItem("fp_son_yedek", String(Date.now()));
   } }, "\u2B07\uFE0F Yede\u011Fi \u0130ndir"), /* @__PURE__ */ React.createElement("label", { style: { ...S.btnO, cursor: "pointer" } }, "\u2B06\uFE0F Yedek Y\xFCkle", /* @__PURE__ */ React.createElement("input", { type: "file", accept: ".json", style: { display: "none" }, onChange: (e) => {
     const dosya = e.target.files[0];
     if (!dosya) return;
@@ -89,6 +90,7 @@ function Ayarlar() {
       try {
         const veri = JSON.parse(ev.target.result);
         Object.entries(veri).forEach(([k, v]) => k === "ayarlar" ? saveSettings(v) : LS.set(k, v));
+        localStorage.setItem("fp_son_yedek", String(Date.now()));
         alert("Yedek y\xFCklendi. Sayfa yenilenecek.");
         window.location.reload();
       } catch (err) {
