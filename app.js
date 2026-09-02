@@ -220,8 +220,8 @@ const S = {
   td: { padding: "11px 10px", fontSize: 13.5, borderBottom: `1px solid ${C.border}55`, color: C.text },
   tbl: { width: "100%", borderCollapse: "collapse" },
   secTitle: { fontSize: 15, fontWeight: 700, color: C.white, marginBottom: 14 },
-  modal: { position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 },
-  mbox: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, maxHeight: "88vh", overflowY: "auto" },
+  modal: { position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600, padding: 16 },
+  mbox: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, maxHeight: "88vh", overflowY: "auto", overflowX: "auto" },
   badge: (c) => ({ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: c + "22", color: c })
 };
 function FG({ label, children }) {
@@ -234,7 +234,7 @@ function Badge({ d, map = DURUM_LABEL, renk = DURUM_RENK }) {
   return /* @__PURE__ */ React.createElement("span", { style: S.badge(renk[d] || C.muted) }, map[d] || d);
 }
 function Modal({ title, onClose, width = 520, children }) {
-  return /* @__PURE__ */ React.createElement("div", { style: S.modal, onClick: (e) => e.target === e.currentTarget && onClose() }, /* @__PURE__ */ React.createElement("div", { style: { ...S.mbox, width: `min(${width}px,94vw)` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 18 } }, title), children));
+  return /* @__PURE__ */ React.createElement("div", { className: "fp-modal-overlay", style: S.modal, onClick: (e) => e.target === e.currentTarget && onClose() }, /* @__PURE__ */ React.createElement("div", { className: "fp-mbox", style: { ...S.mbox, width: `min(${width}px,94vw)` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 18 } }, title), children));
 }
 function Grid2({ children }) {
   return /* @__PURE__ */ React.createElement("div", { className: "fp-grid2", style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 } }, children);
@@ -455,6 +455,7 @@ function ServisIsleri() {
   const [aiOneriDevam, setAiOneriDevam] = useState(false);
   const [aiOneriMetni, setAiOneriMetni] = useState("");
   const [gecmisModal, setGecmisModal] = useState(null);
+  const [detayAracId, setDetayAracId] = useState(null);
 
   const aiTeknisyenOner = async () => {
     if (!form.hizmetTuru) {
@@ -628,6 +629,13 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     const a = aracBilgi(araclar, s.aracId);
     return a ? `${a.plaka}${a.marka ? " \xB7 " + a.marka + " " + (a.model || "") : ""}` : s.aracPlaka || "\u2014";
   };
+  const detayArac = detayAracId ? araclar.find((a) => a.id === detayAracId) : null;
+  const detayAracServisleri = detayAracId ? liste.filter((s) => s.aracId === detayAracId).sort((a, b) => (b.tarih || "").localeCompare(a.tarih || "")) : [];
+  const detayAracGuncelle = (patch) => {
+    const yeni = araclar.map((a) => a.id === detayAracId ? { ...a, ...patch } : a);
+    LS.set("araclar", yeni);
+    setAraclar(yeni);
+  };
   const gosterilecek = !aramaMetni ? durumaGoreFiltreli : durumaGoreFiltreli.filter((s) => (cariAd(cariler, s.musteriId) + " " + aracEtiket(s) + " " + (s.aciklama || "") + " " + (s.isEmriNo || "")).toLocaleLowerCase("tr-TR").includes(aramaMetni));
   const araclarSirali = [...araclar].sort((a, b) => (a.plaka || "").localeCompare(b.plaka || ""));
   const secilenArac = form.aracId ? araclar.find((a) => a.id === form.aracId) : null;
@@ -728,7 +736,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
                   { key: s.id },
                   React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.accent } }, s.isEmriNo || "\u2014"), React.createElement("div", { style: { fontSize: 10.5, color: C.muted, marginTop: 2 } }, fmtDate(s.tarih))),
                   React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, s.musteriId))),
-                  React.createElement("td", { style: S.td }, aracEtiket(s)),
+                  React.createElement("td", { style: S.td }, s.aracId ? React.createElement("strong", { style: { color: C.accent, cursor: "pointer", textDecoration: "underline" }, title: "Araç sicilini görüntüle (fotoğraf, belge, servis geçmişi)", onClick: () => setDetayAracId(s.aracId) }, aracEtiket(s)) : aracEtiket(s)),
                   React.createElement("td", { style: S.td }, HIZMET_TIP_LABEL[s.hizmetTuru]),
                   React.createElement("td", { style: S.td }, sorumlu ? sorumlu.ad : "\u2014"),
                   React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.accent } }, fmtTL(s.tutar))),
@@ -877,7 +885,8 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
             React.createElement("div", { style: { fontSize: 12.5, color: C.white, fontWeight: 700 } }, ASAMA_LABEL[h.asama] || h.asama),
             React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, fmtDate(h.tarih), h.not ? " \xB7 " + h.not : "")
           )))
-    )
+    ),
+    detayArac && React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: detayAracServisleri, onClose: () => setDetayAracId(null), onGuncelle: detayAracGuncelle })
   );
 }
 function HizliAracFormu({ onClose, onEklendi }) {
