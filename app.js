@@ -65,6 +65,12 @@ const DURUM_LABEL = { bekliyor: "Bekliyor", devam: "Devam Ediyor", tamamlandi: "
 const DURUM_RENK = { bekliyor: C.yellow, devam: C.blue, tamamlandi: C.green, iptal: C.red };
 const GIDER_KATEGORILERI = ["Malzeme/Hammadde", "Kira", "Elektrik/Su", "Personel Maa\u015F\u0131", "Yak\u0131t", "Bak\u0131m-Onar\u0131m", "Vergi/SGK", "Di\u011Fer"];
 const HESAP_TUR_LABEL = { kasa: "\u{1F4B5} Kasa", banka: "\u{1F3E6} Banka", kredi_karti: "\u{1F4B3} Kredi Kart\u0131", pos: "\u{1F5A5}\uFE0F POS" };
+const ROL_LABEL = { patron: "\u{1F451} Patron / Y\xF6netici", usta: "\u{1F527} Usta / Teknisyen", kasiyer: "\u{1F4B0} Kasiyer / Muhasebe" };
+const ROL_SAYFA_IZIN = {
+  patron: null,
+  usta: ["dashboard", "servis", "takvim", "araclar"],
+  kasiyer: ["dashboard", "servis", "takvim", "araclar", "cariler", "muhasebe"]
+};
 const CEK_SENET_TUR_LABEL = { cek: "\u{1F4C4} \xC7ek", senet: "\u{1F4DD} Senet" };
 const CEK_SENET_DURUM_LABEL = { portfoyde: "Portf\xF6yde", tahsil: "Tahsil Edildi", karsiliksiz: "Kar\u015F\u0131l\u0131ks\u0131z" };
 const CEK_SENET_DURUM_RENK = { portfoyde: C.yellow, tahsil: C.green, karsiliksiz: C.red };
@@ -368,6 +374,18 @@ function whatsappLinkAc(telefon, mesaj) {
   }
   window.open(whatsappLinkOlustur(telefon, mesaj), "_blank");
 }
+function whatsappTeslimBildir(s, cariler) {
+  const musteri = cariler.find((c) => c.id === s.musteriId);
+  if (!musteri || !musteri.tel) return;
+  if (!confirm(`İş "${s.isEmriNo || ""}" teslim edildi olarak işaretlendi. M\xFCşteriye (${musteri.ad}) WhatsApp ile bilgi mesajı g\xF6nderilsin mi?`)) return;
+  const mesaj = `Merhaba ${musteri.ad}, ${s.isEmriNo || ""} numaralı işleminiz tamamlandı ve teslime hazır. Tutar: ${fmtTL(s.tutar)}. — As Egzoz & Makine`;
+  whatsappLinkAc(musteri.tel, mesaj);
+}
+function whatsappTahsilatHatirlat(s, cariler) {
+  const musteri = cariler.find((c) => c.id === s.musteriId);
+  const mesaj = `Merhaba ${musteri ? musteri.ad : ""}, ${s.isEmriNo || ""} numaralı işleminize ait ${fmtTL(s.tutar)} tutarındaki \xF6demeniz hen\xFCz alınmamış g\xF6r\xFCn\xFCyor. M\xFCşait olduğunuzda tahsilatı tamamlayabilir misiniz? — As Egzoz & Makine`;
+  whatsappLinkAc(musteri ? musteri.tel : "", mesaj);
+}
 function hesapHareketiKaydet(hesapId, yon, tutar, tarih, aciklama, kaynak) {
   if (!hesapId || !(+tutar > 0)) return;
   const hesaplar = LS.get("hesaplar");
@@ -429,6 +447,57 @@ function isEmriYazdir(s, musteriAdi, aracEtiket) {
   ${s.garantili ? `<div class="satir" style="margin-top:14px;">\u{1F6E1}\uFE0F Bu i\u015Flem ${s.garantiBitis ? fmtDate(s.garantiBitis) + " tarihine kadar" : ""} garanti kapsam\u0131ndad\u0131r.</div>` : ""}
   </body></html>`;
   htmlBelgeIndir(html, `${s.isEmriNo || "is-emri"}.pdf`);
+}
+function ozetRaporuIndir(servisler, satislar, giderler, personelListesi) {
+  const ayStr = today().slice(0, 7);
+  const ayServisler = servisler.filter((s) => s.tarih && s.tarih.startsWith(ayStr) && s.durum === "tamamlandi");
+  const aySatislar = satislar.filter((s) => s.tarih && s.tarih.startsWith(ayStr));
+  const ayGiderler = giderler.filter((g) => g.tarih && g.tarih.startsWith(ayStr));
+  const gelir = ayServisler.reduce((t, s) => t + (+s.tutar || 0), 0) + aySatislar.reduce((t, s) => t + (+s.toplam || 0), 0);
+  const gider = ayGiderler.reduce((t, g) => t + (+g.tutar || 0), 0);
+  const netKar = gelir - gider;
+  const hizmetSayaci = {};
+  ayServisler.forEach((s) => {
+    const l = HIZMET_TIP_LABEL[s.hizmetTuru] || s.hizmetTuru;
+    hizmetSayaci[l] = (hizmetSayaci[l] || 0) + 1;
+  });
+  const hizmetSiralanmis = Object.entries(hizmetSayaci).sort((a, b) => b[1] - a[1]);
+  const teknisyenSatirlari = personelListesi.map((p) => {
+    const isler = ayServisler.filter((s) => s.personelId === p.id);
+    return { ad: p.ad, sayi: isler.length, ciro: isler.reduce((t, s) => t + (+s.tutar || 0), 0) };
+  }).filter((t) => t.sayi > 0).sort((a, b) => b.ciro - a.ciro);
+  const settings = getSettings();
+  const [, ayNo] = ayStr.split("-");
+  const ayAdi = AY_ADLARI[+ayNo - 1];
+  const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>Özet Rapor — ${ayAdi}</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;padding:40px;color:#111;max-width:680px;margin:0 auto;}
+    .head{display:flex;justify-content:space-between;border-bottom:3px solid #e8622c;padding-bottom:16px;margin-bottom:16px;}
+    .firma{font-size:20px;font-weight:800;}
+    .muted{color:#666;font-size:13px;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;margin-bottom:20px;}
+    th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:12px;}
+    td{padding:8px;border-bottom:1px solid #eee;font-size:13px;}
+    .kutular{display:flex;gap:14px;margin-bottom:20px;}
+    .kutu{flex:1;border:1px solid #ddd;border-radius:8px;padding:12px;}
+    .kutu .lbl{font-size:11px;color:#666;}
+    .kutu .val{font-size:18px;font-weight:800;}
+  </style></head><body>
+  <div class="head"><div><div class="firma">${settings.firmaAdi || "Atölye"}</div><div class="muted">${settings.firmaAdres || ""} ${settings.firmaTel ? " · " + settings.firmaTel : ""}</div></div>
+  <div class="muted">${ayAdi} Aylık Özet Raporu</div></div>
+  <div class="kutular">
+    <div class="kutu"><div class="lbl">Toplam Gelir</div><div class="val" style="color:#1a9e4f;">${fmtTL(gelir)}</div></div>
+    <div class="kutu"><div class="lbl">Toplam Gider</div><div class="val" style="color:#c0392b;">${fmtTL(gider)}</div></div>
+    <div class="kutu"><div class="lbl">Net Kâr</div><div class="val" style="color:${netKar >= 0 ? "#1a9e4f" : "#c0392b"};">${fmtTL(netKar)}</div></div>
+  </div>
+  <h3 style="font-size:14px;">🔧 Hizmet Türü Dağılımı (${ayServisler.length} tamamlanan iş)</h3>
+  <table><thead><tr><th>Hizmet Türü</th><th style="text-align:right;">Adet</th></tr></thead>
+  <tbody>${hizmetSiralanmis.length === 0 ? `<tr><td colspan="2">Bu ay tamamlanan iş yok.</td></tr>` : hizmetSiralanmis.map(([ad, sayi]) => `<tr><td>${ad}</td><td style="text-align:right;">${sayi}</td></tr>`).join("")}</tbody></table>
+  <h3 style="font-size:14px;">🧑‍🔧 Teknisyen Performansı</h3>
+  <table><thead><tr><th>Teknisyen</th><th style="text-align:right;">İş Sayısı</th><th style="text-align:right;">Ciro</th></tr></thead>
+  <tbody>${teknisyenSatirlari.length === 0 ? `<tr><td colspan="3">Bu ay veriye rastlanmadı.</td></tr>` : teknisyenSatirlari.map((t) => `<tr><td>${t.ad}</td><td style="text-align:right;">${t.sayi}</td><td style="text-align:right;">${fmtTL(t.ciro)}</td></tr>`).join("")}</tbody></table>
+  </body></html>`;
+  htmlBelgeIndir(html, `Ozet-Rapor-${ayStr}.pdf`);
 }
 function malzemeStokDegistir(malzemeId, delta) {
   if (!malzemeId) return;
@@ -492,6 +561,7 @@ function Dashboard() {
   const [giderler] = useState(LS.get("giderler"));
   const [cariler] = useState(LS.get("cariler"));
   const [personelListesi] = useState(LS.get("personel"));
+  const [malzemeler] = useState(LS.get("malzemeler"));
   const acikServisSayisi = servisler.filter((s) => s.durum !== "tamamlandi" && s.durum !== "iptal").length;
   const buAyGelir = servisler.filter((s) => s.tarih && s.tarih.startsWith(today().slice(0, 7)) && s.durum === "tamamlandi").reduce((t, s) => t + (+s.tutar || 0), 0) + satislar.filter((s) => s.tarih && s.tarih.startsWith(today().slice(0, 7))).reduce((t, s) => t + (+s.toplam || 0), 0);
   const buAyGider = giderler.filter((g) => g.tarih && g.tarih.startsWith(today().slice(0, 7))).reduce((t, g) => t + (+g.tutar || 0), 0);
@@ -507,6 +577,7 @@ function Dashboard() {
   const stokListesi = aktifUrunler.map((u) => ({ ...u, stok: stokHesapla(u.id) }));
   const toplamStok = stokListesi.reduce((t, u) => t + u.stok, 0);
   const kritikUrunler = stokListesi.filter((u) => u.stok <= (+u.kritikStok || 3));
+  const kritikMalzemeler = malzemeler.filter((m) => (+m.stokMiktari || 0) <= (+m.minMiktar || 0));
   const hizmetDagilimi = Object.entries(
     servisler.reduce((acc, s) => {
       const l = HIZMET_TIP_LABEL[s.hizmetTuru] || s.hizmetTuru;
@@ -515,13 +586,100 @@ function Dashboard() {
     }, {})
   ).map(([name, value]) => ({ name, value }));
   const renkler = [C.accent, C.blue, C.green, C.yellow, C.purple];
-  return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white, marginBottom: 4 } }, "Genel Bak\u0131\u015F"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 20 } }, (/* @__PURE__ */ new Date()).toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })), /* @__PURE__ */ React.createElement(Grid4, null, /* @__PURE__ */ React.createElement(StatCard, { color: C.accent, icon: "\u{1F527}", value: acikServisSayisi, label: "A\xE7\u0131k Servis \u0130\u015Fi" }), /* @__PURE__ */ React.createElement(StatCard, { color: buAyNetKar >= 0 ? C.green : C.red, icon: "\u{1F4B0}", value: fmtTL(buAyNetKar), label: "Bu Ay Net K\xE2r", sub: `Gelir ${fmtTL(buAyGelir)} \u2212 Gider ${fmtTL(buAyGider)}` }), /* @__PURE__ */ React.createElement(StatCard, { color: C.red, icon: "\u23F3", value: fmtTL(odenmemis), label: "Tahsil Edilecek" }), /* @__PURE__ */ React.createElement(StatCard, { color: C.blue, icon: "\u{1F6D2}", value: `${toplamStok} adet`, label: "Toplam \xDCr\xFCn Stoku", sub: `${aktifUrunler.length} aktif \xFCr\xFCn \xE7e\u015Fidi` })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4E6} Stok Durumu"), stokListesi.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Hen\xFCz \xFCr\xFCn eklenmedi.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, stokListesi.slice(0, 5).map(
+  return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "Genel Bak\u0131\u015F"), /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => ozetRaporuIndir(servisler, satislar, giderler, personelListesi) }, "\uD83D\uDCCA Bu Ay\u0131n \u00D6zet Raporunu \u0130ndir (PDF)")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 20 } }, (/* @__PURE__ */ new Date()).toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })), /* @__PURE__ */ React.createElement(Grid4, null, /* @__PURE__ */ React.createElement(StatCard, { color: C.accent, icon: "\u{1F527}", value: acikServisSayisi, label: "A\xE7\u0131k Servis \u0130\u015Fi" }), /* @__PURE__ */ React.createElement(StatCard, { color: buAyNetKar >= 0 ? C.green : C.red, icon: "\u{1F4B0}", value: fmtTL(buAyNetKar), label: "Bu Ay Net K\xE2r", sub: `Gelir ${fmtTL(buAyGelir)} \u2212 Gider ${fmtTL(buAyGider)}` }), /* @__PURE__ */ React.createElement(StatCard, { color: C.red, icon: "\u23F3", value: fmtTL(odenmemis), label: "Tahsil Edilecek" }), /* @__PURE__ */ React.createElement(StatCard, { color: C.blue, icon: "\u{1F6D2}", value: `${toplamStok} adet`, label: "Toplam \xDCr\xFCn Stoku", sub: `${aktifUrunler.length} aktif \xFCr\xFCn \xE7e\u015Fidi` })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4E6} Stok Durumu"), stokListesi.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Hen\xFCz \xFCr\xFCn eklenmedi.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, stokListesi.slice(0, 5).map(
     (u) => /* @__PURE__ */ React.createElement("div", { key: u.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderRadius: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: C.text } }, u.ad), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, fontWeight: 800, color: u.stok <= (+u.kritikStok || 3) ? C.red : C.white } }, u.stok, " adet"))
-  )), kritikUrunler.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, fontSize: 12, color: C.red } }, "\u26A0\uFE0F ", kritikUrunler.length, " \xFCr\xFCn kritik stok seviyesinde \u2014 \xFCretim/al\u0131m planlamay\u0131 d\xFC\u015F\xFCn\xFCn.")), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4CA} Hizmet T\xFCr\xFC Da\u011F\u0131l\u0131m\u0131"), RC.PieChart && hizmetDagilimi.length > 0 ? /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: 200 }, /* @__PURE__ */ React.createElement(PieChart, null, /* @__PURE__ */ React.createElement(Pie, { data: hizmetDagilimi, dataKey: "value", nameKey: "name", cx: "50%", cy: "50%", innerRadius: 45, outerRadius: 78, paddingAngle: 3, label: ({ name, value }) => `${name}: ${value}` }, hizmetDagilimi.map((e, i) => /* @__PURE__ */ React.createElement(Cell, { key: i, fill: renkler[i % renkler.length] }))), /* @__PURE__ */ React.createElement(Tooltip, { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 } }))) : /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Hen\xFCz veri yok."))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F9D1}\u200D\u{1F527} Teknisyen \u0130\u015F Y\xFCk\xFC"), personelListesi.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Hen\xFCz personel eklenmedi.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, teknisyenYuku.map(
+  )), kritikUrunler.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, fontSize: 12, color: C.red } }, "\u26A0\uFE0F ", kritikUrunler.length, " \xFCr\xFCn kritik stok seviyesinde \u2014 \xFCretim/al\u0131m planlamay\u0131 d\xFC\u015F\xFCn\xFCn."), kritikMalzemeler.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, padding: "10px 14px", background: C.red + "18", borderRadius: 8, fontSize: 12, color: C.red } }, "\u26A0\uFE0F ", kritikMalzemeler.length, " yedek par\xE7a/malzeme kritik seviyede: ", kritikMalzemeler.slice(0, 4).map((m) => m.ad).join(", "), kritikMalzemeler.length > 4 ? "\u2026" : "")), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4CA} Hizmet T\xFCr\xFC Da\u011F\u0131l\u0131m\u0131"), RC.PieChart && hizmetDagilimi.length > 0 ? /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: 200 }, /* @__PURE__ */ React.createElement(PieChart, null, /* @__PURE__ */ React.createElement(Pie, { data: hizmetDagilimi, dataKey: "value", nameKey: "name", cx: "50%", cy: "50%", innerRadius: 45, outerRadius: 78, paddingAngle: 3, label: ({ name, value }) => `${name}: ${value}` }, hizmetDagilimi.map((e, i) => /* @__PURE__ */ React.createElement(Cell, { key: i, fill: renkler[i % renkler.length] }))), /* @__PURE__ */ React.createElement(Tooltip, { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 } }))) : /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Hen\xFCz veri yok."))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F9D1}\u200D\u{1F527} Teknisyen \u0130\u015F Y\xFCk\xFC"), personelListesi.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Hen\xFCz personel eklenmedi.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, teknisyenYuku.map(
     (t) => /* @__PURE__ */ React.createElement("div", { key: t.ad, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderRadius: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: C.text } }, t.ad), /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(t.acikIsSayisi === 0 ? C.green : t.acikIsSayisi <= 2 ? C.blue : C.yellow) } }, t.acikIsSayisi, " a\xE7\u0131k i\u015F"))
   ), atanmamisIsSayisi > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 4, padding: "10px 14px", background: C.red + "18", borderRadius: 8, fontSize: 12, color: C.red } }, "\u26A0\uFE0F ", atanmamisIsSayisi, " i\u015F hen\xFCz kimseye atanmam\u0131\u015F \u2014 en bo\u015Fta olan ", teknisyenYuku[0]?.ad || "bir teknisyen", " \xF6nerilir."))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F552} Son Servis \u0130\u015Fleri"), servisler.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Hen\xFCz kay\u0131t yok.") : /* @__PURE__ */ React.createElement("table", { style: S.tbl }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tarih"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "M\xFC\u015Fteri"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Ara\xE7"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Hizmet"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tutar"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Durum"))), /* @__PURE__ */ React.createElement("tbody", null, [...servisler].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || "")).slice(0, 6).map(
     (s) => /* @__PURE__ */ React.createElement("tr", { key: s.id }, /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtDate(s.tarih)), /* @__PURE__ */ React.createElement("td", { style: S.td }, cariAd(cariler, s.musteriId)), /* @__PURE__ */ React.createElement("td", { style: S.td }, s.aracPlaka), /* @__PURE__ */ React.createElement("td", { style: S.td }, HIZMET_TIP_LABEL[s.hizmetTuru]), /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtTL(s.tutar)), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement(Badge, { d: s.durum })))
   )))));
+}
+const AY_ADLARI = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+const GUN_ADLARI = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+function Takvim() {
+  const [servisler] = useState(LS.get("servisIsleri"));
+  const [cariler] = useState(LS.get("cariler"));
+  const [araclar] = useState(LS.get("araclar"));
+  const su = /* @__PURE__ */ new Date();
+  const [yil, setYil] = useState(su.getFullYear());
+  const [ay, setAy] = useState(su.getMonth());
+  const [seciliGun, setSeciliGun] = useState(today());
+
+  const gunStr = (y, a, g) => `${y}-${String(a + 1).padStart(2, "0")}-${String(g).padStart(2, "0")}`;
+  const ilkGun = new Date(yil, ay, 1);
+  const gunSayisi = new Date(yil, ay + 1, 0).getDate();
+  const bosluk = (ilkGun.getDay() + 6) % 7;
+  const gunler = [];
+  for (let i = 0; i < bosluk; i++) gunler.push(null);
+  for (let g = 1; g <= gunSayisi; g++) gunler.push(g);
+
+  const aracLabel = (s) => {
+    const a = araclar.find((x) => x.id === s.aracId);
+    return a ? a.plaka : s.aracPlaka || "—";
+  };
+  const gununIsleri = (tarih) => servisler.filter((s) => s.tarih === tarih && s.durum !== "iptal");
+  const bugunIsleri = gununIsleri(today());
+  const seciliIsleri = gununIsleri(seciliGun);
+
+  const oncekiAy = () => {
+    if (ay === 0) {
+      setAy(11);
+      setYil((y) => y - 1);
+    } else setAy((a) => a - 1);
+  };
+  const sonrakiAy = () => {
+    if (ay === 11) {
+      setAy(0);
+      setYil((y) => y + 1);
+    } else setAy((a) => a + 1);
+  };
+  const buguneGit = () => {
+    setYil(su.getFullYear());
+    setAy(su.getMonth());
+    setSeciliGun(today());
+  };
+
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    { className: "fp-fade" },
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white, marginBottom: 16 } }, "📅 Randevu Takvimi"),
+    bugunIsleri.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderTop: `3px solid ${C.accent}` } }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "Bugün Planlı Araçlar (", bugunIsleri.length, ")"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, bugunIsleri.map((s) => /* @__PURE__ */ React.createElement(
+      "div",
+      { key: s.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", background: C.surface, borderRadius: 8, flexWrap: "wrap", gap: 6 } },
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: C.text } }, /* @__PURE__ */ React.createElement("strong", { style: { color: C.white } }, aracLabel(s)), " — ", cariAd(cariler, s.musteriId), " — ", HIZMET_TIP_LABEL[s.hizmetTuru]),
+      /* @__PURE__ */ React.createElement(Badge, { d: s.durum })
+    )))),
+    /* @__PURE__ */ React.createElement(
+      "div",
+      { style: S.card },
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: oncekiAy }, "◀"), /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, color: C.white } }, AY_ADLARI[ay], " ", yil), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: buguneGit }, "Bugün"), /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: sonrakiAy }, "▶"))),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 4 } }, GUN_ADLARI.map((g) => /* @__PURE__ */ React.createElement("div", { key: g, style: { textAlign: "center", fontSize: 11, color: C.muted, fontWeight: 700 } }, g))),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 } }, gunler.map((g, i) => {
+        if (g === null) return /* @__PURE__ */ React.createElement("div", { key: "b" + i });
+        const tarih = gunStr(yil, ay, g);
+        const isler = gununIsleri(tarih);
+        const bugunMu = tarih === today();
+        const seciliMi = tarih === seciliGun;
+        return /* @__PURE__ */ React.createElement(
+          "div",
+          { key: tarih, onClick: () => setSeciliGun(tarih), style: { padding: "8px 4px", borderRadius: 8, textAlign: "center", cursor: "pointer", minHeight: 52, background: seciliMi ? C.accent + "33" : bugunMu ? C.surface : "transparent", border: `1px solid ${seciliMi ? C.accent : bugunMu ? C.border : "transparent"}` } },
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: bugunMu ? C.accent : C.text, fontWeight: bugunMu ? 800 : 400 } }, g),
+          isler.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 2 } }, /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.blue), fontSize: 9.5, padding: "1px 6px" } }, isler.length))
+        );
+      }))
+    ),
+    /* @__PURE__ */ React.createElement(
+      "div",
+      { style: S.card },
+      /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, fmtDate(seciliGun), " Tarihli İşler (", seciliIsleri.length, ")"),
+      seciliIsleri.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Bu tarihte kayıtlı iş yok.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, seciliIsleri.map((s) => /* @__PURE__ */ React.createElement(
+        "div",
+        { key: s.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderRadius: 8, flexWrap: "wrap", gap: 6 } },
+        /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: C.text } }, /* @__PURE__ */ React.createElement("strong", { style: { color: C.white } }, s.isEmriNo), " — ", aracLabel(s), " — ", cariAd(cariler, s.musteriId), " — ", HIZMET_TIP_LABEL[s.hizmetTuru]),
+        /* @__PURE__ */ React.createElement(Badge, { d: s.durum })
+      )))
+    )
+  );
 }
 function ServisIsleri() {
   const [cariler, setCariler] = useState(LS.get("cariler"));
@@ -643,12 +801,14 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
         kayit.durumGecmisi = eski ? eski.durumGecmisi : kayit.durumGecmisi;
       }
     }
+    const eskiKayit = form.id ? liste.find((x) => x.id === form.id) : null;
     const yeni = form.id ? liste.map((x) => x.id === form.id ? kayit : x) : [...liste, kayit];
     LS.set("servisIsleri", yeni);
     setListe(yeni);
     setModalAcik(false);
     if (kayit.asama === "teslim_edildi") {
       faturaOlustur("servis", kayit.id, kayit.musteriId, kayit.tarih, `${kayit.isEmriNo} \u2014 ${HIZMET_TIP_LABEL[kayit.hizmetTuru] || ""}`, kayit.kalemler, kayit.tutar);
+      if (!eskiKayit || eskiKayit.asama !== "teslim_edildi") whatsappTeslimBildir(kayit, cariler);
     }
   };
 
@@ -672,6 +832,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     setListe(yeni);
     if (yeniAsama === "teslim_edildi") {
       faturaOlustur("servis", s.id, s.musteriId, today(), `${s.isEmriNo} \u2014 ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`, s.kalemler, s.tutar);
+      whatsappTeslimBildir({ ...s, asama: yeniAsama }, cariler);
     }
   };
 
@@ -1775,6 +1936,8 @@ function Muhasebe() {
     setFaturalar(yeni);
   };
 
+  const odenmemisServisler = servisler.filter((s) => !s.odendi && s.durum === "tamamlandi");
+
   const detayHareketler = detayHesapId ? hareketler.filter((h) => h.hesapId === detayHesapId).sort((a, b) => (b.tarih || "").localeCompare(a.tarih || "")) : [];
   const detayHesap = detayHesapId && hesaplar.find((h) => h.id === detayHesapId);
 
@@ -1794,6 +1957,19 @@ function Muhasebe() {
       React.createElement(StatCard, { color: vadesiYaklasanlar.length > 0 ? C.red : C.green, icon: "\u{1F4C4}", value: fmtTL(portfoyToplam), label: "Portf\xF6ydeki \xC7ek/Senet", sub: vadesiYaklasanlar.length > 0 ? `${vadesiYaklasanlar.length} tanesinin vadesi yakla\u015Ft\u0131` : "" })
     ),
     React.createElement(TabBar, { tabs: [["faturalar", `\u{1F9FE} Faturalar (${faturalar.length})`], ["giderler", `\u{1F4C9} Giderler (${giderler.length})`], ["hesaplar", "\u{1F3E6} Hesaplar"], ["cekSenet", `\u{1F4C4} \xC7ek/Senet (${cekSenetler.length})`]], active: sekme, onChange: setSekme }),
+
+    sekme === "faturalar" && odenmemisServisler.length > 0 && React.createElement(
+      "div",
+      { style: { ...S.card, borderTop: `3px solid ${C.red}` } },
+      React.createElement("div", { style: S.secTitle }, "\u23F0 Tahsilat Hat\u0131rlatmalar\u0131 (", odenmemisServisler.length, ")"),
+      React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, "Tamamlanm\u0131\u015F ama \xF6demesi al\u0131nmam\u0131\u015F i\u015Fler. M\xFC\u015Fteriye WhatsApp ile hat\u0131rlatma g\xF6nderebilirsiniz."),
+      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, odenmemisServisler.map((s) => React.createElement(
+        "div",
+        { key: s.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", background: C.surface, borderRadius: 8, flexWrap: "wrap", gap: 8 } },
+        React.createElement("span", { style: { fontSize: 12.5, color: C.text } }, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, s.musteriId)), " \u2014 ", s.isEmriNo || "", " \u2014 ", React.createElement("strong", { style: { color: C.red } }, fmtTL(s.tutar))),
+        React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => whatsappTahsilatHatirlat(s, cariler) }, "\u{1F4AC} Hat\u0131rlat")
+      )))
+    ),
 
     sekme === "faturalar" && React.createElement(
       "div",
@@ -2209,7 +2385,7 @@ function Personel() {
       alert("Personel ad\u0131 zorunludur.");
       return;
     }
-    const kayit = { ...form, id: form.id || uid() };
+    const kayit = { ...form, id: form.id || uid(), rol: form.rol || "usta" };
     const yeni = form.id ? liste.map((x) => x.id === form.id ? kayit : x) : [...liste, kayit];
     LS.set("personel", yeni);
     setListe(yeni);
@@ -2240,7 +2416,7 @@ function Personel() {
       setForm(p);
       setModalAcik(true);
     } }, "\u270F\uFE0F D\xFCzenle"), /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(p.id) }, "\u{1F5D1}\uFE0F")))
-  )), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Personeli D\xFCzenle" : "Yeni Personel", onClose: () => setModalAcik(false), width: 420 }, /* @__PURE__ */ React.createElement(FG, { label: "Ad Soyad" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.ad || "", onChange: (e) => setForm((f) => ({ ...f, ad: e.target.value })), autoFocus: true })), /* @__PURE__ */ React.createElement(FG, { label: "Pozisyon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.pozisyon || "", onChange: (e) => setForm((f) => ({ ...f, pozisyon: e.target.value })), placeholder: "\xD6rn: Ustaba\u015F\u0131, Kaynak\xE7\u0131, Tamirci" })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.telefon || "", onChange: (e) => setForm((f) => ({ ...f, telefon: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Ayl\u0131k Maa\u015F (\u20BA)" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.maas || "", onChange: (e) => setForm((f) => ({ ...f, maas: +e.target.value })) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))));
+  )), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Personeli D\xFCzenle" : "Yeni Personel", onClose: () => setModalAcik(false), width: 420 }, /* @__PURE__ */ React.createElement(FG, { label: "Ad Soyad" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.ad || "", onChange: (e) => setForm((f) => ({ ...f, ad: e.target.value })), autoFocus: true })), /* @__PURE__ */ React.createElement(FG, { label: "Pozisyon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.pozisyon || "", onChange: (e) => setForm((f) => ({ ...f, pozisyon: e.target.value })), placeholder: "\xD6rn: Ustaba\u015F\u0131, Kaynak\xE7\u0131, Tamirci" })), /* @__PURE__ */ React.createElement(FG, { label: "Sistem Yetkisi (Google ile giri\u015Fte g\xF6rebilecekleri)" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.rol || "usta", onChange: (e) => setForm((f) => ({ ...f, rol: e.target.value })) }, Object.entries(ROL_LABEL).map(([k, l]) => /* @__PURE__ */ React.createElement("option", { key: k, value: k }, l)))), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.telefon || "", onChange: (e) => setForm((f) => ({ ...f, telefon: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Ayl\u0131k Maa\u015F (\u20BA)" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.maas || "", onChange: (e) => setForm((f) => ({ ...f, maas: +e.target.value })) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))));
 }
 function Araclar() {
   const [liste, setListe] = useState(LS.get("araclar"));
@@ -2425,6 +2601,7 @@ function GirisEkrani({ onGiris }) {
 const SAYFALAR = [
   { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
   { id: "servis", label: "Servis \u0130\u015Fleri", icon: "\u{1F527}", comp: ServisIsleri },
+  { id: "takvim", label: "Randevu Takvimi", icon: "\u{1F4C5}", comp: Takvim },
   { id: "araclar", label: "Ara\xE7 Kay\u0131tlar\u0131", icon: "\u{1F697}", comp: Araclar },
   { id: "uretim", label: "\xDCretim & Stok", icon: "\u{1F6D2}", comp: UretimStok },
   { id: "malzeme", label: "Yedek Par\xE7a", icon: "\u{1F9F0}", comp: MalzemeStok },
@@ -2450,6 +2627,13 @@ function personelMigrasyonu() {
     saveSettings({ ...ayarlar, firmaAdi: "As Egzoz & Makine" });
   }
   localStorage.setItem("fp_personel_v2", "1");
+}
+function rolMigrasyonu() {
+  if (localStorage.getItem("fp_rol_migrasyon_v1")) return;
+  const mevcut = LS.get("personel") || [];
+  const yeni = mevcut.map((p) => p.rol ? p : { ...p, rol: "patron" });
+  LS.set("personel", yeni);
+  localStorage.setItem("fp_rol_migrasyon_v1", "1");
 }
 function urunMigrasyonu() {
   if (localStorage.getItem("fp_urun_migrasyon_v1")) return;
@@ -2505,6 +2689,7 @@ function faturaMigrasyonu() {
 function App() {
   seedVeri();
   personelMigrasyonu();
+  rolMigrasyonu();
   urunMigrasyonu();
   servisMigrasyonu();
   faturaMigrasyonu();
@@ -2547,8 +2732,18 @@ function App() {
     setKullanici(null);
     setGirisYapildi(!getSettings().googleClientId);
   };
-  const AktifBilesen = (SAYFALAR.find((s) => s.id === sayfa) || SAYFALAR[0]).comp;
-  return /* @__PURE__ */ React.createElement("div", { className: "fp-app", style: S.app }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, "\u{1F527} At\xF6lyePro"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Egzoz \xB7 Chiptuning \xB7 \xDCretim")), /* @__PURE__ */ React.createElement("div", { className: "fp-navlist" }, SAYFALAR.map(
+  const girisliPersonel = (() => {
+    if (!kullanici || !kullanici.ad) return null;
+    const personelListesi = LS.get("personel") || [];
+    return personelListesi.find((p) => (p.ad || "").trim().toLocaleLowerCase("tr-TR") === kullanici.ad.trim().toLocaleLowerCase("tr-TR")) || null;
+  })();
+  const izinliSayfaIdleri = girisliPersonel ? ROL_SAYFA_IZIN[girisliPersonel.rol] : null;
+  const gorunurSayfalar = izinliSayfaIdleri ? SAYFALAR.filter((s) => izinliSayfaIdleri.includes(s.id)) : SAYFALAR;
+  if (izinliSayfaIdleri && !izinliSayfaIdleri.includes(sayfa)) {
+    setSayfa(gorunurSayfalar[0]?.id || "dashboard");
+  }
+  const AktifBilesen = (gorunurSayfalar.find((s) => s.id === sayfa) || gorunurSayfalar[0] || SAYFALAR[0]).comp;
+  return /* @__PURE__ */ React.createElement("div", { className: "fp-app", style: S.app }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, "\u{1F527} At\xF6lyePro"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Egzoz \xB7 Chiptuning \xB7 \xDCretim")), /* @__PURE__ */ React.createElement("div", { className: "fp-navlist" }, gorunurSayfalar.map(
     (s) => /* @__PURE__ */ React.createElement("div", { key: s.id, className: "fp-navitem", style: S.navBtn(sayfa === s.id), onClick: () => setSayfa(s.id) }, /* @__PURE__ */ React.createElement("span", { className: "fp-navicon" }, s.icon), /* @__PURE__ */ React.createElement("span", { className: "fp-navlabel" }, s.label))
   )), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-spacer", style: { flex: 1 } }), kullanici && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "10px", display: "flex", alignItems: "center", gap: 8, borderTop: `1px solid ${C.border}`, marginTop: 12, paddingTop: 14 } }, kullanici.foto && /* @__PURE__ */ React.createElement("img", { src: kullanici.foto, alt: "", style: { width: 28, height: 28, borderRadius: "50%" } }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, kullanici.ad)), /* @__PURE__ */ React.createElement("button", { onClick: cikisYap, title: "\xC7\u0131k\u0131\u015F Yap", style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 14 } }, "\u23FB")), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "12px 10px", fontSize: 10.5, color: C.muted, borderTop: kullanici ? "none" : `1px solid ${C.border}`, marginTop: kullanici ? 0 : 12, paddingTop: kullanici ? 4 : 14 } }, "At\xF6lyePro v1.0 \u2014 Yerel veri deposu")), /* @__PURE__ */ React.createElement("div", { className: "fp-main", style: S.main }, yeniVeriVar && /* @__PURE__ */ React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 50, background: C.accent, color: "#161311", padding: "10px 16px", borderRadius: 8, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700 } }, "\u{1F504} Ba\u015Fka bir cihazda de\u011Fi\u015Fiklik yap\u0131ld\u0131.", /* @__PURE__ */ React.createElement("button", { style: { background: "#161311", color: C.white, border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700 }, onClick: async () => {
     for (const anahtar of ALL_DATA_KEYS) {
