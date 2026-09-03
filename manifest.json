@@ -1,6 +1,6 @@
 {
-  "name": "AtölyePro — Egzoz, Chiptuning & El Arabası Üretim Yönetimi",
-  "short_name": "AtölyePro",
+  "name": "As — Egzoz, Chiptuning & El Arabası Üretim Yönetimi",
+  "short_name": "As",
   "description": "Atölye yönetimi: servis işleri, araç kayıtları, muhasebe ve üretim takibi.",
   "start_url": "./index.html",
   "scope": "./",

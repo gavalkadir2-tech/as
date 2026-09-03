@@ -1190,10 +1190,31 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     detayArac && React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: detayAracServisleri, onClose: () => setDetayAracId(null), onGuncelle: detayAracGuncelle })
   );
 }
+function goruntuOnIsle(ctx, w, h) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const veri = img.data;
+  const piksel = w * h;
+  const gri = new Uint8ClampedArray(piksel);
+  let min = 255, max = 0;
+  for (let i = 0, p = 0; i < veri.length; i += 4, p++) {
+    const g = 0.299 * veri[i] + 0.587 * veri[i + 1] + 0.114 * veri[i + 2];
+    gri[p] = g;
+    if (g < min) min = g;
+    if (g > max) max = g;
+  }
+  const aralik = Math.max(1, max - min);
+  for (let i = 0, p = 0; i < veri.length; i += 4, p++) {
+    const v = (gri[p] - min) / aralik * 255;
+    veri[i] = veri[i + 1] = veri[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+}
 function PlakaKameraTarayici({ onSonuc }) {
   const [acik, setAcik] = useState(false);
   const [tarama, setTarama] = useState(false);
   const [hata, setHata] = useState("");
+  const [fenerVar, setFenerVar] = useState(false);
+  const [fenerAcik, setFenerAcik] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -1201,6 +1222,8 @@ function PlakaKameraTarayici({ onSonuc }) {
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setAcik(false);
+    setFenerVar(false);
+    setFenerAcik(false);
   };
   useEffect(() => () => kamerayiKapat(), []);
 
@@ -1211,14 +1234,30 @@ function PlakaKameraTarayici({ onSonuc }) {
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } });
       streamRef.current = stream;
       setAcik(true);
       setTimeout(() => {
         if (videoRef.current) videoRef.current.srcObject = stream;
       }, 0);
+      try {
+        const track = stream.getVideoTracks()[0];
+        const yetenekler = track.getCapabilities ? track.getCapabilities() : {};
+        setFenerVar(!!yetenekler.torch);
+      } catch {
+      }
     } catch (e) {
       setHata("Kameraya erişilemedi: " + e.message);
+    }
+  };
+  const fenerDegistir = async () => {
+    const track = streamRef.current && streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: !fenerAcik }] });
+      setFenerAcik((v) => !v);
+    } catch {
+      setHata("Fener açılamadı, cihazınız desteklemiyor olabilir.");
     }
   };
   const cekVeOku = async () => {
@@ -1228,32 +1267,55 @@ function PlakaKameraTarayici({ onSonuc }) {
     }
     setTarama(true);
     setHata("");
+    let worker = null;
     try {
       const video = videoRef.current;
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const cropW = vw * 0.88, cropH = vh * 0.34;
+      const cropX = (vw - cropW) / 2, cropY = (vh - cropH) / 2;
+      const olcek = 2;
       const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext("2d").drawImage(video, 0, 0);
-      const { data } = await window.Tesseract.recognize(canvas, "eng");
+      canvas.width = cropW * olcek;
+      canvas.height = cropH * olcek;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      goruntuOnIsle(ctx, canvas.width, canvas.height);
+      worker = await window.Tesseract.createWorker("eng");
+      await worker.setParameters({ tessedit_char_whitelist: "ABCDEFGHIJKLMNOPRSTUVYZ0123456789 " });
+      const { data } = await worker.recognize(canvas);
       const ham = (data.text || "").toUpperCase();
       const eslesme = ham.match(/\d{2}\s?[A-Z]{1,3}\s?\d{2,4}/);
       const sonuc = eslesme ? plakaNormalize(eslesme[0]) : "";
       if (!sonuc) {
-        setHata("Plaka okunamadı, ışığı/açıyı düzeltip tekrar deneyin veya elle girin.");
+        setHata("Plaka okunamadı — plakayı aşağıdaki çerçeveye düz açıyla ve yakın hizalayıp tekrar deneyin.");
       } else {
         onSonuc(sonuc);
         kamerayiKapat();
       }
     } catch (e) {
       setHata("Okuma hatası: " + e.message);
+    } finally {
+      if (worker) {
+        try {
+          await worker.terminate();
+        } catch {
+        }
+      }
+      setTarama(false);
     }
-    setTarama(false);
   };
 
   if (!acik) {
     return /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btnO, marginBottom: 10 }, onClick: kamerayiAc }, "📷 Kamera ile Plaka Tara");
   }
-  return /* @__PURE__ */ React.createElement("div", { style: { border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 10, background: C.surface } }, /* @__PURE__ */ React.createElement("video", { ref: videoRef, autoPlay: true, playsInline: true, muted: true, style: { width: "100%", borderRadius: 8, marginBottom: 8, maxHeight: 240, objectFit: "cover", background: "#000" } }), hata && /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontSize: 12, marginBottom: 8 } }, "⚠️ ", hata), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btn(), flex: 1 }, disabled: tarama, onClick: cekVeOku }, tarama ? "Okunuyor…" : "📸 Çek ve Oku"), /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btnO, onClick: kamerayiKapat }, "İptal")));
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    { style: { border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 10, background: C.surface } },
+    /* @__PURE__ */ React.createElement("div", { style: { position: "relative", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("video", { ref: videoRef, autoPlay: true, playsInline: true, muted: true, style: { width: "100%", borderRadius: 8, maxHeight: 240, objectFit: "cover", background: "#000", display: "block" } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "33%", left: "6%", width: "88%", height: "34%", border: `2px dashed ${C.accent}`, borderRadius: 6, pointerEvents: "none" } }), fenerVar && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: fenerDegistir, style: { position: "absolute", top: 8, right: 8, background: fenerAcik ? C.accent : "#000000aa", color: fenerAcik ? "#161311" : "#fff", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer" } }, "\u{1F4A1}")),
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, "Plakayı çerçeveye, düz açıyla ve iyi ışıkta hizalayın."),
+    hata && /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontSize: 12, marginBottom: 8 } }, "⚠️ ", hata),
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btn(), flex: 1 }, disabled: tarama, onClick: cekVeOku }, tarama ? "Okunuyor…" : "📸 Çek ve Oku"), /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btnO, onClick: kamerayiKapat }, "İptal"))
+  );
 }
 function HizliAracFormu({ onClose, onEklendi }) {
   const [plaka, setPlaka] = useState("");
@@ -2743,9 +2805,9 @@ function App() {
     setSayfa(gorunurSayfalar[0]?.id || "dashboard");
   }
   const AktifBilesen = (gorunurSayfalar.find((s) => s.id === sayfa) || gorunurSayfalar[0] || SAYFALAR[0]).comp;
-  return /* @__PURE__ */ React.createElement("div", { className: "fp-app", style: S.app }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, "\u{1F527} At\xF6lyePro"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Egzoz \xB7 Chiptuning \xB7 \xDCretim")), /* @__PURE__ */ React.createElement("div", { className: "fp-navlist" }, gorunurSayfalar.map(
+  return /* @__PURE__ */ React.createElement("div", { className: "fp-app", style: S.app }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, "\u{1F527} As"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Egzoz \xB7 Chiptuning \xB7 \xDCretim")), /* @__PURE__ */ React.createElement("div", { className: "fp-navlist" }, gorunurSayfalar.map(
     (s) => /* @__PURE__ */ React.createElement("div", { key: s.id, className: "fp-navitem", style: S.navBtn(sayfa === s.id), onClick: () => setSayfa(s.id) }, /* @__PURE__ */ React.createElement("span", { className: "fp-navicon" }, s.icon), /* @__PURE__ */ React.createElement("span", { className: "fp-navlabel" }, s.label))
-  )), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-spacer", style: { flex: 1 } }), kullanici && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "10px", display: "flex", alignItems: "center", gap: 8, borderTop: `1px solid ${C.border}`, marginTop: 12, paddingTop: 14 } }, kullanici.foto && /* @__PURE__ */ React.createElement("img", { src: kullanici.foto, alt: "", style: { width: 28, height: 28, borderRadius: "50%" } }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, kullanici.ad)), /* @__PURE__ */ React.createElement("button", { onClick: cikisYap, title: "\xC7\u0131k\u0131\u015F Yap", style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 14 } }, "\u23FB")), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "12px 10px", fontSize: 10.5, color: C.muted, borderTop: kullanici ? "none" : `1px solid ${C.border}`, marginTop: kullanici ? 0 : 12, paddingTop: kullanici ? 4 : 14 } }, "At\xF6lyePro v1.0 \u2014 Yerel veri deposu")), /* @__PURE__ */ React.createElement("div", { className: "fp-main", style: S.main }, yeniVeriVar && /* @__PURE__ */ React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 50, background: C.accent, color: "#161311", padding: "10px 16px", borderRadius: 8, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700 } }, "\u{1F504} Ba\u015Fka bir cihazda de\u011Fi\u015Fiklik yap\u0131ld\u0131.", /* @__PURE__ */ React.createElement("button", { style: { background: "#161311", color: C.white, border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700 }, onClick: async () => {
+  )), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-spacer", style: { flex: 1 } }), kullanici && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "10px", display: "flex", alignItems: "center", gap: 8, borderTop: `1px solid ${C.border}`, marginTop: 12, paddingTop: 14 } }, kullanici.foto && /* @__PURE__ */ React.createElement("img", { src: kullanici.foto, alt: "", style: { width: 28, height: 28, borderRadius: "50%" } }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, kullanici.ad)), /* @__PURE__ */ React.createElement("button", { onClick: cikisYap, title: "\xC7\u0131k\u0131\u015F Yap", style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 14 } }, "\u23FB")), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "12px 10px", fontSize: 10.5, color: C.muted, borderTop: kullanici ? "none" : `1px solid ${C.border}`, marginTop: kullanici ? 0 : 12, paddingTop: kullanici ? 4 : 14 } }, "As v1.0 \u2014 Yerel veri deposu")), /* @__PURE__ */ React.createElement("div", { className: "fp-main", style: S.main }, yeniVeriVar && /* @__PURE__ */ React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 50, background: C.accent, color: "#161311", padding: "10px 16px", borderRadius: 8, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700 } }, "\u{1F504} Ba\u015Fka bir cihazda de\u011Fi\u015Fiklik yap\u0131ld\u0131.", /* @__PURE__ */ React.createElement("button", { style: { background: "#161311", color: C.white, border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700 }, onClick: async () => {
     for (const anahtar of ALL_DATA_KEYS) {
       const veri = await buluttanOku(anahtar);
       if (veri !== null) localStorage.setItem(anahtar, JSON.stringify(veri));
