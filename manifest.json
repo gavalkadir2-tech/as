@@ -1,0 +1,17 @@
+{
+  "name": "AtölyePro — Egzoz, Chiptuning & El Arabası Üretim Yönetimi",
+  "short_name": "AtölyePro",
+  "description": "Atölye yönetimi: servis işleri, araç kayıtları, muhasebe ve üretim takibi.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#161311",
+  "theme_color": "#161311",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

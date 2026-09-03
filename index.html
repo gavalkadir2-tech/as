@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-title" content="AtölyePro">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#161311">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
 <title>🔧 AtölyePro — Egzoz, Chiptuning & El Arabası Üretim Yönetimi</title>
 <style>
 :root{
@@ -113,5 +116,12 @@ table{min-width:520px;}
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script src="app.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>
