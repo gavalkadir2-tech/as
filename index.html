@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="As">
@@ -20,15 +20,26 @@
   --green:#5fb87a; --red:#e15c5c; --yellow:#d9a441; --blue:#5b8fc9;
   --radius:10px;
 }
-*{box-sizing:border-box;}
-body{margin:0;font-family:'Inter',-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);}
+html{height:-webkit-fill-available;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;min-height:100vh;min-height:-webkit-fill-available;font-family:'Inter',-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior-y:none;}
 ::-webkit-scrollbar{width:8px;height:8px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 input,select,textarea{font-family:inherit;}
 .fp-fade{animation:fadeIn .25s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 .fp-card:hover{border-color:#4a4038;}
-button{font-family:inherit;}
+button{font-family:inherit;-webkit-appearance:none;appearance:none;touch-action:manipulation;}
+a{-webkit-touch-callout:default;}
+
+.fp-mobile-topbar{display:none;}
+.fp-sidebar-backdrop{display:none;}
+.fp-vh-fix{min-height:100vh;min-height:-webkit-fill-available;}
+.fp-hamburger{
+  background:transparent;border:1px solid var(--border);color:var(--white);
+  width:38px;height:38px;border-radius:8px;font-size:19px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
 
 /* ===== Responsive: tablet ===== */
 @media (max-width:1024px){
@@ -38,51 +49,78 @@ button{font-family:inherit;}
 
 /* ===== Responsive: telefon ===== */
 @media (max-width:680px){
-  .fp-app{flex-direction:column !important;}
-  .fp-sidebar{
-    width:100% !important;
-    flex-direction:row !important;
-    align-items:center !important;
-    position:fixed !important;
-    left:0; right:0; bottom:0; top:auto !important;
-    height:auto !important;
-    z-index:500;
-    padding:6px 4px !important;
-    border-right:none !important;
-    border-top:1px solid var(--border);
-    background:var(--surface);
+  .fp-app{
+    flex-direction:column !important;
+    min-height:100vh;
+    min-height:-webkit-fill-available;
   }
-  .fp-sidebar-brand,.fp-sidebar-footer,.fp-sidebar-spacer{display:none !important;}
-  .fp-navlist{
+
+  /* Üstte sabit çubuk: sol tarafta ☰ hamburger, aktif sayfa adı */
+  .fp-mobile-topbar{
     display:flex !important;
-    flex-direction:row !important;
-    gap:2px !important;
-    width:100%;
-    overflow-x:auto;
+    align-items:center;
+    gap:12px;
+    position:fixed;
+    top:0; left:0; right:0;
+    height:52px;
+    padding:0 14px;
+    padding-top:env(safe-area-inset-top);
+    height:calc(52px + env(safe-area-inset-top));
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    z-index:520;
+  }
+
+  /* Kenar çubuğu varsayılan olarak ekran dışında, soldan kayarak açılan panel */
+  .fp-sidebar{
+    position:fixed !important;
+    top:0; left:0; bottom:0;
+    width:78vw !important;
+    max-width:300px;
+    height:100vh !important;
+    height:-webkit-fill-available !important;
+    z-index:600;
+    padding:calc(16px + env(safe-area-inset-top)) 12px 16px !important;
+    padding-left:calc(12px + env(safe-area-inset-left)) !important;
+    border-right:1px solid var(--border) !important;
+    background:var(--surface);
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    overflow-y:auto;
     -webkit-overflow-scrolling:touch;
   }
-  .fp-navitem{
-    flex-direction:column !important;
-    align-items:center !important;
-    justify-content:center !important;
-    gap:2px !important;
-    flex-shrink:0;
-    min-width:60px;
-    text-align:center;
-    padding:6px 4px !important;
-    margin-bottom:0 !important;
-    border-radius:8px !important;
+  .fp-sidebar.fp-sidebar-open{transform:translateX(0);}
+  .fp-sidebar-brand,.fp-sidebar-footer{display:block !important;}
+
+  .fp-sidebar-backdrop{
+    display:block;
+    position:fixed;
+    inset:0;
+    background:#000000aa;
+    z-index:590;
   }
-  .fp-navicon{font-size:17px;}
-  .fp-navlabel{font-size:9px;line-height:1.1;white-space:nowrap;}
+
+  .fp-navlist{display:flex !important;flex-direction:column !important;gap:2px !important;width:100%;}
+  .fp-navitem{
+    flex-direction:row !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    gap:10px !important;
+  }
+  .fp-navicon{font-size:16px;}
+  .fp-navlabel{font-size:13.5px;}
+
   .fp-main{
-    padding:14px 12px 88px !important;
+    padding:calc(68px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom)) !important;
     max-width:100% !important;
   }
+  .fp-yeni-veri-uyari{top:calc(52px + env(safe-area-inset-top) + 8px) !important;}
   .fp-grid2{grid-template-columns:1fr !important;}
 
-  /* Modallar telefonda alttan açılan tam genişlikte panel olsun,
-     ve her zaman alt gezinme çubuğunun ÜSTÜNDE görünsün. */
+  /* iOS Safari'de odaklanınca otomatik yakınlaştırmayı önlemek için form elemanları en az 16px olsun */
+  input,select,textarea{font-size:16px !important;}
+
+  /* Modallar telefonda alttan açılan tam genişlikte panel olsun */
   .fp-modal-overlay{align-items:flex-end !important; padding:0 !important;}
   .fp-mbox{
     width:100% !important;
