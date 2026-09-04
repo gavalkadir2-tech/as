@@ -1266,7 +1266,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       Modal,
       { title: "\u{1F4B0} \xD6deme Al", onClose: () => setOdemeModal(null), width: 400 },
       React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 14 } }, "Tutar: ", React.createElement("strong", { style: { color: C.white } }, fmtTL(odemeModal.tutar)), " \u2014 hangi hesaba girdi?"),
-      React.createElement(FG, { label: "Hesap" }, React.createElement("select", { style: S.sel, value: odemeHesapId, onChange: (e) => setOdemeHesapId(e.target.value) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Kasa & Banka'dan hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad, " (", fmtTL(h.bakiye), ")")))),
+      React.createElement(FG, { label: "Hesap" }, React.createElement("select", { style: S.sel, value: odemeHesapId, onChange: (e) => setOdemeHesapId(e.target.value) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Kasa & Banka'dan hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad)))),
       React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setOdemeModal(null) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: odemeOnayla }, "Onayla"))
     ),
     gecmisModal && React.createElement(
@@ -2167,7 +2167,7 @@ function Muhasebe() {
       { title: `\u{1F4B0} ${odemeAlModal.faturaNo} \u2014 ${odemeAlModal.tur === "alis" ? "\xD6deme Yap" : "\xD6deme Al"}`, onClose: () => setOdemeAlModal(null), width: 400 },
       React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 14 } }, "Kalan: ", React.createElement("strong", { style: { color: C.white } }, fmtTL(faturaKalan(odemeAlModal))), " / Toplam: ", fmtTL(odemeAlModal.toplam)),
       React.createElement(FG, { label: "Tutar (\u20ba)" }, React.createElement("input", { type: "number", style: S.inp, value: odemeAlForm.tutar ?? "", onChange: (e) => setOdemeAlForm((f) => ({ ...f, tutar: +e.target.value })) })),
-      React.createElement(FG, { label: "Hesap" }, React.createElement("select", { style: S.sel, value: odemeAlForm.hesapId || "", onChange: (e) => setOdemeAlForm((f) => ({ ...f, hesapId: e.target.value })) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Kasa & Banka'dan hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad, " (", fmtTL(h.bakiye), ")")))),
+      React.createElement(FG, { label: "Hesap" }, React.createElement("select", { style: S.sel, value: odemeAlForm.hesapId || "", onChange: (e) => setOdemeAlForm((f) => ({ ...f, hesapId: e.target.value })) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Kasa & Banka'dan hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad)))),
       odemeHata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26a0\ufe0f ", odemeHata),
       React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setOdemeAlModal(null) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: odemeAlKaydet }, "Onayla"))
     ),
