@@ -64,6 +64,7 @@ const ECU_MARKALARI = ["Bosch", "Continental", "Siemens", "Delphi", "Denso", "Ma
 const KESS_PROTOKOL_LISTESI = ["OBD", "Bench", "Boot/BDM", "Bench/Boot"];
 const KESS_STAGE_LISTESI = ["Stage 1", "Stage 2", "Stage 3", "Stage 1+", "\u00d6zel (Custom)", "Orijinale D\u00f6n\u00fc\u015f (Stock)"];
 const KESS_YARDIM_KATEGORILERI = ["Ba\u011flant\u0131 Sorunu", "Protokol Se\u00e7imi (OBD/Bench/Boot)", "Stage/Dosya Ayar\u0131", "Checksum Hatas\u0131", "Genel Kullan\u0131m", "Di\u011fer"];
+const ODEME_YONTEMLERI = ["Nakit", "Kredi Kart\u0131", "Havale/EFT", "\u00c7ek/Senet", "Di\u011fer"];
 const DURUM_LABEL = { bekliyor: "Bekliyor", devam: "Devam Ediyor", tamamlandi: "Tamamland\u0131", iptal: "\u0130ptal" };
 const DURUM_RENK = { bekliyor: C.yellow, devam: C.blue, tamamlandi: C.green, iptal: C.red };
 const GIDER_KATEGORILERI = ["Malzeme/Hammadde", "Kira", "Elektrik/Su", "Personel Maa\u015F\u0131", "Yak\u0131t", "Bak\u0131m-Onar\u0131m", "Vergi/SGK", "Di\u011Fer"];
@@ -466,11 +467,11 @@ function whatsappTahsilatHatirlat(s, cariler) {
   const mesaj = `Merhaba ${musteri ? musteri.ad : ""}, ${s.isEmriNo || ""} numaralı işleminize ait ${fmtTL(s.tutar)} tutarındaki \xF6demeniz hen\xFCz alınmamış g\xF6r\xFCn\xFCyor. M\xFCşait olduğunuzda tahsilatı tamamlayabilir misiniz? — As Egzoz & Makine`;
   whatsappLinkAc(musteri ? musteri.tel : "", mesaj);
 }
-function hesapHareketiKaydet(hesapId, yon, tutar, tarih, aciklama, kaynak) {
+function hesapHareketiKaydet(hesapId, yon, tutar, tarih, aciklama, kaynak, yontem) {
   if (!hesapId || !(+tutar > 0)) return;
   const hesaplar = LS.get("hesaplar");
   const hareketler = LS.get("kasaHareketleri");
-  const yeniHareket = { id: uid(), hesapId, tur: yon, tutar: +tutar, tarih: tarih || today(), aciklama: aciklama || "", kaynak: kaynak || "otomatik" };
+  const yeniHareket = { id: uid(), hesapId, tur: yon, tutar: +tutar, tarih: tarih || today(), aciklama: aciklama || "", kaynak: kaynak || "otomatik", yontem: yontem || "" };
   LS.set("kasaHareketleri", [...hareketler, yeniHareket]);
   const yeniHesaplar = hesaplar.map((h) => h.id === hesapId ? { ...h, bakiye: (+h.bakiye || 0) + (yon === "giris" ? +tutar : -tutar) } : h);
   LS.set("hesaplar", yeniHesaplar);
@@ -775,6 +776,7 @@ function ServisIsleri() {
   const [arama, setArama] = useState("");
   const [odemeModal, setOdemeModal] = useState(null);
   const [odemeHesapId, setOdemeHesapId] = useState("");
+  const [odemeYontemi, setOdemeYontemi] = useState("Nakit");
   const [aiOneriDevam, setAiOneriDevam] = useState(false);
   const [aiOneriMetni, setAiOneriMetni] = useState("");
   const [gecmisModal, setGecmisModal] = useState(null);
@@ -969,12 +971,13 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       return;
     }
     const s = odemeModal;
-    hesapHareketiKaydet(odemeHesapId, "giris", s.tutar, today(), `Servis \xF6demesi \u2014 ${s.isEmriNo || ""} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""} (${cariAd(cariler, s.musteriId)})`, "servis");
-    const yeni = liste.map((x) => x.id === s.id ? { ...x, odendi: true, odemeHesapId } : x);
+    hesapHareketiKaydet(odemeHesapId, "giris", s.tutar, today(), `Servis \xF6demesi \u2014 ${s.isEmriNo || ""} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""} (${cariAd(cariler, s.musteriId)})`, "servis", odemeYontemi);
+    const yeni = liste.map((x) => x.id === s.id ? { ...x, odendi: true, odemeHesapId, odemeYontemi } : x);
     LS.set("servisIsleri", yeni);
     setListe(yeni);
     setOdemeModal(null);
     setOdemeHesapId("");
+    setOdemeYontemi("Nakit");
   };
 
   const durumaGoreFiltreli = durumFiltre === "tumu" ? liste : durumFiltre === "acik" ? liste.filter((s) => s.durum !== "tamamlandi" && s.durum !== "iptal") : liste.filter((s) => s.durum === durumFiltre);
@@ -1267,6 +1270,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       { title: "\u{1F4B0} \xD6deme Al", onClose: () => setOdemeModal(null), width: 400 },
       React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 14 } }, "Tutar: ", React.createElement("strong", { style: { color: C.white } }, fmtTL(odemeModal.tutar)), " \u2014 hangi hesaba girdi?"),
       React.createElement(FG, { label: "Hesap" }, React.createElement("select", { style: S.sel, value: odemeHesapId, onChange: (e) => setOdemeHesapId(e.target.value) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Kasa & Banka'dan hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad)))),
+      React.createElement(FG, { label: "\xD6deme Y\xF6ntemi" }, React.createElement("select", { style: S.sel, value: odemeYontemi, onChange: (e) => setOdemeYontemi(e.target.value) }, ODEME_YONTEMLERI.map((y) => React.createElement("option", { key: y, value: y }, y)))),
       React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setOdemeModal(null) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: odemeOnayla }, "Onayla"))
     ),
     gecmisModal && React.createElement(
@@ -1640,9 +1644,9 @@ function Cariler() {
   const filtreliListe = !aramaMetni ? liste : liste.filter((c) => (c.ad + " " + (c.tel || "") + " " + (c.adres || "")).toLocaleLowerCase("tr-TR").includes(aramaMetni));
   const ekstreCari = ekstreId && liste.find((c) => c.id === ekstreId);
   const ekstreHareketleri = ekstreId ? [
-    ...servisler.filter((s) => s.musteriId === ekstreId).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F527} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`, tutar: s.tutar, odendi: s.odendi })),
-    ...satislar.filter((s) => s.musteriId === ekstreId).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F6D2} ${EL_ARABASI_TUR_LABEL[s.tur] || ""}`, tutar: s.toplam, odendi: true })),
-    ...manuelFaturalar(ekstreId).map((f) => ({ tarih: f.tarih, aciklama: `${f.tur === "alis" ? "\u{1F4E5} Al\u0131\u015F" : "\u{1F4E4} Sat\u0131\u015F"} \u2014 ${f.aciklama || f.faturaNo}`, tutar: f.tur === "alis" ? -f.toplam : f.toplam, odendi: true }))
+    ...servisler.filter((s) => s.musteriId === ekstreId).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F527} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`, tutar: s.tutar, odendi: s.odendi, yontem: s.odendi ? s.odemeYontemi || "\u2014" : "\u2014" })),
+    ...satislar.filter((s) => s.musteriId === ekstreId).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F6D2} ${EL_ARABASI_TUR_LABEL[s.tur] || ""}`, tutar: s.toplam, odendi: true, yontem: "\u2014" })),
+    ...manuelFaturalar(ekstreId).map((f) => ({ tarih: f.tarih, aciklama: `${f.tur === "alis" ? "\u{1F4E5} Al\u0131\u015F" : "\u{1F4E4} Sat\u0131\u015F"} \u2014 ${f.aciklama || f.faturaNo}`, tutar: f.tur === "alis" ? -f.toplam : f.toplam, odendi: true, yontem: (f.odemeler && f.odemeler.length > 0) ? f.odemeler[f.odemeler.length - 1].yontem || "\u2014" : "\u2014" }))
   ].sort((a, b) => (a.tarih || "").localeCompare(b.tarih || "")) : [];
   const faturaOlusturKaydet = () => {
     if (!(+faturaForm.tutar > 0)) {
@@ -1669,8 +1673,8 @@ function Cariler() {
       setForm(c);
       setModalAcik(true);
     } }, "\u270F\uFE0F"), /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(c.id) }, "\u{1F5D1}\uFE0F")));
-  })), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Cariyi D\xFCzenle" : "Yeni Cari", onClose: () => setModalAcik(false), width: 420 }, /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.ad || "", onChange: (e) => setForm((f) => ({ ...f, ad: e.target.value })), autoFocus: true })), /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.tel || "", onChange: (e) => setForm((f) => ({ ...f, tel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.adres || "", onChange: (e) => setForm((f) => ({ ...f, adres: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), ekstreCari && /* @__PURE__ */ React.createElement(Modal, { title: `\u{1F4CB} ${ekstreCari.ad} \u2014 Cari Hesap Ekstresi`, onClose: () => setEkstreId(null), width: 640 }, /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Toplam \u0130\u015Flem Hacmi"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, fmtTL(harcama(ekstreCari.id)))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14, borderTop: `3px solid ${C.red}` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "A\xE7\u0131k Bor\xE7"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.red } }, fmtTL(borc(ekstreCari.id))))), ekstreHareketleri.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Hen\xFCz i\u015Flem yok.") : /* @__PURE__ */ React.createElement("table", { style: S.tbl }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tarih"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "A\xE7\u0131klama"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tutar"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Durum"))), /* @__PURE__ */ React.createElement("tbody", null, ekstreHareketleri.map(
-    (h, i) => /* @__PURE__ */ React.createElement("tr", { key: i }, /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtDate(h.tarih)), /* @__PURE__ */ React.createElement("td", { style: S.td }, h.aciklama), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement("strong", { style: { color: h.tutar < 0 ? C.red : C.accent } }, fmtTL(h.tutar))), /* @__PURE__ */ React.createElement("td", { style: S.td }, h.odendi ? /* @__PURE__ */ React.createElement(Badge, { d: "tamamlandi", map: { tamamlandi: "\xD6dendi" }, renk: { tamamlandi: C.green } }) : /* @__PURE__ */ React.createElement(Badge, { d: "bekliyor", map: { bekliyor: "Bekliyor" }, renk: { bekliyor: C.yellow } })))
+  })), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Cariyi D\xFCzenle" : "Yeni Cari", onClose: () => setModalAcik(false), width: 420 }, /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.ad || "", onChange: (e) => setForm((f) => ({ ...f, ad: e.target.value })), autoFocus: true })), /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.tel || "", onChange: (e) => setForm((f) => ({ ...f, tel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.adres || "", onChange: (e) => setForm((f) => ({ ...f, adres: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), ekstreCari && /* @__PURE__ */ React.createElement(Modal, { title: `\u{1F4CB} ${ekstreCari.ad} \u2014 Cari Hesap Ekstresi`, onClose: () => setEkstreId(null), width: 640 }, /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Toplam \u0130\u015Flem Hacmi"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, fmtTL(harcama(ekstreCari.id)))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14, borderTop: `3px solid ${C.red}` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "A\xE7\u0131k Bor\xE7"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.red } }, fmtTL(borc(ekstreCari.id))))), ekstreHareketleri.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Hen\xFCz i\u015Flem yok.") : /* @__PURE__ */ React.createElement("table", { style: S.tbl }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tarih"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "A\xE7\u0131klama"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Y\xF6ntem"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tutar"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Durum"))), /* @__PURE__ */ React.createElement("tbody", null, ekstreHareketleri.map(
+    (h, i) => /* @__PURE__ */ React.createElement("tr", { key: i }, /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtDate(h.tarih)), /* @__PURE__ */ React.createElement("td", { style: S.td }, h.aciklama), /* @__PURE__ */ React.createElement("td", { style: S.td }, h.yontem || "\u2014"), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement("strong", { style: { color: h.tutar < 0 ? C.red : C.accent } }, fmtTL(h.tutar))), /* @__PURE__ */ React.createElement("td", { style: S.td }, h.odendi ? /* @__PURE__ */ React.createElement(Badge, { d: "tamamlandi", map: { tamamlandi: "\xD6dendi" }, renk: { tamamlandi: C.green } }) : /* @__PURE__ */ React.createElement(Badge, { d: "bekliyor", map: { bekliyor: "Bekliyor" }, renk: { bekliyor: C.yellow } })))
   )))), faturaModal && /* @__PURE__ */ React.createElement(
     Modal,
     { title: `\u{1F9FE} ${faturaModal.ad} — Fatura Oluştur`, onClose: () => setFaturaModal(null), width: 420 },
@@ -1742,8 +1746,9 @@ function Muhasebe() {
     const f = odemeAlModal;
     const tutar = +odemeAlForm.tutar;
     const yon = f.tur === "alis" ? "cikis" : "giris";
-    hesapHareketiKaydet(odemeAlForm.hesapId, yon, tutar, today(), `${f.tur === "alis" ? "Tedarik\xE7i \xF6demesi" : "Tahsilat"} — ${f.faturaNo} (${cariAd(cariler, f.musteriId)})`, "fatura");
-    const odeme = { id: uid(), tarih: today(), tutar, hesapId: odemeAlForm.hesapId };
+    const yontem = odemeAlForm.yontem || "Nakit";
+    hesapHareketiKaydet(odemeAlForm.hesapId, yon, tutar, today(), `${f.tur === "alis" ? "Tedarik\xE7i \xF6demesi" : "Tahsilat"} — ${f.faturaNo} (${cariAd(cariler, f.musteriId)})`, "fatura", yontem);
+    const odeme = { id: uid(), tarih: today(), tutar, hesapId: odemeAlForm.hesapId, yontem };
     const yeni = faturalar.map((x) => x.id === f.id ? { ...x, odemeler: [...(x.odemeler || []), odeme] } : x);
     LS.set("faturalar", yeni);
     setFaturalar(yeni);
@@ -1779,7 +1784,7 @@ function Muhasebe() {
     setGiderler(yeni);
     setGiderModal(false);
     if (!giderForm.id && giderForm.hesapId) {
-      hesapHareketiKaydet(giderForm.hesapId, "cikis", kayit.tutar, kayit.tarih, `${kayit.kategori}${kayit.aciklama ? " \u2014 " + kayit.aciklama : ""}`, "gider");
+      hesapHareketiKaydet(giderForm.hesapId, "cikis", kayit.tutar, kayit.tarih, `${kayit.kategori}${kayit.aciklama ? " \u2014 " + kayit.aciklama : ""}`, "gider", giderForm.yontem || "Nakit");
       setHesaplar(LS.get("hesaplar"));
     }
   };
@@ -1823,7 +1828,7 @@ function Muhasebe() {
     }
     setHata("");
     const yon = hareketForm.yon || "giris";
-    const kayit = { id: uid(), hesapId: hareketForm.hesapId, tur: yon, tutar: +hareketForm.tutar, tarih: hareketForm.tarih || today(), aciklama: hareketForm.aciklama || "", kaynak: "manuel" };
+    const kayit = { id: uid(), hesapId: hareketForm.hesapId, tur: yon, tutar: +hareketForm.tutar, tarih: hareketForm.tarih || today(), aciklama: hareketForm.aciklama || "", kaynak: "manuel", yontem: hareketForm.yontem || "Nakit" };
     const yeniHareketler = [...hareketler, kayit];
     LS.set("kasaHareketleri", yeniHareketler);
     setHareketler(yeniHareketler);
@@ -2096,6 +2101,7 @@ function Muhasebe() {
       React.createElement(FG, { label: "A\xE7\u0131klama" }, React.createElement("input", { style: S.inp, value: giderForm.aciklama || "", onChange: (e) => setGiderForm((f) => ({ ...f, aciklama: e.target.value })) })),
       React.createElement(FG, { label: "Tutar (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: giderForm.tutar || "", onChange: (e) => setGiderForm((f) => ({ ...f, tutar: +e.target.value })) })),
       !giderForm.id && React.createElement(FG, { label: "\xD6demenin \xC7\u0131kt\u0131\u011F\u0131 Hesap (opsiyonel)" }, React.createElement("select", { style: S.sel, value: giderForm.hesapId || "", onChange: (e) => setGiderForm((f) => ({ ...f, hesapId: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Sadece kayda ge\xE7sin, hesaptan d\xFC\u015F\xFClmesin \u2014"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad, " (", fmtTL(h.bakiye), ")")))),
+      !giderForm.id && giderForm.hesapId && React.createElement(FG, { label: "\xD6deme Y\xF6ntemi" }, React.createElement("select", { style: S.sel, value: giderForm.yontem || "Nakit", onChange: (e) => setGiderForm((f) => ({ ...f, yontem: e.target.value })) }, ODEME_YONTEMLERI.map((y) => React.createElement("option", { key: y, value: y }, y)))),
       hata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26A0\uFE0F ", hata),
       React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setGiderModal(false) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: giderKaydet }, "Kaydet"))
     ),
@@ -2140,6 +2146,7 @@ function Muhasebe() {
         React.createElement(FG, { label: "Y\xF6n" }, React.createElement("select", { style: S.sel, value: hareketForm.yon || "giris", onChange: (e) => setHareketForm((f) => ({ ...f, yon: e.target.value })) }, React.createElement("option", { value: "giris" }, "\u2795 Para Giri\u015Fi"), React.createElement("option", { value: "cikis" }, "\u2796 Para \xC7\u0131k\u0131\u015F\u0131"))),
         React.createElement(FG, { label: "Tutar (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: hareketForm.tutar || "", onChange: (e) => setHareketForm((f) => ({ ...f, tutar: +e.target.value })) }))
       ),
+      React.createElement(FG, { label: "\xD6deme Y\xF6ntemi" }, React.createElement("select", { style: S.sel, value: hareketForm.yontem || "Nakit", onChange: (e) => setHareketForm((f) => ({ ...f, yontem: e.target.value })) }, ODEME_YONTEMLERI.map((y) => React.createElement("option", { key: y, value: y }, y)))),
       React.createElement(FG, { label: "Tarih" }, React.createElement("input", { type: "date", style: S.inp, value: hareketForm.tarih || "", onChange: (e) => setHareketForm((f) => ({ ...f, tarih: e.target.value })) })),
       React.createElement(FG, { label: "A\xE7\u0131klama" }, React.createElement("input", { style: S.inp, value: hareketForm.aciklama || "", onChange: (e) => setHareketForm((f) => ({ ...f, aciklama: e.target.value })) })),
       hata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26A0\uFE0F ", hata),
@@ -2168,6 +2175,7 @@ function Muhasebe() {
       React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 14 } }, "Kalan: ", React.createElement("strong", { style: { color: C.white } }, fmtTL(faturaKalan(odemeAlModal))), " / Toplam: ", fmtTL(odemeAlModal.toplam)),
       React.createElement(FG, { label: "Tutar (\u20ba)" }, React.createElement("input", { type: "number", style: S.inp, value: odemeAlForm.tutar ?? "", onChange: (e) => setOdemeAlForm((f) => ({ ...f, tutar: +e.target.value })) })),
       React.createElement(FG, { label: "Hesap" }, React.createElement("select", { style: S.sel, value: odemeAlForm.hesapId || "", onChange: (e) => setOdemeAlForm((f) => ({ ...f, hesapId: e.target.value })) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Kasa & Banka'dan hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad)))),
+      React.createElement(FG, { label: "\xD6deme Y\xF6ntemi" }, React.createElement("select", { style: S.sel, value: odemeAlForm.yontem || "Nakit", onChange: (e) => setOdemeAlForm((f) => ({ ...f, yontem: e.target.value })) }, ODEME_YONTEMLERI.map((y) => React.createElement("option", { key: y, value: y }, y)))),
       odemeHata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26a0\ufe0f ", odemeHata),
       React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setOdemeAlModal(null) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: odemeAlKaydet }, "Onayla"))
     ),
@@ -2180,13 +2188,14 @@ function Muhasebe() {
         : React.createElement(
             "table",
             { style: S.tbl },
-            React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", { style: S.th }, "Tarih"), React.createElement("th", { style: S.th }, "A\xE7\u0131klama"), React.createElement("th", { style: S.th }, "Y\xF6n"), React.createElement("th", { style: S.th }, "Tutar"))),
+            React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", { style: S.th }, "Tarih"), React.createElement("th", { style: S.th }, "A\xE7\u0131klama"), React.createElement("th", { style: S.th }, "Y\xF6n"), React.createElement("th", { style: S.th }, "Y\xF6ntem"), React.createElement("th", { style: S.th }, "Tutar"))),
             React.createElement("tbody", null, detayHareketler.map((h) => React.createElement(
               "tr",
               { key: h.id },
               React.createElement("td", { style: S.td }, fmtDate(h.tarih)),
               React.createElement("td", { style: S.td }, h.aciklama || "\u2014"),
               React.createElement("td", { style: S.td }, h.tur === "giris" ? "\u2795 Giri\u015F" : "\u2796 \xC7\u0131k\u0131\u015F"),
+              React.createElement("td", { style: S.td }, h.yontem || "\u2014"),
               React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: h.tur === "giris" ? C.green : C.red } }, h.tur === "giris" ? "+" : "-", fmtTL(h.tutar)))
             )))
           )
