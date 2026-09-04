@@ -59,6 +59,7 @@ const EL_ARABASI_TUR_LABEL = {
   kantarsiz_bidon: "Kantars\u0131z Bidon Ta\u015F\u0131ma",
   bidon_devirme: "Bidon Devirme"
 };
+const FATURA_TUR_LABEL = { servis: "\u{1F527} Servis", el_arabasi: "\u{1F6D2} El Arabas\u0131", satis: "\u{1F4E4} Sat\u0131\u015f", alis: "\u{1F4E5} Al\u0131\u015f" };
 const DURUM_LABEL = { bekliyor: "Bekliyor", devam: "Devam Ediyor", tamamlandi: "Tamamland\u0131", iptal: "\u0130ptal" };
 const DURUM_RENK = { bekliyor: C.yellow, devam: C.blue, tamamlandi: C.green, iptal: C.red };
 const GIDER_KATEGORILERI = ["Malzeme/Hammadde", "Kira", "Elektrik/Su", "Personel Maa\u015F\u0131", "Yak\u0131t", "Bak\u0131m-Onar\u0131m", "Vergi/SGK", "Di\u011Fer"];
@@ -1826,6 +1827,7 @@ function Muhasebe() {
           "tr",
           null,
           React.createElement("th", { style: S.th }, "Fatura No"),
+          React.createElement("th", { style: S.th }, "T\xFCr"),
           React.createElement("th", { style: S.th }, "Tarih"),
           React.createElement("th", { style: S.th }, "M\xFC\u015Fteri"),
           React.createElement("th", { style: S.th }, "A\xE7\u0131klama"),
@@ -1839,17 +1841,18 @@ function Muhasebe() {
           "tbody",
           null,
           filtreliFaturalar.length === 0
-            ? React.createElement("tr", null, React.createElement("td", { style: S.td, colSpan: 9 }, React.createElement("div", { style: { textAlign: "center", color: C.muted, padding: 20 } }, "Hen\xFCz fatura yok. Bir servis i\u015Fi \"Teslim Edildi\" a\u015Famas\u0131na ge\xE7ti\u011Finde veya bir \xFCr\xFCn sat\u0131ld\u0131\u011F\u0131nda otomatik olu\u015Fur.")))
+            ? React.createElement("tr", null, React.createElement("td", { style: S.td, colSpan: 10 }, React.createElement("div", { style: { textAlign: "center", color: C.muted, padding: 20 } }, "Hen\xFCz fatura yok. Bir servis i\u015Fi \"Teslim Edildi\" a\u015Famas\u0131na ge\xE7ti\u011Finde veya bir \xFCr\xFCn sat\u0131ld\u0131\u011F\u0131nda otomatik olu\u015Fur.")))
             : [...filtreliFaturalar].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || "")).map((f) => React.createElement(
                 "tr",
                 { key: f.id },
                 React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.accent } }, f.faturaNo)),
+                React.createElement("td", { style: S.td }, React.createElement("span", { style: S.badge(f.tur === "alis" ? C.red : C.blue) }, FATURA_TUR_LABEL[f.tur] || f.tur)),
                 React.createElement("td", { style: S.td }, fmtDate(f.tarih)),
                 React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, f.musteriId))),
                 React.createElement("td", { style: S.td }, f.aciklama),
                 React.createElement("td", { style: S.td }, fmtTL(f.araToplam)),
                 React.createElement("td", { style: S.td }, fmtTL(f.kdvTutari)),
-                React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: C.accent } }, fmtTL(f.toplam))),
+                React.createElement("td", { style: S.td }, React.createElement("strong", { style: { color: f.tur === "alis" ? C.red : C.accent } }, f.tur === "alis" ? "\u2212" : "", fmtTL(f.toplam))),
                 React.createElement("td", { style: S.td }, (() => {
                   const durum = faturaDurumu(f);
                   if (durum === "odendi") return React.createElement(Badge, { d: "tamamlandi", map: { tamamlandi: "\xD6dendi" }, renk: { tamamlandi: C.green } });
@@ -1857,7 +1860,7 @@ function Muhasebe() {
                   return React.createElement(Badge, { d: "bekliyor", map: { bekliyor: "Bekliyor" }, renk: { bekliyor: C.yellow } });
                 })()),
                 React.createElement("td", { style: S.td }, React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
-                  f.tur !== "servis" && faturaKalan(f) > 0 && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setOdemeAlForm({ tutar: faturaKalan(f), hesapId: hesaplar[0] ? hesaplar[0].id : "" }); setOdemeHata(""); setOdemeAlModal(f); } }, "\u{1F4B0} \xD6deme Al"),
+                  f.tur !== "servis" && faturaKalan(f) > 0 && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setOdemeAlForm({ tutar: faturaKalan(f), hesapId: hesaplar[0] ? hesaplar[0].id : "" }); setOdemeHata(""); setOdemeAlModal(f); } }, f.tur === "alis" ? "\u{1F4B0} \xD6deme Yap" : "\u{1F4B0} \xD6deme Al"),
                   React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => faturaYazdir(f, cariAd(cariler, f.musteriId)) }, "\u{1F4C4} PDF"),
                   React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => faturaDuzenle(f) }, "\u270F\uFE0F"),
                   React.createElement("button", { style: S.btnR, onClick: () => faturaSil(f.id) }, "\u{1F5D1}\uFE0F")
