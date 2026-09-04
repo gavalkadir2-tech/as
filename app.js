@@ -63,6 +63,7 @@ const FATURA_TUR_LABEL = { servis: "\u{1F527} Servis", el_arabasi: "\u{1F6D2} El
 const ECU_MARKALARI = ["Bosch", "Continental", "Siemens", "Delphi", "Denso", "Marelli", "Valeo", "Sagem", "Keihin", "Visteon", "Di\u011fer"];
 const KESS_PROTOKOL_LISTESI = ["OBD", "Bench", "Boot/BDM", "Bench/Boot"];
 const KESS_STAGE_LISTESI = ["Stage 1", "Stage 2", "Stage 3", "Stage 1+", "\u00d6zel (Custom)", "Orijinale D\u00f6n\u00fc\u015f (Stock)"];
+const KESS_YARDIM_KATEGORILERI = ["Ba\u011flant\u0131 Sorunu", "Protokol Se\u00e7imi (OBD/Bench/Boot)", "Stage/Dosya Ayar\u0131", "Checksum Hatas\u0131", "Genel Kullan\u0131m", "Di\u011fer"];
 const DURUM_LABEL = { bekliyor: "Bekliyor", devam: "Devam Ediyor", tamamlandi: "Tamamland\u0131", iptal: "\u0130ptal" };
 const DURUM_RENK = { bekliyor: C.yellow, devam: C.blue, tamamlandi: C.green, iptal: C.red };
 const GIDER_KATEGORILERI = ["Malzeme/Hammadde", "Kira", "Elektrik/Su", "Personel Maa\u015F\u0131", "Yak\u0131t", "Bak\u0131m-Onar\u0131m", "Vergi/SGK", "Di\u011Fer"];
@@ -772,9 +773,15 @@ function ServisIsleri() {
   const [kessOneriDevam, setKessOneriDevam] = useState(false);
   const [kessOneriMetni, setKessOneriMetni] = useState("");
   const [kessYardimAcik, setKessYardimAcik] = useState(false);
+  const [kessYardimAdim, setKessYardimAdim] = useState(1);
+  const [kessYardimKategori, setKessYardimKategori] = useState("");
   const [kessYardimSoru, setKessYardimSoru] = useState("");
   const [kessYardimCevap, setKessYardimCevap] = useState("");
   const [kessYardimDevam, setKessYardimDevam] = useState(false);
+  const [kessHataAcik, setKessHataAcik] = useState(false);
+  const [kessHataMetni, setKessHataMetni] = useState("");
+  const [kessHataCevap, setKessHataCevap] = useState("");
+  const [kessHataDevam, setKessHataDevam] = useState(false);
   const benimPersonelim = (() => {
     const k = googleKullanici();
     if (!k || !k.ad) return null;
@@ -811,7 +818,14 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     try {
       const arac = form.aracId ? araclar.find((a) => a.id === form.aracId) : null;
       const aracBilgisi = arac ? `${arac.marka || "bilinmiyor"} ${arac.model || ""} ${arac.yil || ""}`.trim() : "belirtilmedi";
-      const prompt = `Bir oto chiptuning atölyesinde KESS V3 (Alientech) cihazıyla ECU chiptuning yapılacak. Araç: ${aracBilgisi}. Bu araç i\xE7in kısaca (en fazla 4-5 satır, madde madde): 1) muhtemel ECU markası, 2) KESS V3 i\xE7in önerilen bağlantı protokol\xFC (OBD / Bench / Boot-BDM), 3) g\xFCvenli başlangı\xE7 stage önerisi ve dikkat edilmesi gereken 1-2 nokta yaz. Emin olmadığın teknik detaylarda "aracı/ECU'y\xFC kontrol edin" diye belirt. Başka hi\xE7bir şey ekleme.`;
+      const gecmisIsler = arac ? liste.filter((s) => {
+        if (s.id === form.id || s.hizmetTuru !== "chiptuning") return false;
+        if (!(s.kessStage || s.kessProtokol || s.kessEcuMarka)) return false;
+        const a2 = araclar.find((x) => x.id === s.aracId);
+        return a2 && a2.marka === arac.marka && a2.model === arac.model;
+      }) : [];
+      const gecmisMetin = gecmisIsler.slice(0, 3).map((s) => `- ECU: ${s.kessEcuMarka || "belirtilmemiş"} · Protokol: ${s.kessProtokol || "belirtilmemiş"} · Stage: ${s.kessStage || "belirtilmemiş"}${s.kessDosyaNotu ? ` · Not: ${s.kessDosyaNotu}` : ""}`).join("\n");
+      const prompt = `Bir oto chiptuning atölyesinde KESS V3 (Alientech) cihazıyla ECU chiptuning yapılacak. Araç: ${aracBilgisi}.${gecmisMetin ? `\n\nAtölyemizde daha önce aynı marka/modelde yapılan işler:\n${gecmisMetin}\nBu geçmiş kayıtları da dikkate alarak öneride bulun.` : ""}\n\nBu araç i\xE7in kısaca (en fazla 4-5 satır, madde madde): 1) muhtemel ECU markası, 2) KESS V3 i\xE7in önerilen bağlantı protokol\xFC (OBD / Bench / Boot-BDM), 3) g\xFCvenli başlangı\xE7 stage önerisi ve dikkat edilmesi gereken 1-2 nokta yaz. Emin olmadığın teknik detaylarda "aracı/ECU'y\xFC kontrol edin" diye belirt. Başka hi\xE7bir şey ekleme.`;
       const cevap = await aiSor(prompt);
       setKessOneriMetni(cevap.trim());
     } catch (e) {
@@ -824,13 +838,27 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     setKessYardimDevam(true);
     setKessYardimCevap("");
     try {
-      const prompt = `Sen Alientech KESS V3 ECU chiptuning cihazı konusunda uzman bir teknik destek asistanısın. Bir oto tamir/chiptuning ustasının aşağıdaki sorusunu kısa, pratik ve T\xFCrk\xE7e yanıtla. Emin olmadığın konularda resmi KESS V3 kılavuzuna veya yetkili servise y\xF6nlendir. \n\nSoru: "${kessYardimSoru.trim()}"`;
+      const kategoriMetni = kessYardimKategori ? `Konu kategorisi: ${kessYardimKategori}. ` : "";
+      const prompt = `Sen Alientech KESS V3 ECU chiptuning cihazı konusunda uzman bir teknik destek asistanısın. ${kategoriMetni}Bir oto tamir/chiptuning ustasının aşağıdaki sorusunu kısa, pratik, adım adım ve T\xFCrk\xE7e yanıtla. Emin olmadığın konularda resmi KESS V3 kılavuzuna veya yetkili servise y\xF6nlendir. \n\nSoru: "${kessYardimSoru.trim()}"`;
       const cevap = await aiSor(prompt);
       setKessYardimCevap(cevap.trim());
     } catch (e) {
       setKessYardimCevap("Hata: " + e.message);
     }
     setKessYardimDevam(false);
+  };
+  const kessHataSor = async () => {
+    if (!kessHataMetni.trim()) return;
+    setKessHataDevam(true);
+    setKessHataCevap("");
+    try {
+      const prompt = `Sen Alientech KESS V3 ECU chiptuning cihazında görülen hata kodları ve checksum sorunları konusunda uzman bir teknik destek asistanısın. Aşağıdaki hata mesajını veya belirtiyi analiz et; muhtemel sebeplerini ve çözüm adımlarını kısa, madde madde ve Türkçe yaz. Emin olmadığın konularda resmi KESS V3 kılavuzuna veya yetkili servise yönlendir.\n\nHata/Belirti: "${kessHataMetni.trim()}"`;
+      const cevap = await aiSor(prompt);
+      setKessHataCevap(cevap.trim());
+    } catch (e) {
+      setKessHataCevap("Hata: " + e.message);
+    }
+    setKessHataDevam(false);
   };
 
   const kaydet = () => {
@@ -1176,9 +1204,13 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
         ),
         React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
           React.createElement("button", { type: "button", style: S.btnO, onClick: kessOner, disabled: kessOneriDevam }, kessOneriDevam ? "\u23F3" : "\u{1F916} AI'dan Stage/Protokol \xD6ner"),
-          React.createElement("button", { type: "button", style: S.btnO, onClick: () => { setKessYardimAcik(true); setKessYardimSoru(""); setKessYardimCevap(""); } }, "\u2753 KESS V3 Kullan\u0131m Yard\u0131m\u0131")
+          React.createElement("button", { type: "button", style: S.btnO, onClick: () => { setKessYardimAcik(true); setKessYardimAdim(1); setKessYardimKategori(""); setKessYardimSoru(""); setKessYardimCevap(""); } }, "\u2753 KESS V3 Ad\u0131m Ad\u0131m Yard\u0131m"),
+          React.createElement("button", { type: "button", style: S.btnO, onClick: () => { setKessHataAcik(true); setKessHataMetni(""); setKessHataCevap(""); } }, "\u{1F6E0}\uFE0F Hata Kodu / Checksum \xC7\xF6z")
         ),
-        kessOneriMetni && React.createElement("div", { style: { marginTop: 10, padding: "8px 12px", background: C.card, borderRadius: 8, fontSize: 12, color: C.text, whiteSpace: "pre-line" } }, kessOneriMetni)
+        kessOneriMetni && React.createElement(React.Fragment, null,
+          React.createElement("div", { style: { marginTop: 10, padding: "8px 12px", background: C.card, borderRadius: 8, fontSize: 12, color: C.text, whiteSpace: "pre-line" } }, kessOneriMetni),
+          React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: C.yellow } }, "\u26A0\uFE0F Bu \u00F6neri genel bilgiye dayan\u0131r, dyno testi ve ger\u00E7ek ECU okumas\u0131 olmadan do\u011Frudan uygulamay\u0131n.")
+        )
       ),
 
       React.createElement(FG, { label: "Toplam (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: form.tutar ?? 0, onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
@@ -1240,12 +1272,29 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     ),
     kessYardimAcik && React.createElement(
       Modal,
-      { title: "❓ KESS V3 Kullanım Yardımı", onClose: () => setKessYardimAcik(false), width: 480 },
-      React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, "KESS V3 cihazının bağlanması, protokol se\xE7imi, hata kodları veya genel kullanımı hakkında bir soru sorun."),
-      React.createElement(FG, { label: "Sorunuz" }, React.createElement("textarea", { style: { ...S.inp, minHeight: 70 }, value: kessYardimSoru, onChange: (e) => setKessYardimSoru(e.target.value), placeholder: "\xD6rn: Bench modda bağlantı sağlanamıyor, ne kontrol etmeliyim?" })),
-      React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: 12 } }, React.createElement("button", { style: S.btn(), onClick: kessYardimSor, disabled: kessYardimDevam || !kessYardimSoru.trim() }, kessYardimDevam ? "⏳ Soruluyor..." : "\u{1F916} Sor")),
-      kessYardimCevap && React.createElement("div", { style: { padding: "10px 14px", background: C.surface, borderRadius: 8, fontSize: 13, color: C.text, whiteSpace: "pre-line" } }, kessYardimCevap),
+      { title: "❓ KESS V3 Adım Adım Yardım", onClose: () => setKessYardimAcik(false), width: 480 },
+      kessYardimAdim === 1 ? React.createElement(React.Fragment, null,
+        React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, "1. Adım: Önce sorunuzun konusunu se\xE7in."),
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } }, KESS_YARDIM_KATEGORILERI.map((k) => React.createElement("button", { key: k, type: "button", style: S.btnO, onClick: () => { setKessYardimKategori(k); setKessYardimAdim(2); } }, k)))
+      ) : React.createElement(React.Fragment, null,
+        React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, "2. Adım: Kategori: ", React.createElement("strong", { style: { color: C.white } }, kessYardimKategori), " — sorunuzu detaylandırın."),
+        React.createElement(FG, { label: "Sorunuz" }, React.createElement("textarea", { style: { ...S.inp, minHeight: 70 }, value: kessYardimSoru, onChange: (e) => setKessYardimSoru(e.target.value), placeholder: "\xD6rn: Bench modda bağlantı sağlanamıyor, ne kontrol etmeliyim?" })),
+        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 12 } },
+          React.createElement("button", { type: "button", style: S.btnO, onClick: () => setKessYardimAdim(1) }, "← Geri"),
+          React.createElement("button", { style: S.btn(), onClick: kessYardimSor, disabled: kessYardimDevam || !kessYardimSoru.trim() }, kessYardimDevam ? "⏳ Soruluyor..." : "\u{1F916} Sor")
+        ),
+        kessYardimCevap && React.createElement("div", { style: { padding: "10px 14px", background: C.surface, borderRadius: 8, fontSize: 13, color: C.text, whiteSpace: "pre-line" } }, kessYardimCevap)
+      ),
       React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", marginTop: 14 } }, React.createElement("button", { style: S.btnO, onClick: () => setKessYardimAcik(false) }, "Kapat"))
+    ),
+    kessHataAcik && React.createElement(
+      Modal,
+      { title: "\u{1F6E0}️ Hata Kodu / Checksum \xC7\xF6z\xFCc\xFC", onClose: () => setKessHataAcik(false), width: 480 },
+      React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, "KESS V3 ekranında veya yazılımında g\xF6rd\xFCğ\xFCn\xFCz hata mesajını ya da belirtiyi olduğu gibi yapıştırın."),
+      React.createElement(FG, { label: "Hata Mesajı / Belirti" }, React.createElement("textarea", { style: { ...S.inp, minHeight: 80 }, value: kessHataMetni, onChange: (e) => setKessHataMetni(e.target.value), placeholder: "\xD6rn: Checksum error, ECU cevap vermiyor..." })),
+      React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: 12 } }, React.createElement("button", { style: S.btn(), onClick: kessHataSor, disabled: kessHataDevam || !kessHataMetni.trim() }, kessHataDevam ? "⏳ Analiz ediliyor..." : "\u{1F916} Analiz Et")),
+      kessHataCevap && React.createElement("div", { style: { padding: "10px 14px", background: C.surface, borderRadius: 8, fontSize: 13, color: C.text, whiteSpace: "pre-line" } }, kessHataCevap),
+      React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", marginTop: 14 } }, React.createElement("button", { style: S.btnO, onClick: () => setKessHataAcik(false) }, "Kapat"))
     ),
     detayArac && React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: detayAracServisleri, onClose: () => setDetayAracId(null), onGuncelle: detayAracGuncelle })
   );
