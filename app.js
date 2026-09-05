@@ -281,8 +281,22 @@ async function htmlBelgeIndir(html, dosyaAdi) {
   try {
     const canvas = await window.html2canvas(kapsayici, { scale: 2, backgroundColor: "#ffffff" });
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: "px", format: [canvas.width, canvas.height] });
-    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, canvas.width, canvas.height);
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const sayfaGenislik = pdf.internal.pageSize.getWidth();
+    const sayfaYukseklik = pdf.internal.pageSize.getHeight();
+    const oran = sayfaGenislik / canvas.width;
+    const resimYukseklik = canvas.height * oran;
+    const resimVerisi = canvas.toDataURL("image/png");
+    let kalanYukseklik = resimYukseklik;
+    let pozisyon = 0;
+    pdf.addImage(resimVerisi, "PNG", 0, pozisyon, sayfaGenislik, resimYukseklik);
+    kalanYukseklik -= sayfaYukseklik;
+    while (kalanYukseklik > 0) {
+      pozisyon = kalanYukseklik - resimYukseklik;
+      pdf.addPage();
+      pdf.addImage(resimVerisi, "PNG", 0, pozisyon, sayfaGenislik, resimYukseklik);
+      kalanYukseklik -= sayfaYukseklik;
+    }
     pdf.save(dosyaAdi);
   } catch (e) {
     alert("PDF oluşturulamadı: " + e.message);
