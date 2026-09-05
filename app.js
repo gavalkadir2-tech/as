@@ -385,7 +385,7 @@ const fmtDate = (d) => {
   const [y, m, g] = d.split("-");
   return g ? `${g}.${m}.${y}` : d;
 };
-const fmtTL = (n) => `\u20BA${(+n || 0).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+const fmtTL = (n) => `${(+n || 0).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} \u20BA`;
 const DEFAULT_SETTINGS = {
   firmaAdi: "As Egzoz & Makine",
   firmaAdres: "",
