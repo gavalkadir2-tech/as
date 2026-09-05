@@ -17,18 +17,74 @@ const C = {
   blue: "#5b8fc9",
   purple: "#a87fd0"
 };
-const HIZMET_TIP_LABEL = {
-  egzoz_tamir: "\u{1F529} Egzoz Tamiri",
-  egzoz_degisim: "\u{1F527} Egzoz De\u011Fi\u015Fimi",
-  egzoz_kaynak: "\u{1F525} Egzoz Kaynak/Onar\u0131m",
-  chiptuning: "\u26A1 Chiptuning",
-  motor_bakim: "\u{1F6E0}\uFE0F Motor Bak\u0131m\u0131",
-  elektrik_ariza: "\u{1F50C} Elektrik Ar\u0131za",
-  akilli_makine_kurulum: "\u{1F916} Ak\u0131ll\u0131 Makine Kurulumu",
-  akilli_makine_bakim: "\u{1F916} Ak\u0131ll\u0131 Makine Bak\u0131m\u0131",
-  periyodik_bakim: "\u{1F9F0} Periyodik Bak\u0131m",
-  diger: "\u270F\uFE0F Di\u011Fer (\xF6zel)"
+const TEMA_KOYU = { ...C };
+const TEMA_ACIK = {
+  bg: "#f3efe8",
+  surface: "#ffffff",
+  card: "#ffffff",
+  border: "#ddd5c7",
+  accent: "#e8622c",
+  steel: "#5f6c76",
+  white: "#221f1b",
+  text: "#3f372f",
+  muted: "#7a705f",
+  green: "#2f9155",
+  red: "#c94444",
+  yellow: "#b6791b",
+  blue: "#3d6fa8",
+  purple: "#8457b8"
 };
+function temaCssUygula() {
+  const kok = document.documentElement.style;
+  kok.setProperty("--bg", C.bg);
+  kok.setProperty("--surface", C.surface);
+  kok.setProperty("--card", C.card);
+  kok.setProperty("--border", C.border);
+  kok.setProperty("--ember", C.accent);
+  kok.setProperty("--ember-dim", C.accent + "22");
+  kok.setProperty("--steel", C.steel);
+  kok.setProperty("--white", C.white);
+  kok.setProperty("--text", C.text);
+  kok.setProperty("--muted", C.muted);
+  kok.setProperty("--green", C.green);
+  kok.setProperty("--red", C.red);
+  kok.setProperty("--yellow", C.yellow);
+  kok.setProperty("--blue", C.blue);
+}
+function temaUygula(mod) {
+  Object.assign(C, mod === "acik" ? TEMA_ACIK : TEMA_KOYU);
+  temaCssUygula();
+}
+function temaDegistir(mod) {
+  saveSettings({ ...getSettings(), tema: mod });
+  temaUygula(mod);
+  window.location.reload();
+}
+const HIZMET_TIP_SABIT = { egzoz_tamir: "\u{1F529} Egzoz Tamiri", chiptuning: "\u26A1 Chiptuning" };
+const HIZMET_TIP_VARSAYILAN_DIGER = [
+  { key: "egzoz_degisim", label: "\u{1F527} Egzoz De\u011Fi\u015Fimi" },
+  { key: "egzoz_kaynak", label: "\u{1F525} Egzoz Kaynak/Onar\u0131m" },
+  { key: "motor_bakim", label: "\u{1F6E0}\uFE0F Motor Bak\u0131m\u0131" },
+  { key: "elektrik_ariza", label: "\u{1F50C} Elektrik Ar\u0131za" },
+  { key: "akilli_makine_kurulum", label: "\u{1F916} Ak\u0131ll\u0131 Makine Kurulumu" },
+  { key: "akilli_makine_bakim", label: "\u{1F916} Ak\u0131ll\u0131 Makine Bak\u0131m\u0131" },
+  { key: "periyodik_bakim", label: "\u{1F9F0} Periyodik Bak\u0131m" },
+  { key: "diger", label: "\u270F\uFE0F Di\u011Fer (\xF6zel)" }
+];
+const GIDER_KATEGORILERI_VARSAYILAN = ["Malzeme/Hammadde", "Kira", "Elektrik/Su", "Personel Maa\u015F\u0131", "Yak\u0131t", "Bak\u0131m-Onar\u0131m", "Vergi/SGK", "Di\u011Fer"];
+let HIZMET_TIP_LABEL = { ...HIZMET_TIP_SABIT };
+let HIZMET_TIP_DIGER_LISTESI = [];
+function hizmetTurleriYenile() {
+  const ayar = getSettings().hizmetTurleri;
+  HIZMET_TIP_DIGER_LISTESI = Array.isArray(ayar) ? ayar : HIZMET_TIP_VARSAYILAN_DIGER;
+  const yeni = { ...HIZMET_TIP_SABIT };
+  HIZMET_TIP_DIGER_LISTESI.forEach((k) => { if (k && k.key) yeni[k.key] = k.label; });
+  HIZMET_TIP_LABEL = yeni;
+}
+function giderKategorileriYenile() {
+  const ayar = getSettings().giderKategorileri;
+  GIDER_KATEGORILERI = Array.isArray(ayar) && ayar.length > 0 ? ayar : GIDER_KATEGORILERI_VARSAYILAN;
+}
 function asamaRenk(asama) {
   if (asama === "iptal") return C.muted;
   if (asama === "teslim_edildi") return C.green;
@@ -67,7 +123,7 @@ const KESS_YARDIM_KATEGORILERI = ["Ba\u011flant\u0131 Sorunu", "Protokol Se\u00e
 const ODEME_YONTEMLERI = ["Nakit", "Kredi Kart\u0131", "Havale/EFT", "\u00c7ek/Senet", "Di\u011fer"];
 const DURUM_LABEL = { bekliyor: "Bekliyor", devam: "Devam Ediyor", tamamlandi: "Tamamland\u0131", iptal: "\u0130ptal" };
 const DURUM_RENK = { bekliyor: C.yellow, devam: C.blue, tamamlandi: C.green, iptal: C.red };
-const GIDER_KATEGORILERI = ["Malzeme/Hammadde", "Kira", "Elektrik/Su", "Personel Maa\u015F\u0131", "Yak\u0131t", "Bak\u0131m-Onar\u0131m", "Vergi/SGK", "Di\u011Fer"];
+let GIDER_KATEGORILERI = [...GIDER_KATEGORILERI_VARSAYILAN];
 const HESAP_TUR_LABEL = { kasa: "\u{1F4B5} Kasa", banka: "\u{1F3E6} Banka", kredi_karti: "\u{1F4B3} Kredi Kart\u0131", pos: "\u{1F5A5}\uFE0F POS" };
 const ROL_LABEL = { patron: "\u{1F451} Patron / Y\xF6netici", usta: "\u{1F527} Usta / Teknisyen", kasiyer: "\u{1F4B0} Kasiyer / Muhasebe" };
 const ROL_SAYFA_IZIN = {
@@ -404,10 +460,16 @@ const DEFAULT_SETTINGS = {
   supabaseUrl: "",
   supabaseAnonKey: "",
   aiApiKey: "",
-  googleClientId: ""
+  googleClientId: "",
+  tema: "koyu",
+  hizmetTurleri: null,
+  giderKategorileri: null
 };
 const getSettings = () => ({ ...DEFAULT_SETTINGS, ...LS.get("ayarlar", {}) });
 const saveSettings = (s) => LS.set("ayarlar", s);
+temaUygula(getSettings().tema || "koyu");
+hizmetTurleriYenile();
+giderKategorileriYenile();
 function seedVeri() {
   if (localStorage.getItem("fp_seed_v1")) return;
   LS.set("cariler", [
@@ -439,21 +501,21 @@ function seedVeri() {
 }
 const S = {
   app: { display: "flex", minHeight: "100vh" },
-  sidebar: { width: 220, background: C.surface, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", padding: "18px 12px", flexShrink: 0 },
+  get sidebar() { return { width: 220, background: C.surface, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", padding: "18px 12px", flexShrink: 0 }; },
   main: { flex: 1, padding: "24px 28px", maxWidth: 1200, margin: "0 auto", width: "100%" },
-  card: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 16, overflowX: "auto", WebkitOverflowScrolling: "touch" },
+  get card() { return { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 16, overflowX: "auto", WebkitOverflowScrolling: "touch" }; },
   navBtn: (active) => ({ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13.5, marginBottom: 2, color: active ? C.white : C.muted, background: active ? C.accent + "22" : "transparent", border: active ? `1px solid ${C.accent}55` : "1px solid transparent", fontWeight: active ? 600 : 400 }),
   btn: (bg = C.accent) => ({ background: bg, color: "#161311", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }),
-  btnO: { background: "transparent", color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer" },
-  btnR: { background: "transparent", color: C.red, border: `1px solid ${C.red}55`, borderRadius: 8, padding: "7px 12px", fontSize: 12, cursor: "pointer" },
-  inp: { width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.white, fontSize: 13.5 },
-  sel: { width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.white, fontSize: 13.5 },
-  th: { textAlign: "left", padding: "9px 10px", fontSize: 11.5, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4, borderBottom: `1px solid ${C.border}` },
-  td: { padding: "11px 10px", fontSize: 13.5, borderBottom: `1px solid ${C.border}55`, color: C.text },
+  get btnO() { return { background: "transparent", color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer" }; },
+  get btnR() { return { background: "transparent", color: C.red, border: `1px solid ${C.red}55`, borderRadius: 8, padding: "7px 12px", fontSize: 12, cursor: "pointer" }; },
+  get inp() { return { width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.white, fontSize: 13.5 }; },
+  get sel() { return { width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.white, fontSize: 13.5 }; },
+  get th() { return { textAlign: "left", padding: "9px 10px", fontSize: 11.5, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4, borderBottom: `1px solid ${C.border}` }; },
+  get td() { return { padding: "11px 10px", fontSize: 13.5, borderBottom: `1px solid ${C.border}55`, color: C.text }; },
   tbl: { width: "100%", borderCollapse: "collapse" },
-  secTitle: { fontSize: 15, fontWeight: 700, color: C.white, marginBottom: 14 },
+  get secTitle() { return { fontSize: 15, fontWeight: 700, color: C.white, marginBottom: 14 }; },
   modal: { position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 700, padding: 16 },
-  mbox: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, maxHeight: "88vh", overflowY: "auto", overflowX: "auto" },
+  get mbox() { return { background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, maxHeight: "88vh", overflowY: "auto", overflowX: "auto" }; },
   badge: (c) => ({ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: c + "22", color: c })
 };
 function FG({ label, children }) {
@@ -1819,16 +1881,24 @@ function Cariler({ hedef, hedefTemizle } = {}) {
   return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F465} Cariler"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => {
     setForm({});
     setModalAcik(true);
-  } }, "\u2795 Yeni Cari")), /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, marginBottom: 16, maxWidth: 360 }, placeholder: "\u{1F50D} \u0130sim, telefon veya adreste ara\u2026", value: arama, onChange: (e) => setArama(e.target.value) }), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 } }, filtreliListe.length === 0 && (liste.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { ...S.card, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "\u{1F465}"), /* @__PURE__ */ React.createElement("div", { style: { color: C.white, fontWeight: 700, marginBottom: 6 } }, "Hen\u00fcz cari eklenmedi"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 12.5, marginBottom: 14 } }, "\u0130lk m\u00fc\u015fterinizi veya tedarik\u00e7inizi ekleyerek ba\u015flay\u0131n."), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => { setForm({}); setModalAcik(true); } }, "\u2795 Yeni Cari Ekle")) : /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Kay\u0131t bulunamad\u0131.")), filtreliListe.map((c) => {
-    const acikBorc = borc(c.id);
-    return /* @__PURE__ */ React.createElement("div", { key: c.id, style: S.card }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.white, marginBottom: 4 } }, c.ad), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 2 } }, c.tel || "Telefon yok"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, c.adres || "Adres yok"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.accent, fontWeight: 700, marginBottom: 4 } }, "Toplam i\u015Flem: ", fmtTL(harcama(c.id))), acikBorc > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.red, fontWeight: 700, marginBottom: 8 } }, "A\xE7\u0131k bor\xE7: ", fmtTL(acikBorc)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, flex: 1 }, onClick: () => setEkstreId(c.id) }, "\u{1F4CB} Ekstre"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, flex: 1 }, onClick: () => {
-      setFaturaForm({ tarih: today(), yon: "satis" });
-      setFaturaHata("");
-      setFaturaModal(c);
-    } }, "\u{1F9FE} Fatura"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, flex: 1 }, onClick: () => {
-      setForm(c);
-      setModalAcik(true);
-    } }, "\u270F\uFE0F"), /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(c.id) }, "\u{1F5D1}\uFE0F")));
+  } }, "\u2795 Yeni Cari")), /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, marginBottom: 16, maxWidth: 360 }, placeholder: "\u{1F50D} \u0130sim, telefon veya adreste ara\u2026", value: arama, onChange: (e) => setArama(e.target.value) }), liste.length === 0 ? React.createElement("div", { style: { ...S.card, textAlign: "center", padding: 32 } }, React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "\u{1F465}"), React.createElement("div", { style: { color: C.white, fontWeight: 700, marginBottom: 6 } }, "Hen\u00fcz cari eklenmedi"), React.createElement("div", { style: { color: C.muted, fontSize: 12.5, marginBottom: 14 } }, "\u0130lk m\u00fc\u015fterinizi veya tedarik\u00e7inizi ekleyerek ba\u015flay\u0131n."), React.createElement("button", { style: S.btn(), onClick: () => { setForm({}); setModalAcik(true); } }, "\u2795 Yeni Cari Ekle")) : React.createElement("div", { style: S.card }, React.createElement(SiraliTablo, {
+    dosyaAdi: "cariler",
+    rowKey: (c) => c.id,
+    bosMesaj: "Kayıt bulunamadı.",
+    rows: filtreliListe,
+    columns: [
+      { key: "ad", baslik: "Müşteri / Firma", sirala: (c) => c.ad || "", render: (c) => React.createElement("strong", { style: { color: C.white } }, c.ad) },
+      { key: "tel", baslik: "Telefon", sirala: (c) => c.tel || "", render: (c) => c.tel || "—" },
+      { key: "adres", baslik: "Adres", sirala: (c) => c.adres || "", render: (c) => c.adres || "—" },
+      { key: "harcama", baslik: "Toplam İşlem", sirala: (c) => harcama(c.id), render: (c) => React.createElement("strong", { style: { color: C.accent } }, fmtTL(harcama(c.id))) },
+      { key: "borc", baslik: "Açık Borç", sirala: (c) => borc(c.id), render: (c) => { const acikBorc = borc(c.id); return acikBorc > 0 ? React.createElement("strong", { style: { color: C.red } }, fmtTL(acikBorc)) : "—"; } },
+      { key: "islemler", baslik: "", render: (c) => React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+        React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => setEkstreId(c.id) }, "\u{1F4CB} Ekstre"),
+        React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setFaturaForm({ tarih: today(), yon: "satis" }); setFaturaHata(""); setFaturaModal(c); } }, "\u{1F9FE} Fatura"),
+        React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(c); setModalAcik(true); } }, "✏️"),
+        React.createElement("button", { style: S.btnR, onClick: () => sil(c.id) }, "\u{1F5D1}️")
+      ) }
+    ]
   })), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Cariyi D\xFCzenle" : "Yeni Cari", onClose: () => setModalAcik(false), width: 420 }, /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.ad || "", onChange: (e) => setForm((f) => ({ ...f, ad: e.target.value })), autoFocus: true })), /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.tel || "", onChange: (e) => setForm((f) => ({ ...f, tel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.adres || "", onChange: (e) => setForm((f) => ({ ...f, adres: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), ekstreCari && /* @__PURE__ */ React.createElement(Modal, { title: `\u{1F4CB} ${ekstreCari.ad} \u2014 Cari Hesap Ekstresi`, onClose: () => setEkstreId(null), width: 640 }, /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Toplam \u0130\u015Flem Hacmi"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, fmtTL(harcama(ekstreCari.id)))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14, borderTop: `3px solid ${C.red}` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "A\xE7\u0131k Bor\xE7"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.red } }, fmtTL(borc(ekstreCari.id))))), ekstreHareketleri.length === 0 ? React.createElement("div", { style: { color: C.muted } }, "Henüz işlem yok.") : React.createElement(SiraliTablo, {
     dosyaAdi: "cari_ekstre",
     rowKey: (h) => h.id,
@@ -1882,6 +1952,25 @@ function Muhasebe() {
   const [odemeAlModal, setOdemeAlModal] = useState(null);
   const [odemeAlForm, setOdemeAlForm] = useState({});
   const [odemeHata, setOdemeHata] = useState("");
+  const [yeniFaturaModal, setYeniFaturaModal] = useState(false);
+  const [yeniFaturaForm, setYeniFaturaForm] = useState({});
+  const [yeniFaturaHata, setYeniFaturaHata] = useState("");
+  const yeniFaturaKaydet = () => {
+    if (!yeniFaturaForm.musteriId) {
+      setYeniFaturaHata("M\xFCşteri se\xE7imi zorunludur.");
+      return;
+    }
+    if (!(+yeniFaturaForm.tutar > 0)) {
+      setYeniFaturaHata("Tutar 0'dan b\xFCy\xFCk olmalıdır.");
+      return;
+    }
+    setYeniFaturaHata("");
+    const yon = yeniFaturaForm.yon || "satis";
+    faturaOlustur(yon, uid(), yeniFaturaForm.musteriId, yeniFaturaForm.tarih || today(), yeniFaturaForm.aciklama || (yon === "alis" ? "Alış" : "Satış"), [], +yeniFaturaForm.tutar);
+    setFaturalar(LS.get("faturalar"));
+    setYeniFaturaModal(false);
+    setYeniFaturaForm({});
+  };
 
   const faturaOdenen = (f) => (f.odemeler || []).reduce((t, o) => t + (+o.tutar || 0), 0);
   const faturaKalan = (f) => Math.max(0, Math.round(((+f.toplam || 0) - faturaOdenen(f)) * 100) / 100);
@@ -2116,7 +2205,10 @@ function Muhasebe() {
     sekme === "faturalar" && React.createElement(
       "div",
       { style: S.card },
-      React.createElement("input", { style: { ...S.inp, marginBottom: 14 }, placeholder: "\u{1F50D} Fatura no, m\xFC\u015Fteri veya a\xE7\u0131klamada ara\u2026", value: arama, onChange: (e) => setArama(e.target.value) }),
+      React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" } },
+        React.createElement("input", { style: { ...S.inp, flex: 1, minWidth: 200 }, placeholder: "\u{1F50D} Fatura no, m\xFC\u015Fteri veya a\xE7\u0131klamada ara\u2026", value: arama, onChange: (e) => setArama(e.target.value) }),
+        React.createElement("button", { style: S.btn(), onClick: () => { setYeniFaturaForm({ tarih: today(), yon: "satis" }); setYeniFaturaHata(""); setYeniFaturaModal(true); } }, "\u2795 Yeni Fatura")
+      ),
       React.createElement(SiraliTablo, {
         dosyaAdi: "faturalar",
         rowKey: (f) => f.id,
@@ -2256,6 +2348,22 @@ function Muhasebe() {
       hata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26a0\ufe0f ", hata),
       React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setFaturaModal(false) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: faturaKaydet }, "Kaydet"))
     ),
+    yeniFaturaModal && React.createElement(
+      Modal,
+      { title: "\u2795 Yeni Fatura", onClose: () => setYeniFaturaModal(false), width: 420 },
+      React.createElement(
+        "div",
+        { style: { display: "flex", gap: 8, marginBottom: 14 } },
+        React.createElement("button", { type: "button", style: (yeniFaturaForm.yon || "satis") === "satis" ? S.btn() : S.btnO, onClick: () => setYeniFaturaForm((f) => ({ ...f, yon: "satis" })) }, "\u{1F4E4} Sat\u0131\u015f Faturas\u0131"),
+        React.createElement("button", { type: "button", style: yeniFaturaForm.yon === "alis" ? S.btn() : S.btnO, onClick: () => setYeniFaturaForm((f) => ({ ...f, yon: "alis" })) }, "\u{1F4E5} Al\u0131\u015f Faturas\u0131")
+      ),
+      React.createElement(FG, { label: "M\u00fc\u015fteri / Tedarik\u00e7i" }, React.createElement("select", { style: S.sel, value: yeniFaturaForm.musteriId || "", onChange: (e) => setYeniFaturaForm((f) => ({ ...f, musteriId: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), cariler.map((c) => React.createElement("option", { key: c.id, value: c.id }, c.ad)))),
+      React.createElement(FG, { label: "Tarih" }, React.createElement("input", { type: "date", style: S.inp, value: yeniFaturaForm.tarih || "", onChange: (e) => setYeniFaturaForm((f) => ({ ...f, tarih: e.target.value })) })),
+      React.createElement(FG, { label: "A\u00e7\u0131klama" }, React.createElement("input", { style: S.inp, value: yeniFaturaForm.aciklama || "", onChange: (e) => setYeniFaturaForm((f) => ({ ...f, aciklama: e.target.value })) })),
+      React.createElement(FG, { label: "Tutar (\u20ba)" }, React.createElement("input", { type: "number", style: S.inp, value: yeniFaturaForm.tutar ?? "", onChange: (e) => setYeniFaturaForm((f) => ({ ...f, tutar: +e.target.value })) })),
+      yeniFaturaHata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26a0\ufe0f ", yeniFaturaHata),
+      React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setYeniFaturaModal(false) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: yeniFaturaKaydet }, "Kaydet"))
+    ),
 
     hesapModal && React.createElement(
       Modal,
@@ -2332,7 +2440,14 @@ function Muhasebe() {
   );
 }
 function Ayarlar() {
-  const [form, setForm] = useState(getSettings());
+  const [form, setForm] = useState(() => {
+    const s = getSettings();
+    return {
+      ...s,
+      hizmetTurleri: Array.isArray(s.hizmetTurleri) ? s.hizmetTurleri.map((x) => ({ ...x })) : HIZMET_TIP_VARSAYILAN_DIGER.map((x) => ({ ...x })),
+      giderKategorileri: Array.isArray(s.giderKategorileri) && s.giderKategorileri.length > 0 ? [...s.giderKategorileri] : [...GIDER_KATEGORILERI_VARSAYILAN]
+    };
+  });
   const [kaydedildi, setKaydedildi] = useState(false);
   const [bulutTest, setBulutTest] = useState("");
   const [bulutIslemDevam, setBulutIslemDevam] = useState(false);
@@ -2340,8 +2455,22 @@ function Ayarlar() {
   const [aiTestDevam, setAiTestDevam] = useState(false);
   const kaydet = () => {
     saveSettings(form);
+    hizmetTurleriYenile();
+    giderKategorileriYenile();
     setKaydedildi(true);
     setTimeout(() => setKaydedildi(false), 2e3);
+  };
+  const hizmetEkle = () => setForm((f) => ({ ...f, hizmetTurleri: [...(f.hizmetTurleri || []), { key: "ozel_" + uid(), label: "" }] }));
+  const hizmetGuncelle = (key, label) => setForm((f) => ({ ...f, hizmetTurleri: f.hizmetTurleri.map((h) => h.key === key ? { ...h, label } : h) }));
+  const hizmetSil = (key) => {
+    if (!confirm("Bu hizmet t\xFCr\xFC kaldırılsın mı? Bu t\xFCrde kayıtlı ge\xE7miş iş emirleri etkilenmez.")) return;
+    setForm((f) => ({ ...f, hizmetTurleri: f.hizmetTurleri.filter((h) => h.key !== key) }));
+  };
+  const giderKategoriEkle = () => setForm((f) => ({ ...f, giderKategorileri: [...(f.giderKategorileri || []), ""] }));
+  const giderKategoriGuncelle = (i, deger) => setForm((f) => ({ ...f, giderKategorileri: f.giderKategorileri.map((g, idx) => idx === i ? deger : g) }));
+  const giderKategoriSil = (i) => {
+    if (!confirm("Bu gider kategorisi kaldırılsın mı?")) return;
+    setForm((f) => ({ ...f, giderKategorileri: f.giderKategorileri.filter((_, idx) => idx !== i) }));
   };
   const bulutTestEt = async () => {
     setBulutIslemDevam(true);
@@ -2434,7 +2563,60 @@ function Ayarlar() {
     if (!confirm("Son kez soruyoruz: t\xFCm veriler s\u0131f\u0131rlans\u0131n m\u0131?")) return;
     localStorage.clear();
     window.location.reload();
-  } }, "\u{1F5D1}\uFE0F T\xFCm Verileri S\u0131f\u0131rla")), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "\u{1F4BE} Ayarlar\u0131 Kaydet"), kaydedildi && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 12, color: C.green, fontSize: 13 } }, "\u2713 Kaydedildi"));
+  } }, "\u{1F5D1}\uFE0F T\xFCm Verileri S\u0131f\u0131rla")),
+  React.createElement(
+    "div",
+    { style: S.card },
+    React.createElement("div", { style: S.secTitle }, "\u{1F3A8} G\xF6r\xFCn\xFCm"),
+    React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Uygulaman\u0131n renk temas\u0131n\u0131 se\xE7in."),
+    React.createElement(
+      "div",
+      { style: { display: "flex", gap: 10 } },
+      React.createElement("button", { type: "button", style: (form.tema || "koyu") === "koyu" ? S.btn() : S.btnO, onClick: () => temaDegistir("koyu") }, "\u{1F319} Koyu Mod"),
+      React.createElement("button", { type: "button", style: form.tema === "acik" ? S.btn() : S.btnO, onClick: () => temaDegistir("acik") }, "\u2600\uFE0F A\xE7\u0131k Mod")
+    )
+  ),
+  React.createElement(
+    "div",
+    { style: S.card },
+    React.createElement("div", { style: S.secTitle }, "\u{1F3F7}\uFE0F Hizmet T\xFCr\xFC Kategorileri"),
+    React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Egzoz Tamiri ve Chiptuning sabittir, de\u011Fi\u015Ftirilemez. Di\u011Fer kategorileri d\xFCzenleyebilir, silebilir veya yeni ekleyebilirsiniz."),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 } },
+      Object.entries(HIZMET_TIP_SABIT).map(([key, label]) => React.createElement(
+        "div",
+        { key, style: { display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: C.surface, borderRadius: 8 } },
+        React.createElement("span", { style: { fontSize: 13, color: C.text, flex: 1 } }, label),
+        React.createElement("span", { style: { fontSize: 11, color: C.muted } }, "\u{1F512} Sabit")
+      )),
+      (form.hizmetTurleri || []).map((h) => React.createElement(
+        "div",
+        { key: h.key, style: { display: "flex", alignItems: "center", gap: 8 } },
+        React.createElement("input", { style: S.inp, value: h.label, onChange: (e) => hizmetGuncelle(h.key, e.target.value), placeholder: "Kategori ad\u0131" }),
+        React.createElement("button", { type: "button", style: S.btnR, onClick: () => hizmetSil(h.key) }, "\u{1F5D1}\uFE0F")
+      ))
+    ),
+    React.createElement("button", { type: "button", style: S.btnO, onClick: hizmetEkle }, "\u2795 Yeni Kategori Ekle")
+  ),
+  React.createElement(
+    "div",
+    { style: S.card },
+    React.createElement("div", { style: S.secTitle }, "\u{1F4B8} Gider Kategorileri"),
+    React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Muhasebe \u2192 Giderler b\xF6l\xFCm\xFCnde kullan\u0131lan kategorileri d\xFCzenleyin."),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 } },
+      (form.giderKategorileri || []).map((g, i) => React.createElement(
+        "div",
+        { key: i, style: { display: "flex", alignItems: "center", gap: 8 } },
+        React.createElement("input", { style: S.inp, value: g, onChange: (e) => giderKategoriGuncelle(i, e.target.value), placeholder: "Kategori ad\u0131" }),
+        React.createElement("button", { type: "button", style: S.btnR, onClick: () => giderKategoriSil(i) }, "\u{1F5D1}\uFE0F")
+      ))
+    ),
+    React.createElement("button", { type: "button", style: S.btnO, onClick: giderKategoriEkle }, "\u2795 Yeni Kategori Ekle")
+  ),
+  /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "\u{1F4BE} Ayarlar\u0131 Kaydet"), kaydedildi && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 12, color: C.green, fontSize: 13 } }, "\u2713 Kaydedildi"));
 }
 function Personel() {
   const [liste, setListe] = useState(LS.get("personel"));
