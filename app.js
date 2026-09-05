@@ -914,7 +914,6 @@ function ServisIsleri({ hedef, hedefTemizle } = {}) {
   const [modalAcik, setModalAcik] = useState(false);
   const [form, setForm] = useState({});
   const [hata, setHata] = useState("");
-  const [durumFiltre, setDurumFiltre] = useState("acik");
   const [yeniAracAcik, setYeniAracAcik] = useState(false);
   const [sahipDuzenAcik, setSahipDuzenAcik] = useState(false);
   const [sahipForm, setSahipForm] = useState({});
@@ -1126,7 +1125,6 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     setOdemeYontemi("Nakit");
   };
 
-  const durumaGoreFiltreli = durumFiltre === "tumu" ? liste : durumFiltre === "acik" ? liste.filter((s) => s.durum !== "tamamlandi" && s.durum !== "iptal") : liste.filter((s) => s.durum === durumFiltre);
   const aramaMetni = arama.trim().toLocaleLowerCase("tr-TR");
   const aracEtiket = (s) => {
     const a = aracBilgi(araclar, s.aracId);
@@ -1139,7 +1137,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     LS.set("araclar", yeni);
     setAraclar(yeni);
   };
-  const metneGoreFiltreli = !aramaMetni ? durumaGoreFiltreli : durumaGoreFiltreli.filter((s) => (cariAd(cariler, s.musteriId) + " " + aracEtiket(s) + " " + (s.aciklama || "") + " " + (s.isEmriNo || "")).toLocaleLowerCase("tr-TR").includes(aramaMetni));
+  const metneGoreFiltreli = !aramaMetni ? liste : liste.filter((s) => (cariAd(cariler, s.musteriId) + " " + aracEtiket(s) + " " + (s.aciklama || "") + " " + (s.isEmriNo || "")).toLocaleLowerCase("tr-TR").includes(aramaMetni));
   const etkinPersonelFiltre = sadeceBenim && benimPersonelim ? benimPersonelim.id : personelFiltre;
   const gosterilecek = !etkinPersonelFiltre ? metneGoreFiltreli : metneGoreFiltreli.filter((s) => s.personelId === etkinPersonelFiltre);
   const araclarSirali = [...araclar].sort((a, b) => (a.plaka || "").localeCompare(b.plaka || ""));
@@ -1178,8 +1176,6 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     const kalanGun = Math.ceil((new Date(s.garantiBitis) - new Date(today())) / 864e5);
     return kalanGun >= 0 ? { metin: `Garanti: ${kalanGun} g\xFCn kald\u0131`, renk: C.green } : { metin: "Garanti bitti", renk: C.muted };
   };
-  const acikSayisi = liste.filter((s) => s.durum !== "tamamlandi" && s.durum !== "iptal").length;
-  const tamamlananSayisi = liste.filter((s) => s.durum === "tamamlandi").length;
   const yeniIsEmriAc = () => {
     setForm({ tarih: today(), saat: nowTime(), asama: "tamirde", tutar: 0, personelId: sonKullanilanPersonelId(), hizmetTuru: sonKullanilanHizmetTuru() });
     setHata("");
@@ -1202,16 +1198,9 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     React.createElement(
       "div",
       { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } },
-      React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F527} Servis \u0130\u015Fleri"),
-      React.createElement("button", { style: S.btn(), onClick: yeniIsEmriAc }, "\u2795 Yeni \u0130\u015F Emri")
+      React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F527} \u0130\u015F Emri Olu\u015Ftur"),
+      React.createElement("button", { style: S.btn(), onClick: yeniIsEmriAc }, "\u2795 \u0130\u015F Emri Olu\u015Ftur")
     ),
-    React.createElement(
-      Grid4,
-      null,
-      React.createElement(StatCard, { color: C.accent, icon: "\u{1F527}", value: acikSayisi, label: "Serviste" }),
-      React.createElement(StatCard, { color: C.green, icon: "\u2705", value: tamamlananSayisi, label: "Teslim Edildi" })
-    ),
-    React.createElement(TabBar, { tabs: [["acik", "Serviste"], ["tumu", "T\xFCm\xFC"], ["tamamlandi", "Teslim Edildi"], ["iptal", "\u0130ptal"]], active: durumFiltre, onChange: setDurumFiltre }),
     React.createElement(
       "div",
       { style: S.card },
@@ -2697,7 +2686,7 @@ function GirisEkrani({ onGiris }) {
 }
 const SAYFALAR = [
   { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
-  { id: "servis", label: "Servis \u0130\u015Fleri", icon: "\u{1F527}", comp: ServisIsleri },
+  { id: "servis", label: "\u0130\u015F Emri Olu\u015Ftur", icon: "\u{1F527}", comp: ServisIsleri },
   { id: "takvim", label: "Randevu Takvimi", icon: "\u{1F4C5}", comp: Takvim },
   { id: "araclar", label: "Ara\xE7 Kay\u0131tlar\u0131", icon: "\u{1F697}", comp: Araclar },
   { id: "el_arabasi", label: "El Arabas\u0131", icon: "\u{1F6D2}", comp: ElArabasi },
@@ -2918,7 +2907,7 @@ function App() {
     /* @__PURE__ */ React.createElement("div", { style: { padding: "0 4px 14px", position: "relative" } },
       /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btn(), width: "100%" }, onClick: () => setHizliMenuAcik((v) => !v) }, "➕ Hızlı Ekle"),
       hizliMenuAcik && /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "100%", left: 4, right: 4, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, marginTop: 4, zIndex: 650, overflow: "hidden" } },
-        /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("servis", { tip: "yeni_is_emri" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.border}` } }, "\u{1F527} Yeni İş Emri"),
+        /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("servis", { tip: "yeni_is_emri" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.border}` } }, "\u{1F527} İş Emri Oluştur"),
         /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("cariler", { tip: "yeni_cari" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.border}` } }, "\u{1F465} Yeni Cari"),
         /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("araclar", { tip: "yeni_arac" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text } }, "\u{1F697} Yeni Ara\xE7")
       )
