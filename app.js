@@ -192,19 +192,29 @@ function plakaNormalize(p) {
 }
 function plakaParcala(deger) {
   const norm = plakaNormalize(deger).replace(/\s+/g, "");
-  const m = norm.match(/^(\d{2})([A-Z]{1,3})(\d{2,4})$/);
+  const m = norm.match(/^(\d{2})([A-Z]{1,3})(\d{2,5})$/);
   return m ? { il: m[1], harf: m[2], rakam: m[3] } : { il: "", harf: "", rakam: "" };
 }
 function plakaBirlestir(il, harf, rakam) {
   return plakaNormalize(`${il || ""} ${harf || ""} ${rakam || ""}`);
 }
 function PlakaGirisi({ il, harf, rakam, onIl, onHarf, onRakam }) {
+  const harfRef = useRef(null);
+  const rakamRef = useRef(null);
   return /* @__PURE__ */ React.createElement(
     "div",
     { style: { display: "flex", gap: 8 } },
-    /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, width: 56, textAlign: "center" }, placeholder: "34", maxLength: 2, value: il || "", onChange: (e) => onIl(e.target.value.replace(/[^0-9]/g, "").slice(0, 2)) }),
-    /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, flex: 1, textAlign: "center" }, placeholder: "ABC", maxLength: 3, value: harf || "", onChange: (e) => onHarf(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3)) }),
-    /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, width: 90, textAlign: "center" }, placeholder: "1234", maxLength: 4, value: rakam || "", onChange: (e) => onRakam(e.target.value.replace(/[^0-9]/g, "").slice(0, 4)) })
+    /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, width: 56, textAlign: "center" }, placeholder: "34", maxLength: 2, value: il || "", onChange: (e) => {
+      const deger = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+      onIl(deger);
+      if (deger.length === 2 && harfRef.current) harfRef.current.focus();
+    } }),
+    /* @__PURE__ */ React.createElement("input", { ref: harfRef, style: { ...S.inp, flex: 1, textAlign: "center" }, placeholder: "ABC", maxLength: 3, value: harf || "", onChange: (e) => {
+      const deger = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
+      onHarf(deger);
+      if (deger.length === 3 && rakamRef.current) rakamRef.current.focus();
+    } }),
+    /* @__PURE__ */ React.createElement("input", { ref: rakamRef, style: { ...S.inp, width: 100, textAlign: "center" }, placeholder: "12345", maxLength: 5, value: rakam || "", onChange: (e) => onRakam(e.target.value.replace(/[^0-9]/g, "").slice(0, 5)) })
   );
 }
 function MarkaModelSecici({ marka, model, onMarka, onModel }) {
@@ -1577,10 +1587,6 @@ function HizliAracFormu({ onClose, onEklendi }) {
       setHata("Plaka zorunludur.");
       return;
     }
-    if (!musteriAdi.trim()) {
-      setHata("M\xFC\u015Fteri / Firma ad\u0131 zorunludur.");
-      return;
-    }
     const araclar = LS.get("araclar");
     const normalize = plakaNormalize(plaka);
     const cakisan = araclar.find((a) => plakaNormalize(a.plaka) === normalize);
@@ -1590,10 +1596,15 @@ function HizliAracFormu({ onClose, onEklendi }) {
     }
     setHata("");
     const cariler = LS.get("cariler");
-    const yeniCari = { id: uid(), ad: musteriAdi.trim(), tel: tel.trim(), adres: adres.trim() };
-    const tumCariler = [...cariler, yeniCari];
-    LS.set("cariler", tumCariler);
-    const yeniArac = { id: uid(), musteriId: yeniCari.id, plaka: normalize, marka: marka.trim(), model: model.trim() };
+    let tumCariler = cariler;
+    let musteriId = "";
+    if (musteriAdi.trim()) {
+      const yeniCari = { id: uid(), ad: musteriAdi.trim(), tel: tel.trim(), adres: adres.trim() };
+      tumCariler = [...cariler, yeniCari];
+      LS.set("cariler", tumCariler);
+      musteriId = yeniCari.id;
+    }
+    const yeniArac = { id: uid(), musteriId, plaka: normalize, marka: marka.trim(), model: model.trim() };
     const tumAraclar = [...araclar, yeniArac];
     LS.set("araclar", tumAraclar);
     onEklendi(yeniArac, tumAraclar, tumCariler);
@@ -1611,7 +1622,7 @@ function HizliAracFormu({ onClose, onEklendi }) {
     /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il, harf, rakam, onIl: setIl, onHarf: setHarf, onRakam: setRakam })),
     /* @__PURE__ */ React.createElement(MarkaModelSecici, { marka, model, onMarka: setMarka, onModel: setModel }),
     /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "\u{1F464} Ara\xE7 Sahibi"),
-    /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: musteriAdi, onChange: (e) => setMusteriAdi(e.target.value) })),
+    /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131 (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: musteriAdi, onChange: (e) => setMusteriAdi(e.target.value) })),
     /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: tel, onChange: (e) => setTel(e.target.value) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: adres, onChange: (e) => setAdres(e.target.value) }))),
     hata && /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26A0\uFE0F ", hata),
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: onClose }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))
@@ -2494,28 +2505,26 @@ function Araclar({ hedef, hedefTemizle } = {}) {
       alert("Plaka zorunludur.");
       return;
     }
-    if (!(form.musteriAdi || "").trim()) {
-      alert("Müşteri / Firma adı zorunludur.");
-      return;
-    }
     const normalize = plakaNormalize(plaka);
     const cakisan = liste.find((a) => a.id !== form.id && plakaNormalize(a.plaka) === normalize);
     if (cakisan) {
       alert(`Bu plaka zaten kayıtlı: ${cakisan.plaka}`);
       return;
     }
-    let cariId = form.musteriId;
-    const cariBilgisi = { ad: form.musteriAdi.trim(), tel: (form.musteriTel || "").trim(), adres: (form.musteriAdres || "").trim() };
-    let yeniCariler;
-    if (cariId && cariler.some((c) => c.id === cariId)) {
-      yeniCariler = cariler.map((c) => c.id === cariId ? { ...c, ...cariBilgisi } : c);
-    } else {
-      const yeniCari = { id: uid(), ...cariBilgisi };
-      cariId = yeniCari.id;
-      yeniCariler = [...cariler, yeniCari];
+    let cariId = form.musteriId || "";
+    let yeniCariler = cariler;
+    if ((form.musteriAdi || "").trim()) {
+      const cariBilgisi = { ad: form.musteriAdi.trim(), tel: (form.musteriTel || "").trim(), adres: (form.musteriAdres || "").trim() };
+      if (cariId && cariler.some((c) => c.id === cariId)) {
+        yeniCariler = cariler.map((c) => c.id === cariId ? { ...c, ...cariBilgisi } : c);
+      } else {
+        const yeniCari = { id: uid(), ...cariBilgisi };
+        cariId = yeniCari.id;
+        yeniCariler = [...cariler, yeniCari];
+      }
+      LS.set("cariler", yeniCariler);
+      setCariler(yeniCariler);
     }
-    LS.set("cariler", yeniCariler);
-    setCariler(yeniCariler);
     const kayit = { ...form, id: form.id || uid(), plaka: normalize, musteriId: cariId };
     delete kayit.musteriAdi;
     delete kayit.musteriTel;
@@ -2572,7 +2581,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
 })), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Aracı Düzenle" : "Yeni Araç", onClose: () => setModalAcik(false), width: 480 }, !form.id && /* @__PURE__ */ React.createElement(PlakaKameraTarayici, { onSonuc: (deger) => {
     const p = plakaParcala(deger);
     setForm((f) => ({ ...f, plakaIl: p.il, plakaHarf: p.harf, plakaRakam: p.rakam }));
-  } }), /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il: form.plakaIl, harf: form.plakaHarf, rakam: form.plakaRakam, onIl: (v) => setForm((f) => ({ ...f, plakaIl: v })), onHarf: (v) => setForm((f) => ({ ...f, plakaHarf: v })), onRakam: (v) => setForm((f) => ({ ...f, plakaRakam: v })) })), /* @__PURE__ */ React.createElement(MarkaModelSecici, { marka: form.marka, model: form.model, onMarka: (v) => setForm((f) => ({ ...f, marka: v })), onModel: (v) => setForm((f) => ({ ...f, model: v })) }), /* @__PURE__ */ React.createElement(FG, { label: "Model Yılı" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.yil || "", onChange: (e) => setForm((f) => ({ ...f, yil: +e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Şasi No (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.sasiNo || "", onChange: (e) => setForm((f) => ({ ...f, sasiNo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "👤 Araç Sahibi (Müşteri/Firma)"), /* @__PURE__ */ React.createElement(FG, { label: "Müşteri / Firma Adı" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdi || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdi: e.target.value })) })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriTel || "", onChange: (e) => setForm((f) => ({ ...f, musteriTel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdres || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdres: e.target.value })) }))), /* @__PURE__ */ React.createElement(FG, { label: "Notlar" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.notlar || "", onChange: (e) => setForm((f) => ({ ...f, notlar: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), detayArac && /* @__PURE__ */ React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: aracServisleri(detayArac.id), onClose: () => setDetayAracId(null), onGuncelle: (patch) => aracGuncelle(detayArac.id, patch) }));
+  } }), /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il: form.plakaIl, harf: form.plakaHarf, rakam: form.plakaRakam, onIl: (v) => setForm((f) => ({ ...f, plakaIl: v })), onHarf: (v) => setForm((f) => ({ ...f, plakaHarf: v })), onRakam: (v) => setForm((f) => ({ ...f, plakaRakam: v })) })), /* @__PURE__ */ React.createElement(MarkaModelSecici, { marka: form.marka, model: form.model, onMarka: (v) => setForm((f) => ({ ...f, marka: v })), onModel: (v) => setForm((f) => ({ ...f, model: v })) }), /* @__PURE__ */ React.createElement(FG, { label: "Model Yılı" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.yil || "", onChange: (e) => setForm((f) => ({ ...f, yil: +e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Şasi No (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.sasiNo || "", onChange: (e) => setForm((f) => ({ ...f, sasiNo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "👤 Araç Sahibi (Müşteri/Firma, opsiyonel)"), /* @__PURE__ */ React.createElement(FG, { label: "Müşteri / Firma Adı (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdi || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdi: e.target.value })) })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriTel || "", onChange: (e) => setForm((f) => ({ ...f, musteriTel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdres || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdres: e.target.value })) }))), /* @__PURE__ */ React.createElement(FG, { label: "Notlar" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.notlar || "", onChange: (e) => setForm((f) => ({ ...f, notlar: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), detayArac && /* @__PURE__ */ React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: aracServisleri(detayArac.id), onClose: () => setDetayAracId(null), onGuncelle: (patch) => aracGuncelle(detayArac.id, patch) }));
 }
 function AracFotoThumb({ foto, onSil }) {
   const [veri, setVeri] = useState(null);
