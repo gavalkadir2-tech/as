@@ -282,19 +282,20 @@ async function htmlBelgeIndir(html, dosyaAdi) {
     const canvas = await window.html2canvas(kapsayici, { scale: 2, backgroundColor: "#ffffff" });
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: "a4" });
-    const sayfaGenislik = pdf.internal.pageSize.getWidth();
-    const sayfaYukseklik = pdf.internal.pageSize.getHeight();
+    const kenarBosluk = 10;
+    const sayfaGenislik = pdf.internal.pageSize.getWidth() - kenarBosluk * 2;
+    const sayfaYukseklik = pdf.internal.pageSize.getHeight() - kenarBosluk * 2;
     const oran = sayfaGenislik / canvas.width;
     const resimYukseklik = canvas.height * oran;
     const resimVerisi = canvas.toDataURL("image/png");
     let kalanYukseklik = resimYukseklik;
-    let pozisyon = 0;
-    pdf.addImage(resimVerisi, "PNG", 0, pozisyon, sayfaGenislik, resimYukseklik);
+    let pozisyon = kenarBosluk;
+    pdf.addImage(resimVerisi, "PNG", kenarBosluk, pozisyon, sayfaGenislik, resimYukseklik);
     kalanYukseklik -= sayfaYukseklik;
     while (kalanYukseklik > 0) {
-      pozisyon = kalanYukseklik - resimYukseklik;
+      pozisyon = kenarBosluk - (resimYukseklik - kalanYukseklik);
       pdf.addPage();
-      pdf.addImage(resimVerisi, "PNG", 0, pozisyon, sayfaGenislik, resimYukseklik);
+      pdf.addImage(resimVerisi, "PNG", kenarBosluk, pozisyon, sayfaGenislik, resimYukseklik);
       kalanYukseklik -= sayfaYukseklik;
     }
     pdf.save(dosyaAdi);
