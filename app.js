@@ -1617,7 +1617,7 @@ function HizliAracFormu({ onClose, onEklendi }) {
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: onClose }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))
   );
 }
-function ElArabasi() {
+function ElArabasi({ hedef, hedefTemizle } = {}) {
   const [cariler, setCariler] = useState(LS.get("cariler"));
   const [satislar, setSatislar] = useState(LS.get("satislar"));
   const [modalAcik, setModalAcik] = useState(false);
@@ -1626,6 +1626,15 @@ function ElArabasi() {
   const [yeniCariAcik, setYeniCariAcik] = useState(false);
   const [yeniCariForm, setYeniCariForm] = useState({});
   const [arama, setArama] = useState("");
+  useEffect(() => {
+    if (!hedef) return;
+    if (hedef.tip === "yeni_satis") {
+      setForm({ tarih: today() });
+      setHata("");
+      setModalAcik(true);
+    }
+    hedefTemizle && hedefTemizle();
+  }, [hedef]);
 
   const kaydet = () => {
     if (!form.musteriId) {
@@ -2682,7 +2691,7 @@ function GirisEkrani({ onGiris }) {
   if (!clientId) {
     return /* @__PURE__ */ React.createElement("div", { className: "fp-vh-fix", style: { display: "flex", alignItems: "center", justifyContent: "center", background: C.bg } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 420, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "\u{1F527}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 8 } }, "Google ile Giri\u015F Kurulmad\u0131"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted } }, "Ayarlar \u2192 Google Giri\u015Fi'nden bir Client ID girip kaydedin. O zamana kadar uygulamaya do\u011Frudan devam edebilirsiniz."), /* @__PURE__ */ React.createElement("button", { style: { ...S.btn(), marginTop: 16 }, onClick: () => onGiris(null) }, "Google's\u0131z Devam Et")));
   }
-  return /* @__PURE__ */ React.createElement("div", { className: "fp-vh-fix", style: { display: "flex", alignItems: "center", justifyContent: "center", background: C.bg } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 380, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 36, marginBottom: 12 } }, "\u{1F527}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: C.white, marginBottom: 4 } }, getSettings().firmaAdi), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 24 } }, "Devam etmek i\xE7in Google hesab\u0131n\u0131zla giri\u015F yap\u0131n"), /* @__PURE__ */ React.createElement("div", { ref: butonRef, style: { display: "flex", justifyContent: "center" } }), hata && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, color: C.red, fontSize: 12 } }, "\u26A0\uFE0F ", hata)));
+  return /* @__PURE__ */ React.createElement("div", { className: "fp-vh-fix", style: { display: "flex", alignItems: "center", justifyContent: "center", background: C.bg } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 380, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement("img", { src: "icons/icon-192.png", alt: "As logo", style: { width: 56, height: 56, marginBottom: 12 } }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: C.white, marginBottom: 4 } }, getSettings().firmaAdi), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 24 } }, "Devam etmek i\xE7in Google hesab\u0131n\u0131zla giri\u015F yap\u0131n"), /* @__PURE__ */ React.createElement("div", { ref: butonRef, style: { display: "flex", justifyContent: "center" } }), hata && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, color: C.red, fontSize: 12 } }, "\u26A0\uFE0F ", hata)));
 }
 const SAYFALAR = [
   { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
@@ -2899,7 +2908,7 @@ function App() {
       /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: C.white } }, aktifSayfaBilgi.icon, " ", aktifSayfaBilgi.label)
     ),
     sidebarAcik && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-backdrop", onClick: () => setSidebarAcik(false) }),
-    /* @__PURE__ */ React.createElement("div", { className: sidebarAcik ? "fp-sidebar fp-sidebar-open" : "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, "\u{1F527} As"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Egzoz \xB7 Chiptuning \xB7 \xDCretim")),
+    /* @__PURE__ */ React.createElement("div", { className: sidebarAcik ? "fp-sidebar fp-sidebar-open" : "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px", display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("img", { src: "icons/icon-192.png", alt: "As logo", style: { width: 34, height: 34, flexShrink: 0 } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, "As"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Egzoz \xB7 Chiptuning \xB7 \xDCretim"))),
     /* @__PURE__ */ React.createElement("div", { style: { padding: "0 4px 10px", position: "relative" } },
       /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, fontSize: 12.5 }, placeholder: "\u{1F50D} Plaka, m\xFCşteri, iş emri ara…", value: globalArama, onChange: (e) => setGlobalArama(e.target.value) }),
       globalSonuclar.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "100%", left: 4, right: 4, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, marginTop: 4, zIndex: 650, maxHeight: 320, overflowY: "auto" } }, globalSonuclar.map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, onClick: () => sonucaGit(s), style: { padding: "8px 10px", cursor: "pointer", borderBottom: i < globalSonuclar.length - 1 ? `1px solid ${C.border}` : "none", display: "flex", gap: 8, alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", null, s.icon), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: C.white, fontWeight: 600 } }, s.baslik), s.alt && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, s.alt)))))
@@ -2909,7 +2918,8 @@ function App() {
       hizliMenuAcik && /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "100%", left: 4, right: 4, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, marginTop: 4, zIndex: 650, overflow: "hidden" } },
         /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("servis", { tip: "yeni_is_emri" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.border}` } }, "\u{1F527} İş Emri Oluştur"),
         /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("cariler", { tip: "yeni_cari" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.border}` } }, "\u{1F465} Yeni Cari"),
-        /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("araclar", { tip: "yeni_arac" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text } }, "\u{1F697} Yeni Ara\xE7")
+        /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("araclar", { tip: "yeni_arac" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.border}` } }, "\u{1F697} Yeni Ara\xE7"),
+        /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("el_arabasi", { tip: "yeni_satis" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text } }, "\u{1F6D2} Araba Sat\u0131\u015F\u0131")
       )
     ),
     /* @__PURE__ */ React.createElement("div", { className: "fp-navlist" }, gorunurSayfalar.map(
