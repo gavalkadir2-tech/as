@@ -163,7 +163,30 @@ const LS = {
 };
 function bulutHazirMi() {
   const s = getSettings();
-  return !!(s.supabaseUrl && s.supabaseAnonKey);
+  return !!(s.supabaseUrl && s.supabaseAnonKey && supabaseOturumu()?.access_token);
+}
+function supabaseOturumu() {
+  try {
+    const veri = sessionStorage.getItem("fp_supabase_oturum");
+    return veri ? JSON.parse(veri) : null;
+  } catch {
+    return null;
+  }
+}
+async function supabaseGoogleIleGiris(idToken) {
+  const s = getSettings();
+  if (!s.supabaseUrl || !s.supabaseAnonKey) return null;
+  const url = `${s.supabaseUrl.replace(/\/$/, "")}/auth/v1/token?grant_type=id_token`;
+  const yanit = await fetch(url, {
+    method: "POST",
+    headers: { apikey: s.supabaseAnonKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ provider: "google", id_token: idToken })
+  });
+  if (!yanit.ok) throw new Error("Supabase oturumu doğrulanamadı. Google sağlayıcısı ve yönlendirme ayarlarını kontrol edin.");
+  const oturum = await yanit.json();
+  if (!oturum.access_token || !oturum.user?.id) throw new Error("Supabase geçerli bir kullanıcı oturumu döndürmedi.");
+  sessionStorage.setItem("fp_supabase_oturum", JSON.stringify(oturum));
+  return oturum;
 }
 function bulutTabloUrl() {
   const s = getSettings();
@@ -171,13 +194,16 @@ function bulutTabloUrl() {
 }
 function bulutHeaders(ekstra) {
   const s = getSettings();
-  return { apikey: s.supabaseAnonKey, Authorization: `Bearer ${s.supabaseAnonKey}`, "Content-Type": "application/json", ...ekstra };
+  const oturum = supabaseOturumu();
+  if (!oturum?.access_token) throw new Error("Bulut senkronizasyonu için doğrulanmış bir Supabase oturumu gerekir.");
+  return { apikey: s.supabaseAnonKey, Authorization: `Bearer ${oturum.access_token}`, "Content-Type": "application/json", ...ekstra };
 }
 async function bulutaYaz(anahtar, deger) {
+  const oturum = supabaseOturumu();
   const r = await fetch(bulutTabloUrl(), {
     method: "POST",
     headers: bulutHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }),
-    body: JSON.stringify([{ anahtar, deger, guncelleme_zamani: (/* @__PURE__ */ new Date()).toISOString() }])
+    body: JSON.stringify([{ owner_id: oturum.user.id, anahtar, deger, guncelleme_zamani: (/* @__PURE__ */ new Date()).toISOString() }])
   });
   if (!r.ok) throw new Error(`Bulut kutusuna yaz\u0131lamad\u0131 (${r.status}): ${(await r.text()).slice(0, 200)}`);
 }
@@ -197,7 +223,8 @@ function bulutaGonder(anahtar, deger) {
   }, 600);
 }
 async function buluttanOku(anahtar) {
-  const r = await fetch(`${bulutTabloUrl()}?anahtar=eq.${encodeURIComponent(anahtar)}&select=deger`, { headers: bulutHeaders() });
+  const oturum = supabaseOturumu();
+  const r = await fetch(`${bulutTabloUrl()}?owner_id=eq.${encodeURIComponent(oturum.user.id)}&anahtar=eq.${encodeURIComponent(anahtar)}&select=deger`, { headers: bulutHeaders() });
   if (!r.ok) throw new Error("Bulut kutusuna eri\u015Filemedi.");
   const veri = await r.json();
   if (!veri || veri.length === 0) return null;
@@ -366,7 +393,18 @@ async function htmlBelgeIndir(html, dosyaAdi) {
   kapsayici.style.top = "0";
   kapsayici.style.width = "700px";
   kapsayici.style.background = "#ffffff";
-  kapsayici.innerHTML = html;
+  // User data can be part of invoice/PDF templates. Keep printable markup but
+  // strip executable content before attaching it to the live document.
+  const belge = new DOMParser().parseFromString(html, "text/html");
+  belge.querySelectorAll("script, iframe, object, embed, link, meta").forEach((el) => el.remove());
+  belge.querySelectorAll("*").forEach((el) => {
+    [...el.attributes].forEach((attr) => {
+      const ad = attr.name.toLowerCase();
+      const deger = attr.value.trim().toLowerCase();
+      if (ad.startsWith("on") || (ad === "href" && (deger.startsWith("javascript:") || deger.startsWith("data:")))) el.removeAttribute(attr.name);
+    });
+  });
+  kapsayici.replaceChildren(...belge.body.childNodes);
   document.body.appendChild(kapsayici);
   try {
     const canvas = await window.html2canvas(kapsayici, { scale: 2, backgroundColor: "#ffffff" });
@@ -2587,13 +2625,16 @@ function Ayarlar() {
     setAiTestDevam(false);
   };
   const tumVerileriSifirla = () => {
-    if (sifreGiris !== "Yamaha88as.") {
-      setSifreHata("\u015Eifre yanl\u0131\u015F.");
+    if (sifreGiris !== "TÜM VERİLERİ SİL") {
+      setSifreHata('Devam etmek için "TÜM VERİLERİ SİL" yazın.');
       return;
     }
     if (!confirm("T\xDCM veriler (m\xFC\u015Fteriler, ara\xE7lar, servis i\u015Fleri, \xFCr\xFCnler, faturalar, ayarlar vb.) kal\u0131c\u0131 olarak silinecek. Bu i\u015Flem GER\u0130 AL\u0131NAMAZ. Devam etmeden \xF6nce Veri Y\xF6netimi'nden yedek indirmenizi \xF6neririz. Devam edilsin mi?")) return;
     if (!confirm("Son kez soruyoruz: t\xFCm veriler s\u0131f\u0131rlans\u0131n m\u0131?")) return;
-    localStorage.clear();
+    // Only delete this app's records; unrelated data from the same origin stays intact.
+    [...ALL_DATA_KEYS, "ayarlar", "fp_is_emri_sayac", "fp_fatura_sayac", "fp_son_senkron", "fp_son_yerel_degisim", "fp_son_personelId", "fp_son_hizmetTuru", "fp_dosya_migrasyon_v1", "fp_seed_v1", "fp_personel_v2", "fp_rol_migrasyon_v1", "fp_urun_migrasyon_v1", "fp_servis_migrasyon_v1", "fp_fatura_migrasyon_v1", "fp_el_arabasi_migrasyon_v1"].forEach((anahtar) => localStorage.removeItem(anahtar));
+    sessionStorage.removeItem("fp_google_kullanici");
+    indexedDB.deleteDatabase(DOSYA_DB_ADI);
     window.location.reload();
   };
   return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white, marginBottom: 16 } }, "\u2699\uFE0F Ayarlar"),
@@ -3083,10 +3124,13 @@ function GirisEkrani({ onGiris }) {
     try {
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: (yanit) => {
+        callback: async (yanit) => {
           try {
             const parcalar = yanit.credential.split(".");
             const bilgi = JSON.parse(atob(parcalar[1].replace(/-/g, "+").replace(/_/g, "/")));
+            // When cloud sync is configured, exchange the Google ID token with
+            // Supabase. Its signed access token is what RLS policies trust.
+            await supabaseGoogleIleGiris(yanit.credential);
             const kullanici = { ad: bilgi.name, email: bilgi.email, foto: bilgi.picture };
             sessionStorage.setItem("fp_google_kullanici", JSON.stringify(kullanici));
             onGiris(kullanici);
@@ -3281,6 +3325,7 @@ function App() {
   }
   const cikisYap = () => {
     sessionStorage.removeItem("fp_google_kullanici");
+    sessionStorage.removeItem("fp_supabase_oturum");
     setKullanici(null);
     setGirisYapildi(!getSettings().googleClientId);
   };
