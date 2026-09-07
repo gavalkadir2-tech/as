@@ -204,6 +204,96 @@ async function buluttanOku(anahtar) {
   return veri[0].deger;
 }
 const bekle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const GOOGLE_TAKVIM_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+let _googleTakvimToken = null;
+let _googleTakvimTokenBitis = 0;
+let _googleTakvimTokenClient = null;
+function googleTakvimHazirMi() {
+  return !!(getSettings().googleClientId && getSettings().googleTakvimAktif);
+}
+function googleTakvimTokenAl() {
+  return new Promise((resolve, reject) => {
+    if (_googleTakvimToken && Date.now() < _googleTakvimTokenBitis) {
+      resolve(_googleTakvimToken);
+      return;
+    }
+    if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+      reject(new Error("Google kimlik doğrulama kit\xFCphanesi y\xFCklenemedi."));
+      return;
+    }
+    const clientId = getSettings().googleClientId;
+    if (!clientId) {
+      reject(new Error("\xD6nce Ayarlar'dan Google Client ID girin."));
+      return;
+    }
+    try {
+      if (!_googleTakvimTokenClient) {
+        _googleTakvimTokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: GOOGLE_TAKVIM_SCOPE,
+          callback: () => {
+          }
+        });
+      }
+      _googleTakvimTokenClient.callback = (yanit) => {
+        if (yanit.error) {
+          reject(new Error(yanit.error));
+          return;
+        }
+        _googleTakvimToken = yanit.access_token;
+        _googleTakvimTokenBitis = Date.now() + (+yanit.expires_in || 3500) * 1e3;
+        resolve(_googleTakvimToken);
+      };
+      _googleTakvimTokenClient.requestAccessToken({ prompt: "" });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+async function googleTakvimIstek(yol, secenekler = {}) {
+  const token = await googleTakvimTokenAl();
+  const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events${yol}`, {
+    ...secenekler,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...secenekler.headers || {} }
+  });
+  if (!r.ok && r.status !== 404) throw new Error(`Google Takvim isteği başarısız (${r.status})`);
+  if (r.status === 204 || r.status === 404) return null;
+  return r.json();
+}
+function servisTakvimEtkinligi(s, cariAdi, aracEtiket) {
+  const tarih = s.tarih || today();
+  const baslangicSaat = s.saat || "09:00";
+  const [saat, dakika] = baslangicSaat.split(":").map(Number);
+  const baslangic = /* @__PURE__ */ new Date(`${tarih}T${baslangicSaat}:00`);
+  const bitis = new Date(baslangic.getTime() + 60 * 60 * 1e3);
+  return {
+    summary: `${s.isEmriNo || ""} — ${HIZMET_TIP_LABEL[s.hizmetTuru] || "Servis"}${cariAdi ? " — " + cariAdi : ""}`,
+    description: `${aracEtiket ? "Ara\xE7: " + aracEtiket + "\\n" : ""}${s.aciklama || ""}`,
+    start: { dateTime: baslangic.toISOString() },
+    end: { dateTime: bitis.toISOString() }
+  };
+}
+async function googleTakvimEtkinlikSenkronEt(s, cariAdi, aracEtiket) {
+  if (!googleTakvimHazirMi() || !s.tarih) return null;
+  try {
+    const etkinlik = servisTakvimEtkinligi(s, cariAdi, aracEtiket);
+    if (s.googleEtkinlikId) {
+      const sonuc = await googleTakvimIstek(`/${s.googleEtkinlikId}`, { method: "PATCH", body: JSON.stringify(etkinlik) });
+      return sonuc ? sonuc.id : s.googleEtkinlikId;
+    }
+    const sonuc = await googleTakvimIstek("", { method: "POST", body: JSON.stringify(etkinlik) });
+    return sonuc ? sonuc.id : null;
+  } catch {
+    return s.googleEtkinlikId || null;
+  }
+}
+async function googleTakvimEtkinlikSil(googleEtkinlikId) {
+  if (!googleTakvimHazirMi() || !googleEtkinlikId) return;
+  try {
+    await googleTakvimIstek(`/${googleEtkinlikId}`, { method: "DELETE" });
+  } catch {
+  }
+}
 async function aiSor(promptMetni, denemeNo = 0) {
   const apiKey = getSettings().aiApiKey;
   if (!apiKey) throw new Error("\xD6nce Ayarlar \u2192 Yapay Zeka'dan bir API key girin.");
@@ -686,6 +776,7 @@ const DEFAULT_SETTINGS = {
   supabaseAnonKey: "",
   aiApiKey: "",
   googleClientId: "",
+  googleTakvimAktif: false,
   tema: "koyu",
   hizmetTurleri: null,
   giderKategorileri: null,
@@ -988,6 +1079,39 @@ function whatsappTeslimBildir(s, cariler) {
   const mesaj = `Merhaba ${musteri.ad}, ${s.isEmriNo || ""} numaralı işleminiz tamamlandı ve teslime hazır. Tutar: ${fmtTL(s.tutar)}. — As Egzoz & Makine`;
   whatsappLinkAc(musteri.tel, mesaj);
 }
+function anketLinkOlustur(isEmriNo) {
+  const s = getSettings();
+  if (!s.supabaseUrl || !s.supabaseAnonKey) return null;
+  const taban = location.origin + location.pathname;
+  const params = new URLSearchParams({ anket: isEmriNo, db: s.supabaseUrl, key: s.supabaseAnonKey });
+  return `${taban}?${params.toString()}`;
+}
+function whatsappAnketGonder(s, cariler) {
+  const musteri = cariler.find((c) => c.id === s.musteriId);
+  const link = anketLinkOlustur(s.isEmriNo);
+  if (!link) {
+    alert("Anket g\xF6nderebilmek i\xE7in \xF6nce Ayarlar → Bağlantılar'dan Bulut Senkronizasyonu (Supabase) kurulmalı.");
+    return;
+  }
+  const mesaj = `Merhaba ${musteri ? musteri.ad : ""}, ${s.isEmriNo || ""} numaralı işleminizle ilgili g\xF6r\xFCş\xFCn\xFCz bizim i\xE7in \xE7ok değerli. Kısa bir değerlendirme yapabilir misiniz? ${link} — As Egzoz & Makine`;
+  whatsappLinkAc(musteri ? musteri.tel : "", mesaj);
+}
+async function anketKaydet(supabaseUrl, anonKey, isEmriNo, puan, yorum) {
+  const tabloUrl = `${(supabaseUrl || "").replace(/\/$/, "")}/rest/v1/veri_kutusu`;
+  const r = await fetch(tabloUrl, {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify([{ anahtar: `anket_${isEmriNo}_${Date.now()}`, deger: { isEmriNo, puan, yorum: yorum || "", tarih: today() }, guncelleme_zamani: (/* @__PURE__ */ new Date()).toISOString() }])
+  });
+  if (!r.ok) throw new Error(`Gönderilemedi (${r.status})`);
+}
+async function anketleriGetir() {
+  if (!bulutHazirMi()) return [];
+  const r = await fetch(`${bulutTabloUrl()}?anahtar=like.anket_*&select=anahtar,deger&order=guncelleme_zamani.desc`, { headers: bulutHeaders() });
+  if (!r.ok) return [];
+  const veri = await r.json();
+  return veri.map((v) => v.deger);
+}
 function whatsappTahsilatHatirlat(s, cariler) {
   const musteri = cariler.find((c) => c.id === s.musteriId);
   const mesaj = `Merhaba ${musteri ? musteri.ad : ""}, ${s.isEmriNo || ""} numaralı işleminize ait ${fmtTL(s.tutar)} tutarındaki \xF6demeniz hen\xFCz alınmamış g\xF6r\xFCn\xFCyor. M\xFCşait olduğunuzda tahsilatı tamamlayabilir misiniz? — As Egzoz & Makine`;
@@ -1160,6 +1284,40 @@ function faturaYazdir(f, musteriAdi) {
   </body></html>`;
   htmlBelgeIndir(html, `${f.faturaNo || "fatura"}.pdf`);
 }
+function MusteriMemnuniyetiKarti() {
+  const [anketler, setAnketler] = useState(null);
+  useEffect(() => {
+    let iptal = false;
+    if (!bulutHazirMi()) {
+      setAnketler([]);
+      return;
+    }
+    anketleriGetir().then((v) => {
+      if (!iptal) setAnketler(v);
+    }).catch(() => {
+      if (!iptal) setAnketler([]);
+    });
+    return () => {
+      iptal = true;
+    };
+  }, []);
+  if (!bulutHazirMi()) return null;
+  const ortalama = anketler && anketler.length > 0 ? anketler.reduce((t, a) => t + (+a.puan || 0), 0) / anketler.length : 0;
+  return React.createElement(
+    "div",
+    { style: S.card },
+    React.createElement("div", { style: S.secTitle }, "⭐ Müşteri Memnuniyeti"),
+    !anketler ? React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Yükleniyor…") : anketler.length === 0 ? React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Henüz anket yanıtı yok. Teslim edilen işlerde ⭐ butonuyla müşteriden değerlendirme isteyebilirsiniz.") : React.createElement(React.Fragment, null,
+      React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 } }, React.createElement("span", { style: { fontSize: 28, fontWeight: 800, color: C.white } }, ortalama.toFixed(1)), React.createElement("span", { style: { color: C.muted, fontSize: 12.5 } }, "/ 5 · ", anketler.length, " yanıt")),
+      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, maxHeight: 220, overflowY: "auto" } }, anketler.slice(0, 10).map((a, i) => React.createElement(
+        "div",
+        { key: i, style: { padding: "8px 12px", background: C.surface, borderRadius: 8 } },
+        React.createElement("div", { style: { fontSize: 12.5, color: C.white } }, "⭐".repeat(a.puan), " ", React.createElement("span", { style: { color: C.muted, fontSize: 11 } }, a.isEmriNo, " · ", fmtDate(a.tarih))),
+        a.yorum && React.createElement("div", { style: { fontSize: 12, color: C.text, marginTop: 4 } }, a.yorum)
+      )))
+    )
+  );
+}
 function Dashboard() {
   const [servisler] = useState(LS.get("servisIsleri"));
   const [satislar] = useState(LS.get("satislar"));
@@ -1241,7 +1399,7 @@ function Dashboard() {
         /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4B8} Gider Kategorisi Dağılımı"),
         RC.PieChart && giderKategoriDagilimi.length > 0 ? /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: 220 }, /* @__PURE__ */ React.createElement(PieChart, null, /* @__PURE__ */ React.createElement(Pie, { data: giderKategoriDagilimi, dataKey: "value", nameKey: "name", cx: "50%", cy: "50%", innerRadius: 45, outerRadius: 78, paddingAngle: 3, label: ({ name, value }) => `${name}: ${fmtTL(value)}` }, giderKategoriDagilimi.map((e, i) => /* @__PURE__ */ React.createElement(Cell, { key: i, fill: renkler[i % renkler.length] }))), /* @__PURE__ */ React.createElement(Tooltip, { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }, formatter: (v) => fmtTL(v) }))) : /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Henüz veri yok.")
       )
-    ), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F9D1}‍\u{1F527} Teknisyen İş Yükü"), personelListesi.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Henüz personel eklenmedi.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, teknisyenYuku.map(
+    ), React.createElement(MusteriMemnuniyetiKarti, null), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F9D1}‍\u{1F527} Teknisyen İş Yükü"), personelListesi.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Henüz personel eklenmedi.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, teknisyenYuku.map(
     (t) => /* @__PURE__ */ React.createElement("div", { key: t.ad, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderRadius: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: C.text } }, t.ad), /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(t.acikIsSayisi === 0 ? C.green : t.acikIsSayisi <= 2 ? C.blue : C.yellow) } }, t.acikIsSayisi, " açık iş"))
   ), atanmamisIsSayisi > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 4, padding: "10px 14px", background: C.red + "18", borderRadius: 8, fontSize: 12, color: C.red } }, "⚠️ ", atanmamisIsSayisi, " iş henüz kimseye atanmamış — en boşta olan ", teknisyenYuku[0]?.ad || "bir teknisyen", " önerilir."))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F552} Son Servis İşleri"), servisler.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Henüz kayıt yok.") : /* @__PURE__ */ React.createElement("table", { style: S.tbl }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tarih"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Müşteri"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Araç"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Hizmet"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Tutar"), /* @__PURE__ */ React.createElement("th", { style: S.th }, "Durum"))), /* @__PURE__ */ React.createElement("tbody", null, [...servisler].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || "")).slice(0, 6).map(
     (s) => /* @__PURE__ */ React.createElement("tr", { key: s.id }, /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtDate(s.tarih)), /* @__PURE__ */ React.createElement("td", { style: S.td }, cariAd(cariler, s.musteriId)), /* @__PURE__ */ React.createElement("td", { style: S.td }, s.aracPlaka), /* @__PURE__ */ React.createElement("td", { style: S.td }, HIZMET_TIP_LABEL[s.hizmetTuru]), /* @__PURE__ */ React.createElement("td", { style: S.td }, fmtTL(s.tutar)), /* @__PURE__ */ React.createElement("td", { style: S.td }, /* @__PURE__ */ React.createElement(Badge, { d: s.durum })))
@@ -1523,13 +1681,24 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       faturaOlustur("servis", kayit.id, kayit.musteriId, kayit.tarih, `${kayit.isEmriNo} \u2014 ${HIZMET_TIP_LABEL[kayit.hizmetTuru] || ""}`, kayit.kalemler, kayit.tutar);
       if (!eskiKayit || eskiKayit.asama !== "teslim_edildi") whatsappTeslimBildir(kayit, cariler);
     }
+    if (googleTakvimHazirMi()) {
+      googleTakvimEtkinlikSenkronEt(kayit, cariAd(cariler, kayit.musteriId), aracEtiket(kayit)).then((eventId) => {
+        if (eventId && eventId !== kayit.googleEtkinlikId) {
+          const guncel = LS.get("servisIsleri").map((x) => x.id === kayit.id ? { ...x, googleEtkinlikId: eventId } : x);
+          LS.set("servisIsleri", guncel);
+          setListe(guncel);
+        }
+      });
+    }
   };
 
   const sil = (id) => {
     if (!confirm("Bu servis kayd\u0131 silinsin mi?")) return;
+    const silinen = liste.find((x) => x.id === id);
     const yeni = liste.filter((x) => x.id !== id);
     LS.set("servisIsleri", yeni);
     setListe(yeni);
+    if (silinen && silinen.googleEtkinlikId) googleTakvimEtkinlikSil(silinen.googleEtkinlikId);
   };
 
   const teslimEt = (s) => {
@@ -1702,6 +1871,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
               whatsappLinkAc(musteri ? musteri.tel : "", mesaj);
             } }, "💬"),
             React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => isEmriYazdir(s, cariAd(cariler, s.musteriId), aracEtiket(s)) }, "📄"),
+            s.asama === "teslim_edildi" && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "Memnuniyet Anketi Gönder", onClick: () => whatsappAnketGonder(s, cariler) }, "⭐"),
             s.durum === "tamamlandi" && s.garantili && (!s.garantiBitis || s.garantiBitis >= today()) && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, title: "Garanti Kapsamında Tekrar İş Aç", onClick: () => garantiTekrarAc(s) }, "🛡️"),
             s.asama !== "iptal" && s.asama !== "teslim_edildi" && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11, color: C.red }, title: "İptal Et", onClick: () => iptalEt(s) }, "✕"),
             React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(s); setHata(""); setModalAcik(true); } }, "✏️"),
@@ -1736,6 +1906,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
                     whatsappLinkAc(musteri ? musteri.tel : "", mesaj);
                   } }, "\u{1F4AC}"),
                   React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => isEmriYazdir(s, cariAd(cariler, s.musteriId), aracEtiket(s)) }, "\u{1F4C4}"),
+                  s.asama === "teslim_edildi" && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "Memnuniyet Anketi Gönder", onClick: () => whatsappAnketGonder(s, cariler) }, "⭐"),
                   s.durum === "tamamlandi" && s.garantili && (!s.garantiBitis || s.garantiBitis >= today()) && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, title: "Garanti Kapsamında Tekrar İş A\xE7", onClick: () => garantiTekrarAc(s) }, "\u{1F6E1}️"),
                   s.asama !== "iptal" && s.asama !== "teslim_edildi" && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11, color: C.red }, title: "İptal Et", onClick: () => iptalEt(s) }, "✕"),
                   React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(s); setHata(""); setModalAcik(true); } }, "✏️"),
@@ -3163,6 +3334,8 @@ function Ayarlar() {
   const [bulutIslemDevam, setBulutIslemDevam] = useState(false);
   const [aiTest, setAiTest] = useState("");
   const [aiTestDevam, setAiTestDevam] = useState(false);
+  const [googleTakvimTest, setGoogleTakvimTest] = useState("");
+  const [googleTakvimDevam, setGoogleTakvimDevam] = useState(false);
   const [sekme, setSekme] = useState("genel");
   const [sifreModal, setSifreModal] = useState(false);
   const [sifreGiris, setSifreGiris] = useState("");
@@ -3264,6 +3437,20 @@ function Ayarlar() {
       setAiTest(e.message);
     }
     setAiTestDevam(false);
+  };
+  const googleTakvimBaglan = async () => {
+    setGoogleTakvimDevam(true);
+    setGoogleTakvimTest("");
+    try {
+      saveSettings({ ...form, googleTakvimAktif: true });
+      _googleTakvimToken = null;
+      await googleTakvimTokenAl();
+      setForm((f) => ({ ...f, googleTakvimAktif: true }));
+      setGoogleTakvimTest("basarili");
+    } catch (e) {
+      setGoogleTakvimTest(e.message || "Bağlantı kurulamadı.");
+    }
+    setGoogleTakvimDevam(false);
   };
   const tumVerileriSifirla = () => {
     if (sifreGiris !== "Yamaha88as.") {
@@ -3379,7 +3566,18 @@ function Ayarlar() {
         ))
       )
     ))
-  ), React.createElement(FirmaLogoYoneticisi, null), React.createElement(BildirimlerYoneticisi, null)), sekme === "baglanti" && React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: S.card }, React.createElement("div", { style: S.secTitle }, "\u2601\uFE0F Bulut Senkronizasyonu (Supabase)"), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Verileriniz farkl\u0131 cihazlarda (telefon, bilgisayar) ayn\u0131 g\xF6r\xFCns\xFCn istiyorsan\u0131z kullan\u0131n. ", React.createElement("a", { href: "https://supabase.com/dashboard/projects", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "supabase.com"), "\u0027da \u00fccretsiz bir hesap a\u00e7\u0131p yeni bir proje olu\u015Fturun. Sonra projenizin SQL Editor\u0027\u00fcnde a\u015Fa\u011F\u0131daki tabloyu olu\u015Fturun:"), React.createElement("pre", { style: { background: "#00000033", padding: "10px 12px", borderRadius: 8, fontSize: 10.5, overflowX: "auto", color: C.text, marginBottom: 14, whiteSpace: "pre-wrap" } }, `create table veri_kutusu (\n  anahtar text primary key,\n  deger jsonb,\n  guncelleme_zamani timestamptz default now()\n);\nalter table veri_kutusu enable row level security;\ncreate policy "herkese_izin" on veri_kutusu for all using (true) with check (true);`), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Ard\u0131ndan proje ayarlar\u0131ndaki (Settings \u2192 API) Project URL ve anon public key de\u011Ferlerini a\u015Fa\u011F\u0131ya yap\u0131\u015Ft\u0131r\u0131n."), React.createElement(FG, { label: "Supabase Project URL" }, React.createElement("input", { style: S.inp, value: form.supabaseUrl || "", onChange: (e) => setForm((f) => ({ ...f, supabaseUrl: e.target.value.trim() })), placeholder: "https://xxxxxxxx.supabase.co" })), React.createElement(FG, { label: "Supabase Anon Key" }, React.createElement("input", { type: "password", style: S.inp, value: form.supabaseAnonKey || "", onChange: (e) => setForm((f) => ({ ...f, supabaseAnonKey: e.target.value.trim() })), placeholder: "eyJhbGciOi..." })), React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 } }, React.createElement("button", { style: S.btnO, onClick: bulutTestEt, disabled: bulutIslemDevam }, "\u{1F50C} Ba\u011Flant\u0131y\u0131 Test Et"), form.supabaseUrl && form.supabaseAnonKey && React.createElement(React.Fragment, null, React.createElement("button", { style: S.btnO, onClick: bulutaYukle, disabled: bulutIslemDevam }, "\u2B06\uFE0F Buluta Y\xFCkle (Bu Cihazdan)"), React.createElement("button", { style: S.btnO, onClick: buluttanIndir, disabled: bulutIslemDevam }, "\u2B07\uFE0F Buluttan \u0130ndir (Di\u011Fer Cihazdan)"))), bulutTest === "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Ba\u011Flant\u0131 ba\u015Far\u0131l\u0131! Art\u0131k her de\u011Fi\u015Fiklik otomatik olarak buluta kaydedilecek."), bulutTest && bulutTest !== "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", bulutTest), React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 10 } }, "Not: Bu cihazda yapt\u0131\u011F\u0131n\u0131z her de\u011Fi\u015Fiklik otomatik buluta g\xF6nderilir. Uygulama ayr\u0131ca her 5 saniyede bir buluttaki de\u011Fi\u015Fiklikleri arka planda kontrol edip ekran\u0131n\u0131z\u0131 otomatik g\xFCnceller \u2014 ba\u015Fka bir cihazdan yap\u0131lan de\u011Fi\u015Fiklikler k\u0131sa s\xFCrede burada da g\xF6r\xFCn\xFCr.")), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F510} Google ile Giri\u015F"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Uygulamay\u0131 a\xE7an herkesin Google hesab\u0131yla giri\u015F yapmas\u0131n\u0131 zorunlu k\u0131lar. Kurulum i\xE7in:", /* @__PURE__ */ React.createElement("ol", { style: { margin: "8px 0 0", paddingLeft: 20 } }, /* @__PURE__ */ React.createElement("li", null, /* @__PURE__ */ React.createElement("a", { href: "https://console.cloud.google.com/apis/credentials", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "Google Cloud Console \u2192 Credentials"), "'a gidin (\xFCcretsiz Google hesab\u0131yla)"), /* @__PURE__ */ React.createElement("li", null, '"Create Credentials" \u2192 "OAuth client ID" \u2192 Uygulama t\xFCr\xFC: "Web application"'), /* @__PURE__ */ React.createElement("li", null, '"Authorized JavaScript origins" k\u0131sm\u0131na sitenizin adresini ekleyin (\xF6rn. https://kullaniciadi.github.io)'), /* @__PURE__ */ React.createElement("li", null, 'Olu\u015Fan "Client ID"yi a\u015Fa\u011F\u0131ya yap\u0131\u015Ft\u0131r\u0131n'))), /* @__PURE__ */ React.createElement(FG, { label: "Google Client ID" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.googleClientId || "", onChange: (e) => setForm((f) => ({ ...f, googleClientId: e.target.value.trim() })), placeholder: "123456789-xxxx.apps.googleusercontent.com" })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Bo\u015F b\u0131rak\u0131rsan\u0131z Google giri\u015Fi istenmez, uygulama do\u011Frudan a\xE7\u0131l\u0131r.")), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F916} Yapay Zeka (Teknisyen \xD6nerisi, KESS V3 Yard\u0131m\u0131)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Yeni bir servis i\u015Fi eklerken hangi teknisyene atanmas\u0131 gerekti\u011Fini, chiptuning i\u015Flerinde KESS V3 i\u00e7in stage/protokol \u00f6nerisini ve genel KESS V3 kullan\u0131m sorular\u0131n\u0131 yapay zekaya sordurabilirsiniz. ", /* @__PURE__ */ React.createElement("a", { href: "https://aistudio.google.com/apikey", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "aistudio.google.com/apikey"), "'dan Google hesab\u0131n\u0131zla, kredi kart\u0131 istemeden \xFCcretsiz bir Gemini API key alabilirsiniz."), /* @__PURE__ */ React.createElement(FG, { label: "Gemini API Key" }, /* @__PURE__ */ React.createElement("input", { type: "password", style: S.inp, value: form.aiApiKey || "", onChange: (e) => setForm((f) => ({ ...f, aiApiKey: e.target.value.trim() })), placeholder: "AIzaSy..." })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.red, marginBottom: 10 } }, "\u26A0\uFE0F Bu key taray\u0131c\u0131n\u0131zda saklan\u0131r ve do\u011Frudan Google'a g\xF6nderilir. Herkesle payla\u015Fmay\u0131n, ba\u015Fkalar\u0131n\u0131n kulland\u0131\u011F\u0131 bir bilgisayara girmeyin."), /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: aiTestEt, disabled: aiTestDevam }, aiTestDevam ? "\u23F3 Test ediliyor..." : "\u{1F50C} Ba\u011Flant\u0131y\u0131 Test Et"), aiTest === "basarili" && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Yapay zeka ba\u011Flant\u0131s\u0131 \xE7al\u0131\u015F\u0131yor."), aiTest && aiTest !== "basarili" && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", aiTest))), sekme === "veri" && React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4BE} Veri Y\xF6netimi (Dosya Olarak)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "T\xFCm verilerinizi tek bir dosya olarak indirin veya geri y\xFCkleyin."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => {
+  ), React.createElement(FirmaLogoYoneticisi, null), React.createElement(BildirimlerYoneticisi, null)), sekme === "baglanti" && React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: S.card }, React.createElement("div", { style: S.secTitle }, "\u2601\uFE0F Bulut Senkronizasyonu (Supabase)"), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Verileriniz farkl\u0131 cihazlarda (telefon, bilgisayar) ayn\u0131 g\xF6r\xFCns\xFCn istiyorsan\u0131z kullan\u0131n. ", React.createElement("a", { href: "https://supabase.com/dashboard/projects", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "supabase.com"), "\u0027da \u00fccretsiz bir hesap a\u00e7\u0131p yeni bir proje olu\u015Fturun. Sonra projenizin SQL Editor\u0027\u00fcnde a\u015Fa\u011F\u0131daki tabloyu olu\u015Fturun:"), React.createElement("pre", { style: { background: "#00000033", padding: "10px 12px", borderRadius: 8, fontSize: 10.5, overflowX: "auto", color: C.text, marginBottom: 14, whiteSpace: "pre-wrap" } }, `create table veri_kutusu (\n  anahtar text primary key,\n  deger jsonb,\n  guncelleme_zamani timestamptz default now()\n);\nalter table veri_kutusu enable row level security;\ncreate policy "herkese_izin" on veri_kutusu for all using (true) with check (true);`), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Ard\u0131ndan proje ayarlar\u0131ndaki (Settings \u2192 API) Project URL ve anon public key de\u011Ferlerini a\u015Fa\u011F\u0131ya yap\u0131\u015Ft\u0131r\u0131n."), React.createElement(FG, { label: "Supabase Project URL" }, React.createElement("input", { style: S.inp, value: form.supabaseUrl || "", onChange: (e) => setForm((f) => ({ ...f, supabaseUrl: e.target.value.trim() })), placeholder: "https://xxxxxxxx.supabase.co" })), React.createElement(FG, { label: "Supabase Anon Key" }, React.createElement("input", { type: "password", style: S.inp, value: form.supabaseAnonKey || "", onChange: (e) => setForm((f) => ({ ...f, supabaseAnonKey: e.target.value.trim() })), placeholder: "eyJhbGciOi..." })), React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 } }, React.createElement("button", { style: S.btnO, onClick: bulutTestEt, disabled: bulutIslemDevam }, "\u{1F50C} Ba\u011Flant\u0131y\u0131 Test Et"), form.supabaseUrl && form.supabaseAnonKey && React.createElement(React.Fragment, null, React.createElement("button", { style: S.btnO, onClick: bulutaYukle, disabled: bulutIslemDevam }, "\u2B06\uFE0F Buluta Y\xFCkle (Bu Cihazdan)"), React.createElement("button", { style: S.btnO, onClick: buluttanIndir, disabled: bulutIslemDevam }, "\u2B07\uFE0F Buluttan \u0130ndir (Di\u011Fer Cihazdan)"))), bulutTest === "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Ba\u011Flant\u0131 ba\u015Far\u0131l\u0131! Art\u0131k her de\u011Fi\u015Fiklik otomatik olarak buluta kaydedilecek."), bulutTest && bulutTest !== "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", bulutTest), React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 10 } }, "Not: Bu cihazda yapt\u0131\u011F\u0131n\u0131z her de\u011Fi\u015Fiklik otomatik buluta g\xF6nderilir. Uygulama ayr\u0131ca her 5 saniyede bir buluttaki de\u011Fi\u015Fiklikleri arka planda kontrol edip ekran\u0131n\u0131z\u0131 otomatik g\xFCnceller \u2014 ba\u015Fka bir cihazdan yap\u0131lan de\u011Fi\u015Fiklikler k\u0131sa s\xFCrede burada da g\xF6r\xFCn\xFCr.")), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F510} Google ile Giri\u015F"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Uygulamay\u0131 a\xE7an herkesin Google hesab\u0131yla giri\u015F yapmas\u0131n\u0131 zorunlu k\u0131lar. Kurulum i\xE7in:", /* @__PURE__ */ React.createElement("ol", { style: { margin: "8px 0 0", paddingLeft: 20 } }, /* @__PURE__ */ React.createElement("li", null, /* @__PURE__ */ React.createElement("a", { href: "https://console.cloud.google.com/apis/credentials", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "Google Cloud Console \u2192 Credentials"), "'a gidin (\xFCcretsiz Google hesab\u0131yla)"), /* @__PURE__ */ React.createElement("li", null, '"Create Credentials" \u2192 "OAuth client ID" \u2192 Uygulama t\xFCr\xFC: "Web application"'), /* @__PURE__ */ React.createElement("li", null, '"Authorized JavaScript origins" k\u0131sm\u0131na sitenizin adresini ekleyin (\xF6rn. https://kullaniciadi.github.io)'), /* @__PURE__ */ React.createElement("li", null, 'Olu\u015Fan "Client ID"yi a\u015Fa\u011F\u0131ya yap\u0131\u015Ft\u0131r\u0131n'))), /* @__PURE__ */ React.createElement(FG, { label: "Google Client ID" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.googleClientId || "", onChange: (e) => setForm((f) => ({ ...f, googleClientId: e.target.value.trim() })), placeholder: "123456789-xxxx.apps.googleusercontent.com" })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Bo\u015F b\u0131rak\u0131rsan\u0131z Google giri\u015Fi istenmez, uygulama do\u011Frudan a\xE7\u0131l\u0131r.")), /* @__PURE__ */ React.createElement(
+    "div",
+    { style: S.card },
+    React.createElement("div", { style: S.secTitle }, "\u{1F4C5} Google Takvim Senkronizasyonu"),
+    React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Ba\u011Flan\u0131rsan\u0131z, olu\u015Fturdu\u011Funuz/g\xFCncelledi\u011Finiz i\u015F emirleri otomatik olarak Google Takvim hesab\u0131n\u0131za (birincil takvim) etkinlik olarak eklenir; telefonunuzun kendi takvim uygulamas\u0131ndan da g\xF6r\xFCrs\xFCn\xFCz. Yukar\u0131daki Google Client ID\u0027nin ayn\u0131s\u0131 kullan\u0131l\u0131r, sadece ek olarak takvim izni istenir."),
+    !form.googleClientId ? React.createElement("div", { style: { color: C.muted, fontSize: 12.5 } }, "\xD6nce yukar\u0131dan bir Google Client ID girip kaydedin.") : React.createElement(React.Fragment, null,
+      React.createElement("button", { style: S.btnO, onClick: googleTakvimBaglan, disabled: googleTakvimDevam }, googleTakvimDevam ? "\u23F3 Bağlanıyor..." : form.googleTakvimAktif ? "\u{1F504} Yeniden Bağlan" : "\u{1F4C5} Google Takvim\u0027e Bağlan"),
+      form.googleTakvimAktif && React.createElement("button", { style: { ...S.btnO, marginLeft: 8 }, onClick: () => { setForm((f) => ({ ...f, googleTakvimAktif: false })); saveSettings({ ...form, googleTakvimAktif: false }); } }, "Bağlantıyı Kes"),
+      googleTakvimTest === "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Bağlandı! Bundan sonraki iş emirleri Google Takvim\u0027e eklenecek."),
+      googleTakvimTest && googleTakvimTest !== "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", googleTakvimTest)
+    )
+  ), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F916} Yapay Zeka (Teknisyen \xD6nerisi, KESS V3 Yard\u0131m\u0131)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Yeni bir servis i\u015Fi eklerken hangi teknisyene atanmas\u0131 gerekti\u011Fini, chiptuning i\u015Flerinde KESS V3 i\u00e7in stage/protokol \u00f6nerisini ve genel KESS V3 kullan\u0131m sorular\u0131n\u0131 yapay zekaya sordurabilirsiniz. ", /* @__PURE__ */ React.createElement("a", { href: "https://aistudio.google.com/apikey", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "aistudio.google.com/apikey"), "'dan Google hesab\u0131n\u0131zla, kredi kart\u0131 istemeden \xFCcretsiz bir Gemini API key alabilirsiniz."), /* @__PURE__ */ React.createElement(FG, { label: "Gemini API Key" }, /* @__PURE__ */ React.createElement("input", { type: "password", style: S.inp, value: form.aiApiKey || "", onChange: (e) => setForm((f) => ({ ...f, aiApiKey: e.target.value.trim() })), placeholder: "AIzaSy..." })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.red, marginBottom: 10 } }, "\u26A0\uFE0F Bu key taray\u0131c\u0131n\u0131zda saklan\u0131r ve do\u011Frudan Google'a g\xF6nderilir. Herkesle payla\u015Fmay\u0131n, ba\u015Fkalar\u0131n\u0131n kulland\u0131\u011F\u0131 bir bilgisayara girmeyin."), /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: aiTestEt, disabled: aiTestDevam }, aiTestDevam ? "\u23F3 Test ediliyor..." : "\u{1F50C} Ba\u011Flant\u0131y\u0131 Test Et"), aiTest === "basarili" && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Yapay zeka ba\u011Flant\u0131s\u0131 \xE7al\u0131\u015F\u0131yor."), aiTest && aiTest !== "basarili" && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", aiTest))), sekme === "veri" && React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4BE} Veri Y\xF6netimi (Dosya Olarak)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "T\xFCm verilerinizi tek bir dosya olarak indirin veya geri y\xFCkleyin."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => {
     const veri = {};
     [...ALL_DATA_KEYS, "ayarlar"].forEach((k) => veri[k] = k === "ayarlar" ? getSettings() : LS.get(k));
     const blob = new Blob([JSON.stringify(veri, null, 2)], { type: "application/json" });
@@ -4076,4 +4274,49 @@ function App() {
     window.location.reload();
   } }, "\u015Eimdi Yenile")), /* @__PURE__ */ React.createElement(AktifBilesen, { hedef, hedefTemizle: () => setHedef(null) })));
 }
-ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
+function AnketSayfasi({ isEmriNo, supabaseUrl, anonKey }) {
+  const [puan, setPuan] = useState(0);
+  const [yorum, setYorum] = useState("");
+  const [gonderiliyor, setGonderiliyor] = useState(false);
+  const [gonderildi, setGonderildi] = useState(false);
+  const [hata, setHata] = useState("");
+  const gonder = async () => {
+    if (!puan) {
+      setHata("L\u00FCtfen bir puan se\u00E7in.");
+      return;
+    }
+    setHata("");
+    setGonderiliyor(true);
+    try {
+      await anketKaydet(supabaseUrl, anonKey, isEmriNo, puan, yorum);
+      setGonderildi(true);
+    } catch (e) {
+      setHata("G\u00F6nderilemedi: " + e.message);
+    }
+    setGonderiliyor(false);
+  };
+  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#161311", padding: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#211d1a", border: "1px solid #3a332d", borderRadius: 14, padding: 28, maxWidth: 420, width: "100%", textAlign: "center" } },
+    gonderildi
+      ? /* @__PURE__ */ React.createElement(React.Fragment, null,
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 10 } }, "\uD83D\uDE4F"),
+          /* @__PURE__ */ React.createElement("div", { style: { color: "#fff", fontSize: 16, fontWeight: 700 } }, "Te\u015Fekk\u00FCrler!"),
+          /* @__PURE__ */ React.createElement("div", { style: { color: "#a89f96", fontSize: 13, marginTop: 6 } }, "De\u011Ferlendirmeniz bize ula\u015Ft\u0131.")
+        )
+      : /* @__PURE__ */ React.createElement(React.Fragment, null,
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "\u2B50"),
+          /* @__PURE__ */ React.createElement("div", { style: { color: "#fff", fontSize: 16, fontWeight: 700, marginBottom: 4 } }, "\u0130\u015Fimizi Nas\u0131l Buldunuz?"),
+          /* @__PURE__ */ React.createElement("div", { style: { color: "#a89f96", fontSize: 12.5, marginBottom: 18 } }, isEmriNo || ""),
+          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 8, marginBottom: 18 } }, [1, 2, 3, 4, 5].map((n) => /* @__PURE__ */ React.createElement("button", { key: n, onClick: () => setPuan(n), style: { background: "none", border: "none", fontSize: 32, cursor: "pointer", opacity: n <= puan ? 1 : 0.3 } }, "\u2B50"))),
+          /* @__PURE__ */ React.createElement("textarea", { value: yorum, onChange: (e) => setYorum(e.target.value), placeholder: "\u0130sterseniz k\u0131sa bir not b\u0131rak\u0131n (opsiyonel)", style: { width: "100%", minHeight: 70, background: "#161311", border: "1px solid #3a332d", borderRadius: 8, padding: 10, color: "#fff", fontSize: 13, marginBottom: 14, boxSizing: "border-box" } }),
+          hata && /* @__PURE__ */ React.createElement("div", { style: { color: "#e05252", fontSize: 12.5, marginBottom: 12 } }, hata),
+          /* @__PURE__ */ React.createElement("button", { onClick: gonder, disabled: gonderiliyor, style: { width: "100%", background: "#e8622c", color: "#161311", border: "none", borderRadius: 8, padding: "12px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" } }, gonderiliyor ? "G\u00F6nderiliyor\u2026" : "G\u00F6nder")
+        )
+  ));
+}
+const _urlParams = new URLSearchParams(location.search);
+const _anketIsEmriNo = _urlParams.get("anket");
+if (_anketIsEmriNo) {
+  ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(AnketSayfasi, { isEmriNo: _anketIsEmriNo, supabaseUrl: _urlParams.get("db"), anonKey: _urlParams.get("key") }));
+} else {
+  ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
+}
