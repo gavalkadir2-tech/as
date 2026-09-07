@@ -1255,6 +1255,7 @@ function ServisIsleri({ hedef, hedefTemizle } = {}) {
   const [sadeceBenim, setSadeceBenim] = useState(false);
   const [kessOneriDevam, setKessOneriDevam] = useState(false);
   const [kessOneriMetni, setKessOneriMetni] = useState("");
+  const [kessDetayAcik, setKessDetayAcik] = useState(false);
   const [kessYardimAcik, setKessYardimAcik] = useState(false);
   const [kessYardimAdim, setKessYardimAdim] = useState(1);
   const [kessYardimKategori, setKessYardimKategori] = useState("");
@@ -1513,6 +1514,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     }
     hedefTemizle && hedefTemizle();
   }, [hedef]);
+  const kessAcik = kessDetayAcik || !!(form.kessEcuMarka || form.kessProtokol || form.kessStage || form.kessDosyaNotu || form.kessChecksum);
 
   return React.createElement(
     "div",
@@ -1643,7 +1645,8 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       form.hizmetTuru === "chiptuning" && React.createElement(
         "div",
         { style: { background: C.surface, borderRadius: 8, padding: "12px 14px", marginBottom: 14 } },
-        React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginBottom: 10 } }, "\u26A1 KESS V3 Chiptuning Detaylar\u0131"),
+        React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginBottom: kessAcik ? 10 : 0, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }, onClick: () => setKessDetayAcik((v) => !v) }, "\u26A1 KESS V3 Chiptuning Detaylar\u0131", React.createElement("span", { style: { fontSize: 11, color: C.muted, fontWeight: 400 } }, kessAcik ? "\u25B2 Gizle" : "\u25BC Detaylar\u0131 Gir")),
+        kessAcik && React.createElement(React.Fragment, null,
         React.createElement(Grid2, null,
           React.createElement(FG, { label: "ECU Markas\u0131" }, React.createElement("input", { list: "ecu-markalari", style: S.inp, value: form.kessEcuMarka || "", onChange: (e) => setForm((f) => ({ ...f, kessEcuMarka: e.target.value })), placeholder: "\xD6rn: Bosch" })),
           React.createElement(FG, { label: "Ba\u011Flant\u0131 Protokol\xFC" }, React.createElement("select", { style: S.sel, value: form.kessProtokol || "", onChange: (e) => setForm((f) => ({ ...f, kessProtokol: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), KESS_PROTOKOL_LISTESI.map((p) => React.createElement("option", { key: p, value: p }, p))))
@@ -1665,6 +1668,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
         kessOneriMetni && React.createElement(React.Fragment, null,
           React.createElement("div", { style: { marginTop: 10, padding: "8px 12px", background: C.card, borderRadius: 8, fontSize: 12, color: C.text, whiteSpace: "pre-line" } }, kessOneriMetni),
           React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: C.yellow } }, "\u26A0\uFE0F Bu \u00F6neri genel bilgiye dayan\u0131r, dyno testi ve ger\u00E7ek ECU okumas\u0131 olmadan do\u011Frudan uygulamay\u0131n.")
+        )
         )
       ),
 
