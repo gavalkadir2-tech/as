@@ -1349,10 +1349,6 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       setHata("Ara\xE7 se\xE7imi zorunludur.");
       return;
     }
-    if (!form.musteriId) {
-      setHata("Bu ara\xE7\u0131n sahibi tan\u0131ml\u0131 de\u011Fil \u2014 \xF6nce sahibini d\xFCzenleyin.");
-      return;
-    }
     if (!form.hizmetTuru) {
       setHata("Hizmet t\xFCr\xFC se\xE7imi zorunludur.");
       return;
