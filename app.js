@@ -1621,6 +1621,25 @@ function PlakaKameraTarayici({ onSonuc }) {
       setHata("Fener açılamadı, cihazınız desteklemiyor olabilir.");
     }
   };
+  const canvasdanOku = async (canvas) => {
+    let worker = null;
+    try {
+      worker = await window.Tesseract.createWorker("eng");
+      await worker.setParameters({ tessedit_char_whitelist: "ABCDEFGHIJKLMNOPRSTUVYZ0123456789 ", tessedit_pageseg_mode: "7" });
+      const { data } = await worker.recognize(canvas);
+      const ham = (data.text || "").toUpperCase();
+      const temiz = ham.replace(/[^A-Z0-9]/g, "");
+      const eslesme = temiz.match(/\d{2}[A-Z]{1,3}\d{2,4}/);
+      return { sonuc: eslesme ? plakaNormalize(eslesme[0]) : "", ham };
+    } finally {
+      if (worker) {
+        try {
+          await worker.terminate();
+        } catch {
+        }
+      }
+    }
+  };
   const cekVeOku = async () => {
     if (!videoRef.current || !window.Tesseract) {
       setHata("OCR kütüphanesi yüklenemedi, internet bağlantınızı kontrol edip tekrar deneyin.");
@@ -1628,7 +1647,6 @@ function PlakaKameraTarayici({ onSonuc }) {
     }
     setTarama(true);
     setHata("");
-    let worker = null;
     try {
       const video = videoRef.current;
       const vw = video.videoWidth, vh = video.videoHeight;
@@ -1646,14 +1664,9 @@ function PlakaKameraTarayici({ onSonuc }) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
       goruntuOnIsle(ctx, canvas.width, canvas.height);
-      worker = await window.Tesseract.createWorker("eng");
-      await worker.setParameters({ tessedit_char_whitelist: "ABCDEFGHIJKLMNOPRSTUVYZ0123456789 ", tessedit_pageseg_mode: "7" });
-      const { data } = await worker.recognize(canvas);
-      const ham = (data.text || "").toUpperCase();
-      const eslesme = ham.match(/\d{2}\s?[A-Z]{1,3}\s?\d{2,4}/);
-      const sonuc = eslesme ? plakaNormalize(eslesme[0]) : "";
+      const { sonuc, ham } = await canvasdanOku(canvas);
       if (!sonuc) {
-        setHata("Plaka okunamadı — plakayı aşağıdaki çerçeveye düz açıyla ve yakın hizalayıp tekrar deneyin.");
+        setHata(`Plaka okunamadı${ham.trim() ? ` (algılanan metin: "${ham.trim()}")` : ""} — plakayı çerçeveye düz açıyla, yakın ve net hizalayıp tekrar deneyin. Kamera hâlâ okumuyorsa "📁 Fotoğraftan Oku" ile net bir fotoğraf çekip deneyin.`);
       } else {
         onSonuc(sonuc);
         kamerayiKapat();
@@ -1661,18 +1674,54 @@ function PlakaKameraTarayici({ onSonuc }) {
     } catch (e) {
       setHata("Okuma hatası: " + e.message);
     } finally {
-      if (worker) {
-        try {
-          await worker.terminate();
-        } catch {
-        }
+      setTarama(false);
+    }
+  };
+  const resimdenOku = async (e) => {
+    const dosya = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!dosya) return;
+    if (!window.Tesseract) {
+      setHata("OCR kütüphanesi yüklenemedi, internet bağlantınızı kontrol edip tekrar deneyin.");
+      return;
+    }
+    setTarama(true);
+    setHata("");
+    try {
+      const veriUrl = await dosyaOku(dosya);
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = veriUrl;
+      });
+      const olcek = Math.min(2, 1600 / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * olcek;
+      canvas.height = img.height * olcek;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      goruntuOnIsle(ctx, canvas.width, canvas.height);
+      const { sonuc, ham } = await canvasdanOku(canvas);
+      if (!sonuc) {
+        setHata(`Plaka okunamadı${ham.trim() ? ` (algılanan metin: "${ham.trim()}")` : ""} — plakanın tamamının net ve düz açıyla göründüğü bir fotoğrafla tekrar deneyin.`);
+      } else {
+        onSonuc(sonuc);
+        kamerayiKapat();
       }
+    } catch (e) {
+      setHata("Okuma hatası: " + e.message);
+    } finally {
       setTarama(false);
     }
   };
 
   if (!acik) {
-    return /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btnO, marginBottom: 10 }, onClick: kamerayiAc }, "📷 Kamera ile Plaka Tara");
+    return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 } },
+      /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btnO, onClick: kamerayiAc }, "📷 Kamera ile Plaka Tara"),
+      /* @__PURE__ */ React.createElement("label", { style: { ...S.btnO, cursor: "pointer" } }, tarama ? "Okunuyor…" : "📁 Fotoğraftan Oku", /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", capture: "environment", disabled: tarama, style: { display: "none" }, onChange: resimdenOku })),
+      hata && /* @__PURE__ */ React.createElement("div", { style: { width: "100%", color: C.red, fontSize: 12 } }, "⚠️ ", hata)
+    );
   }
   return /* @__PURE__ */ React.createElement(
     "div",
@@ -1680,7 +1729,11 @@ function PlakaKameraTarayici({ onSonuc }) {
     /* @__PURE__ */ React.createElement("div", { style: { position: "relative", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("video", { ref: videoRef, autoPlay: true, playsInline: true, "webkit-playsinline": "true", muted: true, disablePictureInPicture: true, style: { width: "100%", borderRadius: 8, maxHeight: 240, objectFit: "cover", background: "#000", display: "block" } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "33%", left: "6%", width: "88%", height: "34%", border: `2px dashed ${C.accent}`, borderRadius: 6, pointerEvents: "none" } }), fenerVar && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: fenerDegistir, style: { position: "absolute", top: 8, right: 8, background: fenerAcik ? C.accent : "#000000aa", color: fenerAcik ? "#161311" : "#fff", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer" } }, "\u{1F4A1}")),
     /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, "Plakayı çerçeveye, düz açıyla ve iyi ışıkta hizalayın."),
     hata && /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontSize: 12, marginBottom: 8 } }, "⚠️ ", hata),
-    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btn(), flex: 1 }, disabled: tarama, onClick: cekVeOku }, tarama ? "Okunuyor…" : "📸 Çek ve Oku"), /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btnO, onClick: kamerayiKapat }, "İptal"))
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+      /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btn(), flex: 1 }, disabled: tarama, onClick: cekVeOku }, tarama ? "Okunuyor…" : "📸 Çek ve Oku"),
+      /* @__PURE__ */ React.createElement("label", { style: { ...S.btnO, cursor: "pointer" } }, "📁", /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", capture: "environment", disabled: tarama, style: { display: "none" }, onChange: resimdenOku })),
+      /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btnO, onClick: kamerayiKapat }, "İptal")
+    )
   );
 }
 function HizliAracFormu({ onClose, onEklendi }) {
