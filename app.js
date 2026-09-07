@@ -737,6 +737,16 @@ function bildirimleriKontrolEt() {
       bildirimGoster("\u{1F4C4} Resmi Ödeme Hatırlatması", `${r.ad}${kalanGun === 0 ? " bug\xFCn" : ` ${kalanGun} g\xFCn sonra`} (her ayın ${r.gun}ı).`);
     }
   });
+  const gorevler = LS.get("yapilacaklar");
+  const acikGorevler = gorevler.filter((g) => !g.tamamlandi && g.bitisTarihi);
+  const gecikenGorevler = acikGorevler.filter((g) => g.bitisTarihi < bugun);
+  const bugunGorevler = acikGorevler.filter((g) => g.bitisTarihi === bugun);
+  if (gecikenGorevler.length > 0) {
+    bildirimGoster("⚠️ Gecikmiş Görevler", `${gecikenGorevler.length} görevin son tarihi ge\xE7ti.`);
+  }
+  if (bugunGorevler.length > 0) {
+    bildirimGoster("✅ Bugün Bitecek Görevler", `${bugunGorevler.length} g\xF6revin son tarihi bug\xFCn.`);
+  }
   localStorage.setItem(gonderildiKey, "1");
 }
 async function dosyaMigrasyonuYap() {
@@ -1123,6 +1133,22 @@ function whatsappRandevuHatirlat(s, cariler, aracEtiket) {
   const musteri = cariler.find((c) => c.id === s.musteriId);
   const mesaj = `Merhaba ${musteri ? musteri.ad : ""}, ${fmtDate(s.tarih)}${s.saat ? " saat " + s.saat : ""} tarihindeki ${aracEtiket ? aracEtiket + " ile ilgili " : ""}randevunuzu hatırlatmak isteriz. — As Egzoz & Makine`;
   whatsappLinkAc(musteri ? musteri.tel : "", mesaj);
+}
+function whatsappGorevGonder(gorev, personel) {
+  if (!personel || !personel.telefon) {
+    alert("Bu personelin telefon numarası kayıtlı değil.");
+    return;
+  }
+  const oncelikMetni = ONCELIK_LABEL[gorev.oncelik] || "";
+  const satirlar = [
+    `Merhaba ${personel.ad}, size yeni bir görev atandı:`,
+    `📋 ${gorev.baslik}`,
+    gorev.aciklama ? gorev.aciklama : null,
+    oncelikMetni ? `Öncelik: ${oncelikMetni}` : null,
+    gorev.bitisTarihi ? `Son Tarih: ${fmtDate(gorev.bitisTarihi)}` : null,
+    "— As Egzoz & Makine"
+  ].filter(Boolean);
+  whatsappLinkAc(personel.telefon, satirlar.join("\n"));
 }
 function hesapHareketiKaydet(hesapId, yon, tutar, tarih, aciklama, kaynak, yontem) {
   if (!hesapId || !(+tutar > 0)) return;
@@ -2515,11 +2541,18 @@ function Yapilacaklar() {
       return;
     }
     setHata("");
+    const yeniKayitMi = !form.id;
     const kayit = { ...form, id: form.id || uid(), oncelik: form.oncelik || "orta", olusturmaTarihi: form.olusturmaTarihi || today(), tamamlandi: !!form.tamamlandi };
     const yeni = form.id ? liste.map((x) => x.id === form.id ? kayit : x) : [...liste, kayit];
     LS.set("yapilacaklar", yeni);
     setListe(yeni);
     setModalAcik(false);
+    if (yeniKayitMi && kayit.personelId) {
+      const sorumlu = personelListesi.find((p) => p.id === kayit.personelId);
+      if (sorumlu && sorumlu.telefon && confirm(`Bu g\xF6rev WhatsApp ile ${sorumlu.ad}'a g\xF6nderilsin mi?`)) {
+        whatsappGorevGonder(kayit, sorumlu);
+      }
+    }
   };
   const sil = (id) => {
     if (!confirm("Bu görev silinsin mi?")) return;
@@ -2562,6 +2595,7 @@ function Yapilacaklar() {
                 )
               ),
               /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
+                sorumlu && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "WhatsApp ile g\xF6nder", onClick: () => whatsappGorevGonder(g, sorumlu) }, "\u{1F4F1}"),
                 /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(g); setHata(""); setModalAcik(true); } }, "✏️"),
                 /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(g.id) }, "🗑️")
               )
