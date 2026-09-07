@@ -1,4 +1,4 @@
-const CACHE_ADI = "atolyepro-v14";
+const CACHE_ADI = "atolyepro-v15";
 const TEMEL_DOSYALAR = ["./", "./index.html", "./app.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -25,7 +25,7 @@ self.addEventListener("fetch", (e) => {
           }
           return yanit;
         })
-        .catch(() => onbellek);
+        .catch(() => onbellek || (e.request.mode === "navigate" ? caches.match("./index.html") : Response.error()));
       return onbellek || agFetch;
     })
   );
