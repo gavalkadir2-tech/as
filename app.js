@@ -2788,7 +2788,7 @@ function Cariler({ hedef, hedefTemizle } = {}) {
       { key: "borc", baslik: "Açık Borç", sirala: (c) => borc(c.id), render: (c) => { const acikBorc = borc(c.id); return acikBorc > 0 ? React.createElement("strong", { style: { color: C.red } }, fmtTL(acikBorc)) : "—"; } },
       { key: "islemler", baslik: "", render: (c) => React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
         React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => setEkstreId(c.id) }, "\u{1F4CB} Ekstre"),
-        React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setFaturaForm({ tarih: today(), yon: "satis", kdvOrani: getSettings().kdvOrani }); setFaturaHata(""); setFaturaModal(c); } }, "\u{1F9FE} Fatura"),
+        React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setFaturaForm({ tarih: today(), yon: "satis", kdvOrani: 0 }); setFaturaHata(""); setFaturaModal(c); } }, "\u{1F9FE} Fatura"),
         React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(c); setModalAcik(true); } }, "✏️"),
         React.createElement("button", { style: S.btnR, onClick: () => sil(c.id) }, "\u{1F5D1}️")
       ) }
@@ -3194,7 +3194,7 @@ function Muhasebe() {
       { style: S.card },
       React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" } },
         React.createElement("input", { style: { ...S.inp, flex: 1, minWidth: 200 }, placeholder: "\u{1F50D} Fatura no, m\xFC\u015Fteri veya a\xE7\u0131klamada ara\u2026", value: arama, onChange: (e) => setArama(e.target.value) }),
-        React.createElement("button", { style: S.btn(), onClick: () => { setYeniFaturaForm({ tarih: today(), yon: "satis", kdvOrani: getSettings().kdvOrani }); setYeniFaturaHata(""); setYeniFaturaModal(true); } }, "\u2795 Yeni Fatura")
+        React.createElement("button", { style: S.btn(), onClick: () => { setYeniFaturaForm({ tarih: today(), yon: "satis", kdvOrani: 0 }); setYeniFaturaHata(""); setYeniFaturaModal(true); } }, "\u2795 Yeni Fatura")
       ),
       React.createElement(SiraliTablo, {
         dosyaAdi: "faturalar",
