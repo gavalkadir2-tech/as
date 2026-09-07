@@ -123,13 +123,15 @@ const KESS_YARDIM_KATEGORILERI = ["Ba\u011flant\u0131 Sorunu", "Protokol Se\u00e
 const ODEME_YONTEMLERI = ["Nakit", "Kredi Kart\u0131", "Havale/EFT", "\u00c7ek/Senet", "Di\u011fer"];
 const DURUM_LABEL = { bekliyor: "Bekliyor", devam: "Devam Ediyor", tamamlandi: "Tamamland\u0131", iptal: "\u0130ptal" };
 const DURUM_RENK = { bekliyor: C.yellow, devam: C.blue, tamamlandi: C.green, iptal: C.red };
+const ONCELIK_LABEL = { dusuk: "\u{1F7E2} D\xFC\u015f\xFCk", orta: "\u{1F7E1} Orta", yuksek: "\u{1F534} Y\xFCksek" };
+const ONCELIK_RENK = { dusuk: C.green, orta: C.yellow, yuksek: C.red };
 let GIDER_KATEGORILERI = [...GIDER_KATEGORILERI_VARSAYILAN];
 const HESAP_TUR_LABEL = { kasa: "\u{1F4B5} Kasa", banka: "\u{1F3E6} Banka", kredi_karti: "\u{1F4B3} Kredi Kart\u0131", pos: "\u{1F5A5}\uFE0F POS" };
 const ROL_LABEL = { patron: "\u{1F451} Patron / Y\xF6netici", usta: "\u{1F527} Usta / Teknisyen", kasiyer: "\u{1F4B0} Kasiyer / Muhasebe" };
 const ROL_SAYFA_IZIN_VARSAYILAN = {
   patron: null,
-  usta: ["dashboard", "servis", "takvim", "araclar"],
-  kasiyer: ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "cariler", "muhasebe"]
+  usta: ["dashboard", "servis", "takvim", "araclar", "yapilacaklar"],
+  kasiyer: ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "cariler", "muhasebe", "yapilacaklar"]
 };
 let ROL_SAYFA_IZIN = { ...ROL_SAYFA_IZIN_VARSAYILAN };
 function rolYetkileriYenile() {
@@ -318,7 +320,7 @@ async function aiSor(promptMetni, denemeNo = 0) {
   const veri = await r.json();
   return veri.candidates && veri.candidates[0] && veri.candidates[0].content && veri.candidates[0].content.parts && veri.candidates[0].content.parts[0] ? veri.candidates[0].content.parts[0].text : "";
 }
-const ALL_DATA_KEYS = ["cariler", "servisIsleri", "satislar", "faturalar", "giderler", "personel", "araclar", "hesaplar", "kasaHareketleri", "personelOdemeleri"];
+const ALL_DATA_KEYS = ["cariler", "servisIsleri", "satislar", "faturalar", "giderler", "personel", "araclar", "hesaplar", "kasaHareketleri", "personelOdemeleri", "yapilacaklar"];
 const sonKullanilanPersonelId = () => { try { return localStorage.getItem("fp_son_personelId") || ""; } catch { return ""; } };
 const sonKullanilanHizmetTuru = () => { try { return localStorage.getItem("fp_son_hizmetTuru") || ""; } catch { return ""; } };
 const sonKullanilanKaydet = (personelId, hizmetTuru) => {
@@ -2491,6 +2493,96 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
     )
   );
 }
+function Yapilacaklar() {
+  const [liste, setListe] = useState(LS.get("yapilacaklar"));
+  const [personelListesi] = useState(LS.get("personel"));
+  const [modalAcik, setModalAcik] = useState(false);
+  const [form, setForm] = useState({});
+  const [hata, setHata] = useState("");
+  const [sekme, setSekme] = useState("acik");
+  const acikGorevler = liste.filter((g) => !g.tamamlandi);
+  const tamamlananGorevler = liste.filter((g) => g.tamamlandi);
+  const oncelikSira = { yuksek: 0, orta: 1, dusuk: 2 };
+  const siraliAcikGorevler = [...acikGorevler].sort((a, b) => {
+    const fark = (oncelikSira[a.oncelik] ?? 1) - (oncelikSira[b.oncelik] ?? 1);
+    if (fark !== 0) return fark;
+    return (a.bitisTarihi || "9999").localeCompare(b.bitisTarihi || "9999");
+  });
+  const gosterilecek = sekme === "acik" ? siraliAcikGorevler : sekme === "tamamlanan" ? [...tamamlananGorevler].sort((a, b) => (b.tamamlanmaTarihi || "").localeCompare(a.tamamlanmaTarihi || "")) : [...liste].sort((a, b) => (b.olusturmaTarihi || "").localeCompare(a.olusturmaTarihi || ""));
+  const kaydet = () => {
+    if (!(form.baslik || "").trim()) {
+      setHata("Görev başlığı zorunludur.");
+      return;
+    }
+    setHata("");
+    const kayit = { ...form, id: form.id || uid(), oncelik: form.oncelik || "orta", olusturmaTarihi: form.olusturmaTarihi || today(), tamamlandi: !!form.tamamlandi };
+    const yeni = form.id ? liste.map((x) => x.id === form.id ? kayit : x) : [...liste, kayit];
+    LS.set("yapilacaklar", yeni);
+    setListe(yeni);
+    setModalAcik(false);
+  };
+  const sil = (id) => {
+    if (!confirm("Bu görev silinsin mi?")) return;
+    const yeni = liste.filter((x) => x.id !== id);
+    LS.set("yapilacaklar", yeni);
+    setListe(yeni);
+  };
+  const tamamlandiToggle = (g) => {
+    const yeni = liste.map((x) => x.id === g.id ? { ...x, tamamlandi: !x.tamamlandi, tamamlanmaTarihi: !x.tamamlandi ? today() : "" } : x);
+    LS.set("yapilacaklar", yeni);
+    setListe(yeni);
+  };
+  const gecikmisMi = (g) => !g.tamamlandi && g.bitisTarihi && g.bitisTarihi < today();
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    { className: "fp-fade" },
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } },
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "✅ Yapılacaklar"),
+      /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => { setForm({}); setHata(""); setModalAcik(true); } }, "➕ Yeni Görev")
+    ),
+    /* @__PURE__ */ React.createElement(TabBar, { tabs: [["acik", `\u{1F4CB} Açık (${acikGorevler.length})`], ["tamamlanan", `✅ Tamamlanan (${tamamlananGorevler.length})`], ["tumu", `Tümü (${liste.length})`]], active: sekme, onChange: setSekme }),
+    gosterilecek.length === 0
+      ? /* @__PURE__ */ React.createElement("div", { style: { ...S.card, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "✅"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Görev bulunamadı."))
+      : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, gosterilecek.map((g) => {
+          const sorumlu = personelListesi.find((p) => p.id === g.personelId);
+          return /* @__PURE__ */ React.createElement(
+            "div",
+            { key: g.id, style: { ...S.card, marginBottom: 0, borderLeft: `3px solid ${ONCELIK_RENK[g.oncelik] || C.border}`, opacity: g.tamamlandi ? 0.6 : 1 } },
+            /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" } },
+              /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "flex-start", flex: 1, minWidth: 200 } },
+                /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: !!g.tamamlandi, onChange: () => tamamlandiToggle(g), style: { width: 18, height: 18, marginTop: 2, cursor: "pointer", flexShrink: 0 } }),
+                /* @__PURE__ */ React.createElement("div", null,
+                  /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.white, textDecoration: g.tamamlandi ? "line-through" : "none" } }, g.baslik),
+                  g.aciklama && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: C.muted, marginTop: 4 } }, g.aciklama),
+                  /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 } },
+                    /* @__PURE__ */ React.createElement("span", { style: S.badge(ONCELIK_RENK[g.oncelik] || C.muted) }, ONCELIK_LABEL[g.oncelik] || g.oncelik),
+                    sorumlu && /* @__PURE__ */ React.createElement("span", { style: S.badge(C.blue) }, "\u{1F464} ", sorumlu.ad),
+                    g.bitisTarihi && /* @__PURE__ */ React.createElement("span", { style: S.badge(gecikmisMi(g) ? C.red : C.muted) }, gecikmisMi(g) ? "⚠️ " : "\u{1F4C5} ", fmtDate(g.bitisTarihi))
+                  )
+                )
+              ),
+              /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
+                /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(g); setHata(""); setModalAcik(true); } }, "✏️"),
+                /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(g.id) }, "🗑️")
+              )
+            )
+          );
+        })),
+    modalAcik && /* @__PURE__ */ React.createElement(
+      Modal,
+      { title: form.id ? "Görevi Düzenle" : "Yeni Görev", onClose: () => setModalAcik(false), width: 460 },
+      /* @__PURE__ */ React.createElement(FG, { label: "Başlık" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.baslik || "", onChange: (e) => setForm((f) => ({ ...f, baslik: e.target.value })), autoFocus: true })),
+      /* @__PURE__ */ React.createElement(FG, { label: "Açıklama (opsiyonel)" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.aciklama || "", onChange: (e) => setForm((f) => ({ ...f, aciklama: e.target.value })) })),
+      /* @__PURE__ */ React.createElement(Grid2, null,
+        /* @__PURE__ */ React.createElement(FG, { label: "Öncelik" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.oncelik || "orta", onChange: (e) => setForm((f) => ({ ...f, oncelik: e.target.value })) }, Object.entries(ONCELIK_LABEL).map(([k, l]) => /* @__PURE__ */ React.createElement("option", { key: k, value: k }, l)))),
+        /* @__PURE__ */ React.createElement(FG, { label: "Bitiş Tarihi (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { type: "date", style: S.inp, value: form.bitisTarihi || "", onChange: (e) => setForm((f) => ({ ...f, bitisTarihi: e.target.value })) }))
+      ),
+      /* @__PURE__ */ React.createElement(FG, { label: "Sorumlu Personel (opsiyonel)" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.personelId || "", onChange: (e) => setForm((f) => ({ ...f, personelId: e.target.value })) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "— Seçiniz —"), personelListesi.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.id, value: p.id }, p.ad)))),
+      hata && /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "⚠️ ", hata),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))
+    )
+  );
+}
 function Cariler({ hedef, hedefTemizle } = {}) {
   const [liste, setListe] = useState(LS.get("cariler"));
   const [servisler] = useState(LS.get("servisIsleri"));
@@ -4035,6 +4127,7 @@ const SAYFALAR = [
   { id: "el_arabasi", label: "El Arabas\u0131", icon: "\u{1F6D2}", comp: ElArabasi },
   { id: "personel", label: "Personel", icon: "\u{1F9D1}\u200D\u{1F527}", comp: Personel },
   { id: "cariler", label: "Cariler", icon: "\u{1F465}", comp: Cariler },
+  { id: "yapilacaklar", label: "Yapılacaklar", icon: "✅", comp: Yapilacaklar },
   { id: "muhasebe", label: "Muhasebe", icon: "\u{1F4B0}", comp: Muhasebe },
   { id: "ayarlar", label: "Ayarlar", icon: "\u2699\uFE0F", comp: Ayarlar }
 ];
