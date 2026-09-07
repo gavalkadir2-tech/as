@@ -669,7 +669,42 @@ function csvIndir(columns, rows, dosyaAdi) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-function SiraliTablo({ columns, rows, rowKey, bosMesaj = "Kayıt yok.", className, dosyaAdi }) {
+function excelIndir(columns, rows, dosyaAdi) {
+  if (!window.XLSX) {
+    alert("Excel kütüphanesi yüklenemedi, internet bağlantınızı kontrol edip tekrar deneyin.");
+    return;
+  }
+  const disaKolonlari = columns.filter((c) => c.sirala);
+  const veri = rows.map((row) => {
+    const satir = {};
+    disaKolonlari.forEach((c) => satir[c.baslik] = c.sirala(row));
+    return satir;
+  });
+  const sayfa = window.XLSX.utils.json_to_sheet(veri);
+  const kitap = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(kitap, sayfa, "Liste");
+  window.XLSX.writeFile(kitap, `${dosyaAdi || "liste"}.xlsx`);
+}
+function pdfIndir(columns, rows, dosyaAdi, baslik) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("PDF kütüphanesi yüklenemedi, internet bağlantınızı kontrol edip tekrar deneyin.");
+    return;
+  }
+  const disaKolonlari = columns.filter((c) => c.sirala);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: disaKolonlari.length > 5 ? "landscape" : "portrait", unit: "mm", format: "a4" });
+  pdf.setFontSize(13);
+  pdf.text(baslik || dosyaAdi || "Liste", 14, 12);
+  pdf.autoTable({
+    startY: 18,
+    head: [disaKolonlari.map((c) => c.baslik)],
+    body: rows.map((row) => disaKolonlari.map((c) => { const v = c.sirala(row); return v == null ? "" : String(v); })),
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [232, 98, 44] }
+  });
+  pdf.save(`${dosyaAdi || "liste"}.pdf`);
+}
+function SiraliTablo({ columns, rows, rowKey, bosMesaj = "Kayıt yok.", className, dosyaAdi, baslik }) {
   const [sayfa, setSayfa] = useState(1);
   const [sayfaBoyutu, setSayfaBoyutu] = useState(20);
   const [siralamaKey, setSiralamaKey] = useState(null);
@@ -733,7 +768,9 @@ function SiraliTablo({ columns, rows, rowKey, bosMesaj = "Kayıt yok.", classNam
         { style: { display: "flex", alignItems: "center", gap: 8 } },
         "Sayfa başı:",
         React.createElement("select", { style: { ...S.sel, width: "auto", padding: "4px 8px" }, value: sayfaBoyutu, onChange: (e) => { setSayfaBoyutu(+e.target.value); setSayfa(1); } }, [20, 50, 100].map((n) => React.createElement("option", { key: n, value: n }, n))),
-        React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 10px" }, title: "CSV olarak indir", onClick: () => csvIndir(columns, siraliSatirlar, dosyaAdi) }, "⬇️ CSV")
+        React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 10px" }, title: "CSV olarak indir", onClick: () => csvIndir(columns, siraliSatirlar, dosyaAdi) }, "⬇️ CSV"),
+        React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 10px" }, title: "Excel olarak indir", onClick: () => excelIndir(columns, siraliSatirlar, dosyaAdi) }, "⬇️ Excel"),
+        React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 10px" }, title: "PDF olarak indir", onClick: () => pdfIndir(columns, siraliSatirlar, dosyaAdi, baslik) }, "⬇️ PDF")
       ),
       React.createElement("div", null, `${ilkKayit}–${sonKayit} / ${siraliSatirlar.length} kayıt`),
       React.createElement(
@@ -3297,7 +3334,7 @@ function GirisEkrani({ onGiris }) {
   if (!clientId) {
     return /* @__PURE__ */ React.createElement("div", { className: "fp-vh-fix", style: { display: "flex", alignItems: "center", justifyContent: "center", background: C.bg } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 420, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "\u{1F527}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 8 } }, "Google ile Giri\u015F Kurulmad\u0131"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted } }, "Ayarlar \u2192 Google Giri\u015Fi'nden bir Client ID girip kaydedin. O zamana kadar uygulamaya do\u011Frudan devam edebilirsiniz."), /* @__PURE__ */ React.createElement("button", { style: { ...S.btn(), marginTop: 16 }, onClick: () => onGiris(null) }, "Google's\u0131z Devam Et")));
   }
-  return /* @__PURE__ */ React.createElement("div", { className: "fp-vh-fix", style: { display: "flex", alignItems: "center", justifyContent: "center", background: C.bg } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 380, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 56, style: { marginBottom: 12 } }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: C.white, marginBottom: 4 } }, getSettings().firmaAdi), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 24 } }, "Devam etmek i\xE7in Google hesab\u0131n\u0131zla giri\u015F yap\u0131n"), /* @__PURE__ */ React.createElement("div", { ref: butonRef, style: { display: "flex", justifyContent: "center" } }), hata && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, color: C.red, fontSize: 12 } }, "\u26A0\uFE0F ", hata)));
+  return /* @__PURE__ */ React.createElement("div", { className: "fp-vh-fix", style: { display: "flex", alignItems: "center", justifyContent: "center", background: C.bg } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 380, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 72, style: { marginBottom: 12 } }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: C.white, marginBottom: 4 } }, getSettings().firmaAdi), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 24 } }, "Devam etmek i\xE7in Google hesab\u0131n\u0131zla giri\u015F yap\u0131n"), /* @__PURE__ */ React.createElement("div", { ref: butonRef, style: { display: "flex", justifyContent: "center" } }), hata && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, color: C.red, fontSize: 12 } }, "\u26A0\uFE0F ", hata)));
 }
 const SAYFALAR = [
   { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
@@ -3514,7 +3551,7 @@ function App() {
       /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: C.white } }, aktifSayfaBilgi.icon, " ", aktifSayfaBilgi.label)
     ),
     sidebarAcik && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-backdrop", onClick: () => setSidebarAcik(false) }),
-    /* @__PURE__ */ React.createElement("div", { className: sidebarAcik ? "fp-sidebar fp-sidebar-open" : "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center" } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 34 }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, getSettings().firmaAdi)),
+    /* @__PURE__ */ React.createElement("div", { className: sidebarAcik ? "fp-sidebar fp-sidebar-open" : "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center" } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 44 }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, getSettings().firmaAdi)),
     /* @__PURE__ */ React.createElement("div", { style: { padding: "0 4px 14px", display: "flex", gap: 6 } },
       /* @__PURE__ */ React.createElement("div", { style: { flex: 1, position: "relative" } },
         /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, fontSize: 12.5 }, placeholder: "\u{1F50D} Plaka, m\xFCşteri, iş emri ara…", value: globalArama, onChange: (e) => setGlobalArama(e.target.value) }),
