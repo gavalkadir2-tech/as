@@ -1511,6 +1511,26 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     detayArac && React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: detayAracServisleri, onClose: () => setDetayAracId(null), onGuncelle: detayAracGuncelle })
   );
 }
+function otsuEsigi(histogram, toplamPiksel) {
+  let toplam = 0;
+  for (let i = 0; i < 256; i++) toplam += i * histogram[i];
+  let toplamArka = 0, agirlikArka = 0, enIyiEsik = 127, enIyiVaryans = 0;
+  for (let esik = 0; esik < 256; esik++) {
+    agirlikArka += histogram[esik];
+    if (agirlikArka === 0) continue;
+    const agirlikOn = toplamPiksel - agirlikArka;
+    if (agirlikOn === 0) break;
+    toplamArka += esik * histogram[esik];
+    const ortalamaArka = toplamArka / agirlikArka;
+    const ortalamaOn = (toplam - toplamArka) / agirlikOn;
+    const varyans = agirlikArka * agirlikOn * (ortalamaArka - ortalamaOn) ** 2;
+    if (varyans > enIyiVaryans) {
+      enIyiVaryans = varyans;
+      enIyiEsik = esik;
+    }
+  }
+  return enIyiEsik;
+}
 function goruntuOnIsle(ctx, w, h) {
   const img = ctx.getImageData(0, 0, w, h);
   const veri = img.data;
@@ -1524,8 +1544,16 @@ function goruntuOnIsle(ctx, w, h) {
     if (g > max) max = g;
   }
   const aralik = Math.max(1, max - min);
+  const gerilmis = new Uint8ClampedArray(piksel);
+  const histogram = new Array(256).fill(0);
+  for (let p = 0; p < piksel; p++) {
+    const v = Math.round((gri[p] - min) / aralik * 255);
+    gerilmis[p] = v;
+    histogram[v]++;
+  }
+  const esik = otsuEsigi(histogram, piksel);
   for (let i = 0, p = 0; i < veri.length; i += 4, p++) {
-    const v = (gri[p] - min) / aralik * 255;
+    const v = gerilmis[p] > esik ? 255 : 0;
     veri[i] = veri[i + 1] = veri[i + 2] = v;
   }
   ctx.putImageData(img, 0, 0);
@@ -1551,16 +1579,18 @@ function PlakaKameraTarayici({ onSonuc }) {
   const kamerayiAc = async () => {
     setHata("");
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setHata("Bu cihaz/tarayıcı kamera erişimini desteklemiyor.");
+      setHata("Bu cihaz/tarayıcı kamera erişimini desteklemiyor. L\xFCtfen adresi https:// ile ve Safari/Chrome ile a\xE7\u0131n.");
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      } catch (e1) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
       streamRef.current = stream;
       setAcik(true);
-      setTimeout(() => {
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      }, 0);
       try {
         const track = stream.getVideoTracks()[0];
         const yetenekler = track.getCapabilities ? track.getCapabilities() : {};
@@ -1568,9 +1598,19 @@ function PlakaKameraTarayici({ onSonuc }) {
       } catch {
       }
     } catch (e) {
-      setHata("Kameraya erişilemedi: " + e.message);
+      setHata("Kameraya eri\u015Filemedi: " + e.message + " \u2014 iPhone\u0027da Ayarlar > Safari > Kamera izninin a\xE7\u0131k oldu\u011Fundan emin olun.");
     }
   };
+  useEffect(() => {
+    if (!acik || !videoRef.current || !streamRef.current) return;
+    const video = videoRef.current;
+    video.srcObject = streamRef.current;
+    video.muted = true;
+    video.playsInline = true;
+    const oynat = () => video.play().catch(() => {});
+    if (video.readyState >= 1) oynat();
+    else video.onloadedmetadata = oynat;
+  }, [acik]);
   const fenerDegistir = async () => {
     const track = streamRef.current && streamRef.current.getVideoTracks()[0];
     if (!track) return;
@@ -1592,9 +1632,14 @@ function PlakaKameraTarayici({ onSonuc }) {
     try {
       const video = videoRef.current;
       const vw = video.videoWidth, vh = video.videoHeight;
+      if (!vw || !vh) {
+        setHata("Kamera görüntüsü henüz hazır değil, bir saniye bekleyip tekrar deneyin.");
+        setTarama(false);
+        return;
+      }
       const cropW = vw * 0.88, cropH = vh * 0.34;
       const cropX = (vw - cropW) / 2, cropY = (vh - cropH) / 2;
-      const olcek = 2;
+      const olcek = 3;
       const canvas = document.createElement("canvas");
       canvas.width = cropW * olcek;
       canvas.height = cropH * olcek;
@@ -1602,7 +1647,7 @@ function PlakaKameraTarayici({ onSonuc }) {
       ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
       goruntuOnIsle(ctx, canvas.width, canvas.height);
       worker = await window.Tesseract.createWorker("eng");
-      await worker.setParameters({ tessedit_char_whitelist: "ABCDEFGHIJKLMNOPRSTUVYZ0123456789 " });
+      await worker.setParameters({ tessedit_char_whitelist: "ABCDEFGHIJKLMNOPRSTUVYZ0123456789 ", tessedit_pageseg_mode: "7" });
       const { data } = await worker.recognize(canvas);
       const ham = (data.text || "").toUpperCase();
       const eslesme = ham.match(/\d{2}\s?[A-Z]{1,3}\s?\d{2,4}/);
@@ -1632,7 +1677,7 @@ function PlakaKameraTarayici({ onSonuc }) {
   return /* @__PURE__ */ React.createElement(
     "div",
     { style: { border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 10, background: C.surface } },
-    /* @__PURE__ */ React.createElement("div", { style: { position: "relative", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("video", { ref: videoRef, autoPlay: true, playsInline: true, muted: true, style: { width: "100%", borderRadius: 8, maxHeight: 240, objectFit: "cover", background: "#000", display: "block" } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "33%", left: "6%", width: "88%", height: "34%", border: `2px dashed ${C.accent}`, borderRadius: 6, pointerEvents: "none" } }), fenerVar && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: fenerDegistir, style: { position: "absolute", top: 8, right: 8, background: fenerAcik ? C.accent : "#000000aa", color: fenerAcik ? "#161311" : "#fff", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer" } }, "\u{1F4A1}")),
+    /* @__PURE__ */ React.createElement("div", { style: { position: "relative", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("video", { ref: videoRef, autoPlay: true, playsInline: true, "webkit-playsinline": "true", muted: true, disablePictureInPicture: true, style: { width: "100%", borderRadius: 8, maxHeight: 240, objectFit: "cover", background: "#000", display: "block" } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "33%", left: "6%", width: "88%", height: "34%", border: `2px dashed ${C.accent}`, borderRadius: 6, pointerEvents: "none" } }), fenerVar && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: fenerDegistir, style: { position: "absolute", top: 8, right: 8, background: fenerAcik ? C.accent : "#000000aa", color: fenerAcik ? "#161311" : "#fff", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer" } }, "\u{1F4A1}")),
     /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, "Plakayı çerçeveye, düz açıyla ve iyi ışıkta hizalayın."),
     hata && /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontSize: 12, marginBottom: 8 } }, "⚠️ ", hata),
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btn(), flex: 1 }, disabled: tarama, onClick: cekVeOku }, tarama ? "Okunuyor…" : "📸 Çek ve Oku"), /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btnO, onClick: kamerayiKapat }, "İptal"))
