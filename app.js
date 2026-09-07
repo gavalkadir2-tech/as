@@ -283,15 +283,24 @@ function PlakaGirisi({ il, harf, rakam, onIl, onHarf, onRakam }) {
     /* @__PURE__ */ React.createElement("input", { ref: rakamRef, style: { ...S.inp, width: 100, textAlign: "center" }, placeholder: "12345", maxLength: 5, value: rakam || "", onChange: (e) => onRakam(e.target.value.replace(/[^0-9]/g, "").slice(0, 5)) })
   );
 }
-function MarkaModelSecici({ marka, model, onMarka, onModel }) {
+const ARAC_GRUP_LABEL = { otomobil: "\u{1F697} Otomobil / Ticari", motosiklet: "\u{1F3CD}\uFE0F Motosiklet", traktor: "\u{1F69C} Traktör" };
+function MarkaModelSecici({ grup, marka, model, onGrup, onMarka, onModel }) {
   const markaListId = useId();
   const modelListId = useId();
-  const modeller = ARAC_MODELLERI[marka] || [];
+  const g = grup || "otomobil";
+  const markalar = g === "motosiklet" ? ARAC_MARKALARI_MOTOSIKLET : g === "traktor" ? ARAC_MARKALARI_TRAKTOR : ARAC_MARKALARI;
+  const modelHaritasi = g === "motosiklet" ? ARAC_MODELLERI_MOTOSIKLET : g === "traktor" ? ARAC_MODELLERI_TRAKTOR : ARAC_MODELLERI;
+  const modeller = modelHaritasi[marka] || [];
   return /* @__PURE__ */ React.createElement(
-    Grid2,
+    React.Fragment,
     null,
-    /* @__PURE__ */ React.createElement(FG, { label: "Marka" }, /* @__PURE__ */ React.createElement("input", { list: markaListId, style: S.inp, value: marka || "", onChange: (e) => onMarka(e.target.value), placeholder: "\xD6rn: Renault" }), /* @__PURE__ */ React.createElement("datalist", { id: markaListId }, ARAC_MARKALARI.map((m) => /* @__PURE__ */ React.createElement("option", { key: m, value: m })))),
-    /* @__PURE__ */ React.createElement(FG, { label: "Model" }, /* @__PURE__ */ React.createElement("input", { list: modelListId, style: S.inp, value: model || "", onChange: (e) => onModel(e.target.value), placeholder: "\xD6rn: Clio" }), /* @__PURE__ */ React.createElement("datalist", { id: modelListId }, modeller.map((m) => /* @__PURE__ */ React.createElement("option", { key: m, value: m }))))
+    onGrup && /* @__PURE__ */ React.createElement(FG, { label: "Araç Grubu" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: g, onChange: (e) => onGrup(e.target.value) }, Object.entries(ARAC_GRUP_LABEL).map(([k, l]) => /* @__PURE__ */ React.createElement("option", { key: k, value: k }, l)))),
+    /* @__PURE__ */ React.createElement(
+      Grid2,
+      null,
+      /* @__PURE__ */ React.createElement(FG, { label: "Marka" }, /* @__PURE__ */ React.createElement("input", { list: markaListId, style: S.inp, value: marka || "", onChange: (e) => onMarka(e.target.value), placeholder: "\xD6rn: Renault" }), /* @__PURE__ */ React.createElement("datalist", { id: markaListId }, markalar.map((m) => /* @__PURE__ */ React.createElement("option", { key: m, value: m })))),
+      /* @__PURE__ */ React.createElement(FG, { label: "Model" }, /* @__PURE__ */ React.createElement("input", { list: modelListId, style: S.inp, value: model || "", onChange: (e) => onModel(e.target.value), placeholder: "\xD6rn: Clio" }), /* @__PURE__ */ React.createElement("datalist", { id: modelListId }, modeller.map((m) => /* @__PURE__ */ React.createElement("option", { key: m, value: m }))))
+    )
   );
 }
 const ARAC_MARKALARI = [
@@ -305,47 +314,130 @@ const ARAC_MARKALARI = [
   "Tesla", "Tofaş", "Toyota", "Volvo", "Volkswagen", "Diğer"
 ];
 const ARAC_MODELLERI = {
-  "Renault": ["Clio", "Megane", "Symbol", "Fluence", "Talisman", "Kadjar", "Captur", "Taliant", "Broadway", "Kangoo", "Master"],
-  "Fiat": ["Egea", "Egea Cross", "Linea", "Punto", "Doblo", "Fiorino", "Tipo", "500", "Panda", "Ducato"],
-  "Ford": ["Focus", "Fiesta", "Mondeo", "Kuga", "Puma", "Courier", "Connect", "Transit", "Ranger", "EcoSport"],
-  "Volkswagen": ["Passat", "Golf", "Polo", "Jetta", "Tiguan", "Caddy", "Transporter", "Bora", "Scirocco", "T-Roc"],
-  "Toyota": ["Corolla", "Yaris", "Auris", "C-HR", "RAV4", "Hilux", "Avensis", "Camry", "Land Cruiser"],
-  "Hyundai": ["i20", "i10", "Accent", "Elantra", "Tucson", "Bayon", "Kona", "Santa Fe", "ix35"],
-  "Peugeot": ["301", "308", "208", "3008", "2008", "508", "Partner", "Boxer", "5008"],
-  "Citroën": ["C-Elysee", "C3", "C4", "C4 Cactus", "Berlingo", "Jumpy", "C5"],
-  "Opel": ["Astra", "Corsa", "Insignia", "Mokka", "Combo", "Vectra", "Vivaro"],
-  "Mercedes-Benz": ["A Serisi", "C Serisi", "E Serisi", "S Serisi", "CLA", "GLA", "GLC", "Vito", "Sprinter", "Actros"],
-  "BMW": ["1 Serisi", "2 Serisi", "3 Serisi", "4 Serisi", "5 Serisi", "X1", "X3", "X5"],
-  "Audi": ["A3", "A4", "A5", "A6", "Q2", "Q3", "Q5"],
-  "Skoda": ["Octavia", "Fabia", "Superb", "Rapid", "Karoq", "Kodiaq"],
-  "Dacia": ["Duster", "Sandero", "Logan", "Lodgy", "Dokker", "Jogger"],
-  "Nissan": ["Micra", "Qashqai", "Juke", "Note", "X-Trail", "Navara"],
-  "Honda": ["Civic", "City", "CR-V", "Jazz", "HR-V"],
-  "Kia": ["Rio", "Ceed", "Sportage", "Picanto", "Stonic", "Sorento"],
-  "Chevrolet": ["Cruze", "Aveo", "Lacetti", "Captiva", "Spark"],
-  "Seat": ["Ibiza", "Leon", "Toledo", "Ateca", "Arona"],
-  "Volvo": ["S60", "S40", "V40", "XC60", "XC90", "FH"],
-  "Mazda": ["3", "6", "CX-5", "CX-3", "2"],
-  "Mitsubishi": ["Lancer", "L200", "Outlander", "ASX", "Colt"],
-  "Suzuki": ["Swift", "Vitara", "Baleno", "S-Cross"],
-  "Isuzu": ["D-Max", "NPR", "NQR"],
-  "Iveco": ["Daily", "Eurocargo", "Stralis"],
-  "Man": ["TGX", "TGS", "TGL", "TGM"],
-  "Scania": ["R Serisi", "P Serisi", "G Serisi"],
-  "Ford Trucks": ["Cargo", "F-Max", "Transit"],
-  "Karsan": ["Jest", "Atak", "Star"],
-  "Otokar": ["Sultan", "Territo", "Atlas"],
-  "Tofaş": ["Şahin", "Doğan", "Kartal"],
-  "Land Rover": ["Discovery", "Range Rover", "Defender", "Evoque"],
-  "Jeep": ["Renegade", "Compass", "Cherokee", "Wrangler"],
-  "Mini": ["Cooper", "Countryman", "Clubman"],
-  "Lada": ["Niva", "Granta", "Vesta"],
-  "Cupra": ["Formentor", "Leon", "Ateca"],
-  "DS Automobiles": ["DS3", "DS4", "DS7"],
-  "Alfa Romeo": ["Giulietta", "Giulia", "Stelvio"],
-  "Subaru": ["Impreza", "Forester", "XV"],
-  "Lexus": ["IS", "ES", "NX", "RX"],
-  "Infiniti": ["Q30", "Q50", "QX70"]
+  "Renault": ["Clio", "Megane", "Symbol", "Fluence", "Talisman", "Kadjar", "Captur", "Taliant", "Broadway", "Kangoo", "Master", "Trafic", "Twingo", "Scenic", "Laguna"],
+  "Fiat": ["Egea", "Egea Cross", "Linea", "Punto", "Doblo", "Fiorino", "Tipo", "500", "500X", "Panda", "Ducato", "Albea", "Palio"],
+  "Ford": ["Focus", "Fiesta", "Mondeo", "Kuga", "Puma", "Courier", "Connect", "Transit", "Transit Custom", "Ranger", "EcoSport", "Galaxy", "S-Max"],
+  "Volkswagen": ["Passat", "Golf", "Polo", "Jetta", "Tiguan", "Caddy", "Transporter", "Crafter", "Bora", "Scirocco", "T-Roc", "T-Cross", "Arteon", "Amarok"],
+  "Toyota": ["Corolla", "Yaris", "Auris", "C-HR", "RAV4", "Hilux", "Avensis", "Camry", "Land Cruiser", "Proace", "Corolla Cross"],
+  "Hyundai": ["i20", "i10", "Accent", "Elantra", "Tucson", "Bayon", "Kona", "Santa Fe", "ix35", "i30", "Custin", "Staria"],
+  "Peugeot": ["301", "308", "208", "3008", "2008", "508", "Partner", "Boxer", "5008", "Expert", "406", "407"],
+  "Citroën": ["C-Elysee", "C3", "C4", "C4 Cactus", "C4 X", "Berlingo", "Jumpy", "Jumper", "C5", "C5 Aircross"],
+  "Opel": ["Astra", "Corsa", "Insignia", "Mokka", "Combo", "Vectra", "Vivaro", "Grandland", "Crossland"],
+  "Mercedes-Benz": ["A Serisi", "B Serisi", "C Serisi", "E Serisi", "S Serisi", "CLA", "GLA", "GLB", "GLC", "GLE", "Vito", "Sprinter", "Actros", "Axor", "Atego"],
+  "BMW": ["1 Serisi", "2 Serisi", "3 Serisi", "4 Serisi", "5 Serisi", "7 Serisi", "X1", "X2", "X3", "X4", "X5", "X6"],
+  "Audi": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q4 e-tron", "Q5", "Q7", "Q8"],
+  "Skoda": ["Octavia", "Fabia", "Superb", "Rapid", "Karoq", "Kodiaq", "Scala", "Kamiq"],
+  "Dacia": ["Duster", "Sandero", "Logan", "Lodgy", "Dokker", "Jogger", "Spring"],
+  "Nissan": ["Micra", "Qashqai", "Juke", "Note", "X-Trail", "Navara", "Primera", "NV200", "Almera"],
+  "Honda": ["Civic", "City", "CR-V", "Jazz", "HR-V", "Accord", "e:Ny1"],
+  "Kia": ["Rio", "Ceed", "Sportage", "Picanto", "Stonic", "Sorento", "Niro", "Sportage Plug-in", "Carnival"],
+  "Chevrolet": ["Cruze", "Aveo", "Lacetti", "Captiva", "Spark", "Malibu", "Orlando"],
+  "Seat": ["Ibiza", "Leon", "Toledo", "Ateca", "Arona", "Tarraco"],
+  "Volvo": ["S60", "S40", "S80", "V40", "V60", "XC40", "XC60", "XC90", "FH", "FM", "FMX"],
+  "Mazda": ["2", "3", "6", "CX-3", "CX-30", "CX-5", "CX-60"],
+  "Mitsubishi": ["Lancer", "L200", "Outlander", "ASX", "Colt", "Space Star", "Eclipse Cross"],
+  "Suzuki": ["Swift", "Vitara", "Baleno", "S-Cross", "Jimny", "Celerio"],
+  "Isuzu": ["D-Max", "NPR", "NQR", "N-Serisi"],
+  "Iveco": ["Daily", "Eurocargo", "Stralis", "S-Way", "Trakker"],
+  "Man": ["TGX", "TGS", "TGL", "TGM", "TGE"],
+  "Scania": ["R Serisi", "P Serisi", "G Serisi", "S Serisi"],
+  "Ford Trucks": ["Cargo", "F-Max", "Transit", "Trakker"],
+  "Karsan": ["Jest", "Atak", "Star", "Midi"],
+  "Otokar": ["Sultan", "Territo", "Atlas", "Kent", "Vectio"],
+  "Tofaş": ["Şahin", "Doğan", "Kartal", "Murat 131", "Serçe"],
+  "Land Rover": ["Discovery", "Discovery Sport", "Range Rover", "Range Rover Sport", "Range Rover Evoque", "Range Rover Velar", "Defender", "Freelander"],
+  "Jeep": ["Renegade", "Compass", "Cherokee", "Grand Cherokee", "Wrangler", "Avenger"],
+  "Mini": ["Cooper", "Cooper S", "Countryman", "Clubman", "Paceman"],
+  "Lada": ["Niva", "Granta", "Vesta", "Kalina", "Priora"],
+  "Cupra": ["Formentor", "Leon", "Ateca", "Born"],
+  "DS Automobiles": ["DS3", "DS4", "DS7", "DS9"],
+  "Alfa Romeo": ["Giulietta", "Giulia", "Stelvio", "Tonale", "MiTo", "146", "156", "159"],
+  "Subaru": ["Impreza", "Forester", "XV", "Outback", "Legacy", "BRZ"],
+  "Lexus": ["IS", "ES", "NX", "RX", "UX", "LS", "LX"],
+  "Infiniti": ["Q30", "Q50", "QX70", "QX50", "FX"],
+  "Jaguar": ["XE", "XF", "XJ", "F-Pace", "E-Pace", "I-Pace", "F-Type"],
+  "Lancia": ["Ypsilon", "Delta", "Musa", "Thema"],
+  "Chrysler": ["300C", "Voyager", "PT Cruiser", "Sebring"],
+  "Cadillac": ["CTS", "Escalade", "XT4", "XT5"],
+  "Rover": ["75", "45", "25", "Streetwise"],
+  "Saab": ["9-3", "9-5", "900"],
+  "Ssangyong": ["Korando", "Tivoli", "Rexton", "Musso", "Actyon"],
+  "Tata": ["Xenon", "Indica", "Nano", "Tiago"],
+  "Proton": ["Saga", "Persona", "X70"],
+  "Rolls-Royce": ["Ghost", "Phantom", "Wraith", "Cullinan"],
+  "Bentley": ["Continental GT", "Bentayga", "Flying Spur"],
+  "Aston Martin": ["Vantage", "DB11", "DBX"],
+  "Maserati": ["Ghibli", "Levante", "Quattroporte"],
+  "Lamborghini": ["Huracán", "Urus", "Aventador"],
+  "Ferrari": ["488", "Roma", "Portofino", "F8"],
+  "Porsche": ["911", "Cayenne", "Macan", "Panamera", "Taycan"],
+  "Tesla": ["Model 3", "Model S", "Model X", "Model Y"],
+  "Smart": ["Fortwo", "Forfour"],
+  "MG": ["ZS", "HS", "5", "4"],
+  "Chery": ["Tiggo 4", "Tiggo 7", "Tiggo 8", "Arrizo 5"],
+  "Seres": ["Seres 3", "Seres 5"],
+  "Maxus": ["T60", "T90", "eDeliver3"],
+  "DFSK": ["Glory 580", "K01", "K05"],
+  "Ineos": ["Grenadier"],
+  "Ram": ["1500", "2500", "3500"],
+  "Dodge": ["Journey", "Caliber", "Charger"],
+  "Lincoln": ["MKZ", "MKC", "Navigator"],
+  "Daihatsu": ["Terios", "Sirion", "Charade"],
+  "Daewoo": ["Matiz", "Nubira", "Lanos", "Espero"],
+  "DAF": ["XF", "CF", "LF"],
+  "BMC": ["Fatih", "Pro", "Neco"],
+  "Temsa": ["Avenue", "Prestij", "Safir", "MD9"],
+  "Anadol": ["A1", "A2", "SV-1636"]
+};
+const ARAC_MARKALARI_MOTOSIKLET = [
+  "Honda", "Yamaha", "Suzuki", "Kawasaki", "BMW Motorrad", "Ducati", "KTM", "Harley-Davidson",
+  "Piaggio", "Vespa", "Aprilia", "Triumph", "Royal Enfield", "TVS", "Bajaj", "CFMoto",
+  "Benelli", "Mondial", "Kanuni", "RKS", "Arora", "Moto Guzzi", "Husqvarna", "SYM", "Kymco", "Diğer"
+];
+const ARAC_MODELLERI_MOTOSIKLET = {
+  "Honda": ["CBR 500R", "CBR 650R", "CB 125", "CB 500F", "PCX 125", "PCX 150", "Forza 125", "Africa Twin", "Transalp", "SH 150i"],
+  "Yamaha": ["NMAX 125", "NMAX 155", "XMAX 250", "MT-03", "MT-07", "MT-09", "R25", "R3", "Tricity 125", "Tenere 700"],
+  "Suzuki": ["GSX-R750", "GSX-S750", "V-Strom 650", "Address 110", "Burgman 125", "GSX-8S"],
+  "Kawasaki": ["Ninja 400", "Ninja 650", "Z650", "Z900", "Versys 650", "Vulcan S"],
+  "BMW Motorrad": ["R 1250 GS", "F 850 GS", "S 1000 RR", "G 310 R", "C 400 GT"],
+  "Ducati": ["Monster", "Panigale V2", "Panigale V4", "Multistrada", "Scrambler"],
+  "KTM": ["Duke 125", "Duke 200", "Duke 390", "Adventure 390", "RC 390"],
+  "Harley-Davidson": ["Iron 883", "Street Bob", "Fat Boy", "Sportster S", "Road King"],
+  "Piaggio": ["Liberty 125", "Beverly 300", "MP3 300"],
+  "Vespa": ["Primavera 150", "GTS 300", "Sprint 150", "LX 125"],
+  "Aprilia": ["RS 125", "RS 660", "Tuono 660", "SR 150"],
+  "Triumph": ["Street Triple", "Tiger 900", "Bonneville T100", "Speed Twin"],
+  "Royal Enfield": ["Classic 350", "Meteor 350", "Himalayan", "Interceptor 650"],
+  "TVS": ["Apache RTR 160", "Apache RR 310", "Ntorq 125"],
+  "Bajaj": ["Pulsar 150", "Pulsar NS200", "Dominar 400"],
+  "CFMoto": ["300NK", "650NK", "450MT"],
+  "Benelli": ["TRK 502", "Leoncino 500", "302S"],
+  "Mondial": ["170 MK", "250 RR", "125 HPS"],
+  "SYM": ["Jet 14 125", "Symphony 125"],
+  "Kymco": ["Agility 125", "People S 125"]
+};
+const ARAC_MARKALARI_TRAKTOR = [
+  "New Holland", "John Deere", "Massey Ferguson", "Case IH", "Fendt", "Same", "Landini",
+  "Deutz-Fahr", "Kubota", "Türk Traktör", "Tümosan", "Erkunt", "Başak", "Claas", "Valtra",
+  "McCormick", "Steyr", "Zetor", "Diğer"
+];
+const ARAC_MODELLERI_TRAKTOR = {
+  "New Holland": ["TD5", "T5", "T6", "T7", "TT75", "TT4"],
+  "John Deere": ["5075E", "5090E", "6110M", "6130M", "3038E"],
+  "Massey Ferguson": ["MF 240", "MF 265", "MF 285", "MF 375", "MF 3070", "MF 6712"],
+  "Case IH": ["Farmall 55", "Farmall 75", "Puma 165", "Maxxum 110"],
+  "Fendt": ["Farmer 300", "Vario 700", "Vario 900"],
+  "Same": ["Explorer 70", "Argon 3", "Frutteto"],
+  "Landini": ["Landpower", "Vision", "Rex"],
+  "Deutz-Fahr": ["Agroplus", "Agrotron", "5D Serisi"],
+  "Kubota": ["M5001", "M7001", "L Serisi"],
+  "Türk Traktör": ["New Holland TT75", "Case Farmall"],
+  "Tümosan": ["8095", "9115", "6110"],
+  "Erkunt": ["ARMOTRAC", "STAR"],
+  "Başak": ["2035", "2095", "3110"],
+  "Claas": ["Arion 420", "Axos 340"],
+  "Valtra": ["A Serisi", "N Serisi", "T Serisi"],
+  "McCormick": ["X4", "X5", "X6"]
 };
 function googleKullanici() {
   try {
@@ -1740,6 +1832,7 @@ function HizliAracFormu({ onClose, onEklendi }) {
   const [il, setIl] = useState("");
   const [harf, setHarf] = useState("");
   const [rakam, setRakam] = useState("");
+  const [grup, setGrup] = useState("otomobil");
   const [marka, setMarka] = useState("");
   const [model, setModel] = useState("");
   const [musteriAdi, setMusteriAdi] = useState("");
@@ -1769,7 +1862,7 @@ function HizliAracFormu({ onClose, onEklendi }) {
       LS.set("cariler", tumCariler);
       musteriId = yeniCari.id;
     }
-    const yeniArac = { id: uid(), musteriId, plaka: normalize, marka: marka.trim(), model: model.trim() };
+    const yeniArac = { id: uid(), musteriId, plaka: normalize, grup, marka: marka.trim(), model: model.trim() };
     const tumAraclar = [...araclar, yeniArac];
     LS.set("araclar", tumAraclar);
     onEklendi(yeniArac, tumAraclar, tumCariler);
@@ -1785,7 +1878,7 @@ function HizliAracFormu({ onClose, onEklendi }) {
     null,
     /* @__PURE__ */ React.createElement(PlakaKameraTarayici, { onSonuc: kameraSonuc }),
     /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il, harf, rakam, onIl: setIl, onHarf: setHarf, onRakam: setRakam })),
-    /* @__PURE__ */ React.createElement(MarkaModelSecici, { marka, model, onMarka: setMarka, onModel: setModel }),
+    /* @__PURE__ */ React.createElement(MarkaModelSecici, { grup, marka, model, onGrup: (v) => { setGrup(v); setMarka(""); setModel(""); }, onMarka: setMarka, onModel: setModel }),
     /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "\u{1F464} Ara\xE7 Sahibi"),
     /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131 (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: musteriAdi, onChange: (e) => setMusteriAdi(e.target.value) })),
     /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: tel, onChange: (e) => setTel(e.target.value) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: adres, onChange: (e) => setAdres(e.target.value) }))),
@@ -3082,6 +3175,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
   rows: filtreli,
   columns: [
     { key: "plaka", baslik: "Plaka", sirala: (a) => a.plaka || "", render: (a) => React.createElement("strong", { style: { color: C.accent, cursor: "pointer", textDecoration: "underline" }, title: "Araç sicilini görüntüle (fotoğraf, belge, servis geçmişi)", onClick: () => setDetayAracId(a.id) }, a.plaka) },
+    { key: "grup", baslik: "Grup", sirala: (a) => ARAC_GRUP_LABEL[a.grup || "otomobil"] || "", render: (a) => ARAC_GRUP_LABEL[a.grup || "otomobil"] || ARAC_GRUP_LABEL.otomobil },
     { key: "markaModel", baslik: "Marka/Model", sirala: (a) => `${a.marka || ""} ${a.model || ""}`, render: (a) => React.createElement(React.Fragment, null, a.marka, " ", a.model) },
     { key: "yil", baslik: "Yıl", sirala: (a) => a.yil || "", render: (a) => a.yil || "—" },
     { key: "sahibi", baslik: "Sahibi", sirala: (a) => cariAd(cariler, a.musteriId), render: (a) => cariAd(cariler, a.musteriId) },
@@ -3091,7 +3185,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
 })), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Aracı Düzenle" : "Yeni Araç", onClose: () => setModalAcik(false), width: 480 }, !form.id && /* @__PURE__ */ React.createElement(PlakaKameraTarayici, { onSonuc: (deger) => {
     const p = plakaParcala(deger);
     setForm((f) => ({ ...f, plakaIl: p.il, plakaHarf: p.harf, plakaRakam: p.rakam }));
-  } }), /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il: form.plakaIl, harf: form.plakaHarf, rakam: form.plakaRakam, onIl: (v) => setForm((f) => ({ ...f, plakaIl: v })), onHarf: (v) => setForm((f) => ({ ...f, plakaHarf: v })), onRakam: (v) => setForm((f) => ({ ...f, plakaRakam: v })) })), /* @__PURE__ */ React.createElement(MarkaModelSecici, { marka: form.marka, model: form.model, onMarka: (v) => setForm((f) => ({ ...f, marka: v })), onModel: (v) => setForm((f) => ({ ...f, model: v })) }), /* @__PURE__ */ React.createElement(FG, { label: "Model Yılı" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.yil || "", onChange: (e) => setForm((f) => ({ ...f, yil: +e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Şasi No (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.sasiNo || "", onChange: (e) => setForm((f) => ({ ...f, sasiNo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "👤 Araç Sahibi (Müşteri/Firma, opsiyonel)"), /* @__PURE__ */ React.createElement(FG, { label: "Müşteri / Firma Adı (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdi || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdi: e.target.value })) })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriTel || "", onChange: (e) => setForm((f) => ({ ...f, musteriTel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdres || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdres: e.target.value })) }))), /* @__PURE__ */ React.createElement(FG, { label: "Notlar" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.notlar || "", onChange: (e) => setForm((f) => ({ ...f, notlar: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), detayArac && /* @__PURE__ */ React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: aracServisleri(detayArac.id), onClose: () => setDetayAracId(null), onGuncelle: (patch) => aracGuncelle(detayArac.id, patch) }));
+  } }), /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il: form.plakaIl, harf: form.plakaHarf, rakam: form.plakaRakam, onIl: (v) => setForm((f) => ({ ...f, plakaIl: v })), onHarf: (v) => setForm((f) => ({ ...f, plakaHarf: v })), onRakam: (v) => setForm((f) => ({ ...f, plakaRakam: v })) })), /* @__PURE__ */ React.createElement(MarkaModelSecici, { grup: form.grup || "otomobil", marka: form.marka, model: form.model, onGrup: (v) => setForm((f) => ({ ...f, grup: v, marka: "", model: "" })), onMarka: (v) => setForm((f) => ({ ...f, marka: v })), onModel: (v) => setForm((f) => ({ ...f, model: v })) }), /* @__PURE__ */ React.createElement(FG, { label: "Model Yılı" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.yil || "", onChange: (e) => setForm((f) => ({ ...f, yil: +e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Şasi No (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.sasiNo || "", onChange: (e) => setForm((f) => ({ ...f, sasiNo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "👤 Araç Sahibi (Müşteri/Firma, opsiyonel)"), /* @__PURE__ */ React.createElement(FG, { label: "Müşteri / Firma Adı (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdi || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdi: e.target.value })) })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriTel || "", onChange: (e) => setForm((f) => ({ ...f, musteriTel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdres || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdres: e.target.value })) }))), /* @__PURE__ */ React.createElement(FG, { label: "Notlar" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.notlar || "", onChange: (e) => setForm((f) => ({ ...f, notlar: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), detayArac && /* @__PURE__ */ React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: aracServisleri(detayArac.id), onClose: () => setDetayAracId(null), onGuncelle: (patch) => aracGuncelle(detayArac.id, patch) }));
 }
 function AracFotoThumb({ foto, onSil }) {
   const [veri, setVeri] = useState(null);
