@@ -2072,7 +2072,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       ),
 
 
-      React.createElement(FG, { label: "Toplam (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: form.tutar ?? 0, onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
+      React.createElement(FG, { label: "Toplam (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: form.tutar || "", onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
       React.createElement(
         "div",
         { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "10px 14px", background: C.surface, borderRadius: 8 } },
@@ -2114,7 +2114,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       Modal,
       { title: "\u{1F4B0} \xD6deme Al", onClose: () => setOdemeModal(null), width: 400 },
       React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 14 } }, "Toplam Tutar: ", React.createElement("strong", { style: { color: C.white } }, fmtTL(odemeModal.tutar)), servisOdenenTutar(odemeModal) > 0 && React.createElement(React.Fragment, null, " \u2014 \u015eu ana kadar \xF6denen: ", React.createElement("strong", { style: { color: C.green } }, fmtTL(servisOdenenTutar(odemeModal))))),
-      React.createElement(FG, { label: "Tahsil Edilecek Tutar" }, React.createElement("input", { type: "number", style: S.inp, value: odemeTutari, onChange: (e) => setOdemeTutari(+e.target.value) })),
+      React.createElement(FG, { label: "Tahsil Edilecek Tutar" }, React.createElement("input", { type: "number", style: S.inp, value: odemeTutari || "", onChange: (e) => setOdemeTutari(+e.target.value) })),
       React.createElement(FG, { label: "Hesap" }, React.createElement("select", { style: S.sel, value: odemeHesapId, onChange: (e) => setOdemeHesapId(e.target.value) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Kasa & Banka'dan hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad)))),
       React.createElement(FG, { label: "\xD6deme Y\xF6ntemi" }, React.createElement("select", { style: S.sel, value: odemeYontemi, onChange: (e) => setOdemeYontemi(e.target.value) }, ODEME_YONTEMLERI.map((y) => React.createElement("option", { key: y, value: y }, y)))),
       React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setOdemeModal(null) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: odemeOnayla }, "Onayla"))
@@ -3303,7 +3303,7 @@ function Muhasebe() {
         { key: k.id, style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" } },
         React.createElement("input", { style: { ...S.inp, flex: "1 1 160px" }, placeholder: "Kalem ad\u0131", value: k.ad || "", onChange: (e) => faturaKalemGuncelle(k.id, { ad: e.target.value }) }),
         React.createElement("input", { type: "number", style: { ...S.inp, width: 64 }, title: "Adet", value: k.adet ?? 1, onChange: (e) => faturaKalemGuncelle(k.id, { adet: +e.target.value }) }),
-        React.createElement("input", { type: "number", style: { ...S.inp, width: 90 }, title: "Birim Fiyat", value: k.birimFiyat ?? 0, onChange: (e) => faturaKalemGuncelle(k.id, { birimFiyat: +e.target.value }) }),
+        React.createElement("input", { type: "number", style: { ...S.inp, width: 90 }, title: "Birim Fiyat", value: k.birimFiyat || "", onChange: (e) => faturaKalemGuncelle(k.id, { birimFiyat: +e.target.value }) }),
         React.createElement("span", { style: { fontSize: 12.5, color: C.muted, minWidth: 70, textAlign: "right" } }, fmtTL(k.tutar)),
         React.createElement("button", { style: S.btnR, onClick: () => faturaKalemSil(k.id) }, "\u2715")
       ))),
