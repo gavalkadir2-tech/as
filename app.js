@@ -2176,11 +2176,14 @@ function Cariler({ hedef, hedefTemizle } = {}) {
   const [liste, setListe] = useState(LS.get("cariler"));
   const [servisler] = useState(LS.get("servisIsleri"));
   const [satislar] = useState(LS.get("satislar"));
+  const [araclar] = useState(LS.get("araclar"));
   const [faturalar, setFaturalar] = useState(LS.get("faturalar"));
   const [modalAcik, setModalAcik] = useState(false);
   const [form, setForm] = useState({});
   const [arama, setArama] = useState("");
   const [ekstreId, setEkstreId] = useState(null);
+  const [karneId, setKarneId] = useState(null);
+  const [karneSekme, setKarneSekme] = useState("genel");
   useEffect(() => {
     if (!hedef) return;
     if (hedef.tip === "yeni_cari") {
@@ -2191,6 +2194,25 @@ function Cariler({ hedef, hedefTemizle } = {}) {
     }
     hedefTemizle && hedefTemizle();
   }, [hedef]);
+  const cariAraclari = (id) => araclar.filter((a) => a.musteriId === id);
+  const cariServisleri = (id) => servisler.filter((s) => s.musteriId === id).sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""));
+  const cariPlakalar = (id) => {
+    const setPlaka = /* @__PURE__ */ new Set();
+    cariAraclari(id).forEach((a) => setPlaka.add(a.plaka));
+    cariServisleri(id).forEach((s) => {
+      if (s.aracId) {
+        const a = araclar.find((x) => x.id === s.aracId);
+        if (a) setPlaka.add(a.plaka);
+      } else if (s.aracPlaka) {
+        setPlaka.add(plakaNormalize(s.aracPlaka));
+      }
+    });
+    return [...setPlaka];
+  };
+  const karneAc = (id, sekme = "genel") => {
+    setKarneSekme(sekme);
+    setKarneId(id);
+  };
   const [faturaModal, setFaturaModal] = useState(null);
   const [faturaForm, setFaturaForm] = useState({});
   const [faturaHata, setFaturaHata] = useState("");
@@ -2221,11 +2243,12 @@ function Cariler({ hedef, hedefTemizle } = {}) {
   const aramaMetni = arama.trim().toLocaleLowerCase("tr-TR");
   const filtreliListe = !aramaMetni ? liste : liste.filter((c) => (c.ad + " " + (c.tel || "") + " " + (c.adres || "")).toLocaleLowerCase("tr-TR").includes(aramaMetni));
   const ekstreCari = ekstreId && liste.find((c) => c.id === ekstreId);
-  const ekstreHareketleri = ekstreId ? [
-    ...servisler.filter((s) => s.musteriId === ekstreId).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F527} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`, tutar: s.tutar, odendi: s.odendi, yontem: s.odendi ? s.odemeYontemi || "\u2014" : "\u2014" })),
-    ...satislar.filter((s) => s.musteriId === ekstreId).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F6D2} ${EL_ARABASI_TUR_LABEL[s.tur] || ""}`, tutar: s.toplam, odendi: true, yontem: "\u2014" })),
-    ...manuelFaturalar(ekstreId).map((f) => ({ tarih: f.tarih, aciklama: `${f.tur === "alis" ? "\u{1F4E5} Al\u0131\u015F" : "\u{1F4E4} Sat\u0131\u015F"} \u2014 ${f.aciklama || f.faturaNo}`, tutar: f.tur === "alis" ? -f.toplam : f.toplam, odendi: true, yontem: (f.odemeler && f.odemeler.length > 0) ? f.odemeler[f.odemeler.length - 1].yontem || "\u2014" : "\u2014" }))
+  const ekstreHareketleriGetir = (id) => id ? [
+    ...servisler.filter((s) => s.musteriId === id).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F527} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`, tutar: s.tutar, odendi: s.odendi, yontem: s.odendi ? s.odemeYontemi || "\u2014" : "\u2014" })),
+    ...satislar.filter((s) => s.musteriId === id).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F6D2} ${EL_ARABASI_TUR_LABEL[s.tur] || ""}`, tutar: s.toplam, odendi: true, yontem: "\u2014" })),
+    ...manuelFaturalar(id).map((f) => ({ tarih: f.tarih, aciklama: `${f.tur === "alis" ? "\u{1F4E5} Al\u0131\u015F" : "\u{1F4E4} Sat\u0131\u015F"} \u2014 ${f.aciklama || f.faturaNo}`, tutar: f.tur === "alis" ? -f.toplam : f.toplam, odendi: true, yontem: (f.odemeler && f.odemeler.length > 0) ? f.odemeler[f.odemeler.length - 1].yontem || "\u2014" : "\u2014" }))
   ].sort((a, b) => (a.tarih || "").localeCompare(b.tarih || "")).map((h, i) => ({ ...h, id: i })) : [];
+  const ekstreHareketleri = ekstreHareketleriGetir(ekstreId);
   const faturaOlusturKaydet = () => {
     if (!(+faturaForm.tutar > 0)) {
       setFaturaHata("Tutar 0'dan b\xFCy\xFCk olmal\u0131d\u0131r.");
@@ -2253,7 +2276,10 @@ function Cariler({ hedef, hedefTemizle } = {}) {
     bosMesaj: "Kayıt bulunamadı.",
     rows: filtreliListe,
     columns: [
-      { key: "ad", baslik: "Müşteri / Firma", sirala: (c) => c.ad || "", render: (c) => React.createElement("strong", { style: { color: C.white } }, c.ad) },
+      { key: "ad", baslik: "Müşteri / Firma", sirala: (c) => c.ad || "", render: (c) => {
+        const plakalar = cariPlakalar(c.id);
+        return React.createElement("span", { style: { cursor: "pointer" }, title: "Cari karnesini g\xF6r\xFCnt\xFCle", onClick: () => karneAc(c.id) }, React.createElement("strong", { style: { color: C.accent, textDecoration: "underline" } }, c.ad), plakalar.length > 0 && React.createElement("span", { style: { color: C.muted, fontSize: 11.5 } }, " — ", plakalar.join(", ")));
+      } },
       { key: "tel", baslik: "Telefon", sirala: (c) => c.tel || "", render: (c) => c.tel || "—" },
       { key: "adres", baslik: "Adres", sirala: (c) => c.adres || "", render: (c) => c.adres || "—" },
       { key: "harcama", baslik: "Toplam İşlem", sirala: (c) => harcama(c.id), render: (c) => React.createElement("strong", { style: { color: C.accent } }, fmtTL(harcama(c.id))) },
@@ -2291,7 +2317,68 @@ function Cariler({ hedef, hedefTemizle } = {}) {
     /* @__PURE__ */ React.createElement(FG, { label: "KDV Oranı" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: faturaForm.kdvOrani ?? "", onChange: (e) => setFaturaForm((f) => ({ ...f, kdvOrani: +e.target.value })) }, kdvOranlariGetir().map((o) => /* @__PURE__ */ React.createElement("option", { key: o, value: o }, "%", o)))),
     faturaHata && /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "⚠️ ", faturaHata),
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setFaturaModal(null) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: faturaOlusturKaydet }, "Kaydet"))
-  ));
+  ), karneId && (() => {
+    const karneCari = liste.find((c) => c.id === karneId);
+    if (!karneCari) return null;
+    const karneAraclari = cariAraclari(karneId);
+    const karneServisleri = cariServisleri(karneId);
+    const karneEkstre = ekstreHareketleriGetir(karneId);
+    return React.createElement(
+      Modal,
+      { title: `📋 ${karneCari.ad} — Cari Karnesi`, onClose: () => setKarneId(null), width: 720 },
+      React.createElement(TabBar, { tabs: [["genel", "👤 Genel"], ["araclar", `🚗 Araçlar (${karneAraclari.length})`], ["servis", `🔧 Servis Geçmişi (${karneServisleri.length})`], ["ekstre", "📋 Ekstre"]], active: karneSekme, onChange: setKarneSekme }),
+      karneSekme === "genel" && React.createElement(
+        Grid2,
+        null,
+        React.createElement(
+          "div",
+          { style: { ...S.card, marginBottom: 14 } },
+          React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 6 } }, "Bilgiler"),
+          React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.white } }, karneCari.ad),
+          React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginTop: 4 } }, karneCari.tel || "Telefon yok"),
+          React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginTop: 2 } }, karneCari.adres || "Adres yok")
+        ),
+        React.createElement(
+          "div",
+          { style: { ...S.card, marginBottom: 14 } },
+          React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 6 } }, "Özet"),
+          React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, fmtTL(harcama(karneId))),
+          React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginTop: 2 } }, "toplam işlem"),
+          borc(karneId) > 0 && React.createElement("div", { style: { fontSize: 13, color: C.red, marginTop: 6 } }, "Açık borç: ", fmtTL(borc(karneId)))
+        )
+      ),
+      karneSekme === "araclar" && (karneAraclari.length === 0 ? React.createElement("div", { style: { color: C.muted } }, "Bu cariye bağlı araç kaydı yok.") : React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, karneAraclari.map((a) => React.createElement(
+        "div",
+        { key: a.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderRadius: 8 } },
+        React.createElement("span", { style: { fontSize: 13, color: C.text } }, React.createElement("strong", { style: { color: C.white } }, a.plaka), " — ", a.marka, " ", a.model),
+        React.createElement("span", { style: { fontSize: 11, color: C.muted } }, karneServisleri.filter((s) => s.aracId === a.id).length, " servis")
+      )))),
+      karneSekme === "servis" && (karneServisleri.length === 0 ? React.createElement("div", { style: { color: C.muted } }, "Servis kaydı yok.") : React.createElement(SiraliTablo, {
+        dosyaAdi: "cari_servis_gecmisi",
+        rowKey: (s) => s.id,
+        rows: karneServisleri,
+        columns: [
+          { key: "tarih", baslik: "Tarih", sirala: (s) => s.tarih || "", render: (s) => fmtDate(s.tarih) },
+          { key: "arac", baslik: "Araç", sirala: (s) => s.aracPlaka || "", render: (s) => { const a = araclar.find((x) => x.id === s.aracId); return a ? a.plaka : s.aracPlaka || "—"; } },
+          { key: "hizmet", baslik: "Hizmet", sirala: (s) => HIZMET_TIP_LABEL[s.hizmetTuru] || "", render: (s) => HIZMET_TIP_LABEL[s.hizmetTuru] },
+          { key: "tutar", baslik: "Tutar", sirala: (s) => +s.tutar || 0, render: (s) => fmtTL(s.tutar) },
+          { key: "durum", baslik: "Durum", sirala: (s) => s.durum || "", render: (s) => React.createElement(Badge, { d: s.durum }) }
+        ]
+      })),
+      karneSekme === "ekstre" && (karneEkstre.length === 0 ? React.createElement("div", { style: { color: C.muted } }, "Henüz işlem yok.") : React.createElement(SiraliTablo, {
+        dosyaAdi: "cari_ekstre",
+        rowKey: (h) => h.id,
+        rows: karneEkstre,
+        columns: [
+          { key: "tarih", baslik: "Tarih", sirala: (h) => h.tarih || "", render: (h) => fmtDate(h.tarih) },
+          { key: "aciklama", baslik: "Açıklama", sirala: (h) => h.aciklama || "", render: (h) => h.aciklama },
+          { key: "yontem", baslik: "Yöntem", sirala: (h) => h.yontem || "", render: (h) => h.yontem || "—" },
+          { key: "tutar", baslik: "Tutar", sirala: (h) => +h.tutar || 0, render: (h) => React.createElement("strong", { style: { color: h.tutar < 0 ? C.red : C.accent } }, fmtTL(h.tutar)) },
+          { key: "durum", baslik: "Durum", sirala: (h) => h.odendi ? 1 : 0, render: (h) => h.odendi ? React.createElement(Badge, { d: "tamamlandi", map: { tamamlandi: "Ödendi" }, renk: { tamamlandi: C.green } }) : React.createElement(Badge, { d: "bekliyor", map: { bekliyor: "Bekliyor" }, renk: { bekliyor: C.yellow } }) }
+        ]
+      }))
+    );
+  })());
 }
 function Muhasebe() {
   const [servisler] = useState(LS.get("servisIsleri"));
