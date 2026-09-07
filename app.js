@@ -1643,10 +1643,18 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       React.createElement(FG, { label: "A\xE7\u0131klama" }, React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.aciklama || "", onChange: (e) => setForm((f) => ({ ...f, aciklama: e.target.value })) })),
 
       form.hizmetTuru === "chiptuning" && React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "10px 14px", background: C.surface, borderRadius: 8 } },
+          React.createElement("input", { type: "checkbox", checked: kessAcik, onChange: (e) => setKessDetayAcik(e.target.checked), style: { width: 16, height: 16 } }),
+          React.createElement("span", { style: { fontSize: 13, color: C.text } }, "\u26A1 Bu i\u015F KESS V3 chiptuning detaylar\u0131 i\u00E7eriyor")
+        ),
+        kessAcik && React.createElement(
         "div",
         { style: { background: C.surface, borderRadius: 8, padding: "12px 14px", marginBottom: 14 } },
-        React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginBottom: kessAcik ? 10 : 0, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }, onClick: () => setKessDetayAcik((v) => !v) }, "\u26A1 KESS V3 Chiptuning Detaylar\u0131", React.createElement("span", { style: { fontSize: 11, color: C.muted, fontWeight: 400 } }, kessAcik ? "\u25B2 Gizle" : "\u25BC Detaylar\u0131 Gir")),
-        kessAcik && React.createElement(React.Fragment, null,
+        React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginBottom: 10 } }, "\u26A1 KESS V3 Chiptuning Detaylar\u0131"),
         React.createElement(Grid2, null,
           React.createElement(FG, { label: "ECU Markas\u0131" }, React.createElement("input", { list: "ecu-markalari", style: S.inp, value: form.kessEcuMarka || "", onChange: (e) => setForm((f) => ({ ...f, kessEcuMarka: e.target.value })), placeholder: "\xD6rn: Bosch" })),
           React.createElement(FG, { label: "Ba\u011Flant\u0131 Protokol\xFC" }, React.createElement("select", { style: S.sel, value: form.kessProtokol || "", onChange: (e) => setForm((f) => ({ ...f, kessProtokol: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), KESS_PROTOKOL_LISTESI.map((p) => React.createElement("option", { key: p, value: p }, p))))
@@ -1671,6 +1679,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
         )
         )
       ),
+
 
       React.createElement(FG, { label: "Toplam (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: form.tutar ?? 0, onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
       React.createElement(
