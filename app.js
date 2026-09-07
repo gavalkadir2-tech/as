@@ -1077,6 +1077,14 @@ function whatsappLinkOlustur(telefon, mesaj) {
   const numara = temiz.startsWith("0") ? "90" + temiz.slice(1) : temiz.startsWith("90") ? temiz : "90" + temiz;
   return `https://wa.me/${numara}?text=${encodeURIComponent(mesaj)}`;
 }
+function WhatsAppIkon({ boyut = 15 } = {}) {
+  return /* @__PURE__ */ React.createElement(
+    "svg",
+    { width: boyut, height: boyut, viewBox: "0 0 32 32", style: { display: "block" } },
+    /* @__PURE__ */ React.createElement("path", { fill: "#25D366", d: "M16 2C8.28 2 2 8.28 2 16c0 2.62.72 5.08 1.98 7.18L2 30l7.02-1.94A13.9 13.9 0 0 0 16 30c7.72 0 14-6.28 14-14S23.72 2 16 2z" }),
+    /* @__PURE__ */ React.createElement("path", { fill: "#fff", d: "M23.4 19.5c-.35-.18-2.1-1.04-2.43-1.15-.33-.12-.57-.18-.8.18-.24.35-.92 1.15-1.13 1.39-.2.24-.42.26-.77.09-.35-.18-1.48-.55-2.82-1.75-1.04-.93-1.75-2.08-1.95-2.43-.2-.35-.02-.54.15-.72.16-.16.35-.42.53-.62.18-.2.24-.35.36-.59.12-.24.06-.44-.03-.62-.09-.18-.8-1.94-1.1-2.66-.29-.7-.58-.6-.8-.61-.2-.01-.44-.01-.68-.01-.24 0-.62.09-.95.44-.33.35-1.24 1.21-1.24 2.96 0 1.75 1.27 3.44 1.45 3.68.18.24 2.5 3.82 6.06 5.35.85.37 1.51.59 2.02.75.85.27 1.63.23 2.24.14.68-.1 2.1-.86 2.4-1.68.3-.83.3-1.54.21-1.68-.09-.15-.32-.24-.68-.42z" })
+  );
+}
 function whatsappLinkAc(telefon, mesaj) {
   if (!telefon || !String(telefon).replace(/[^0-9]/g, "")) {
     alert("Bu m\xFC\u015Fterinin telefon numaras\u0131 kay\u0131tl\u0131 de\u011Fil.");
@@ -1535,7 +1543,7 @@ function Takvim() {
       { style: S.card },
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 4 } },
         /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, fmtDate(seciliGun), " Tarihli İşler (", seciliIsleri.length, ")", gununResmiHatirlaticilari(+seciliGun.slice(8, 10)).length > 0 && /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.yellow), fontSize: 10.5, marginLeft: 8 } }, "\u{1F4C4} ", gununResmiHatirlaticilari(+seciliGun.slice(8, 10)).map((r) => r.ad).join(", "))),
-        seciliHatirlatilabilenler.length > 0 && topluHatirlatIndex === null && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: topluHatirlatBaslat }, "\u{1F4AC} T\xFCm\xFCne Hatırlat (", seciliHatirlatilabilenler.length, ")")
+        seciliHatirlatilabilenler.length > 0 && topluHatirlatIndex === null && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }, onClick: topluHatirlatBaslat }, /* @__PURE__ */ React.createElement(WhatsAppIkon, null), "T\xFCm\xFCne Hatırlat (", seciliHatirlatilabilenler.length, ")")
       ),
       topluHatirlatIndex !== null && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 14px", background: C.accent + "18", borderRadius: 8, marginBottom: 12 } },
         /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.text } }, "WhatsApp sekmesi a\xE7ıldı (", topluHatirlatIndex + 1, "/", seciliHatirlatilabilenler.length, ") — g\xF6nderdikten sonra buraya d\xF6n\xFCp devam edin."),
@@ -1548,7 +1556,7 @@ function Takvim() {
         "div",
         { key: s.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderRadius: 8, flexWrap: "wrap", gap: 6 } },
         /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: C.text } }, /* @__PURE__ */ React.createElement("strong", { style: { color: C.white } }, s.isEmriNo), " — ", aracLabel(s), " — ", cariAd(cariler, s.musteriId), " — ", HIZMET_TIP_LABEL[s.hizmetTuru]),
-        /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => whatsappRandevuHatirlat(s, cariler, aracLabel(s)) }, "\u{1F4AC}"), /* @__PURE__ */ React.createElement(Badge, { d: s.durum }))
+        /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => whatsappRandevuHatirlat(s, cariler, aracLabel(s)) }, /* @__PURE__ */ React.createElement(WhatsAppIkon, null)), /* @__PURE__ */ React.createElement(Badge, { d: s.durum }))
       )))
     )
   );
@@ -1897,7 +1905,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
               const musteri = cariler.find((c) => c.id === s.musteriId);
               const mesaj = `Merhaba ${musteri ? musteri.ad : ""}, ${s.isEmriNo || ""} numaralı ${aracEtiket(s)} işleminizin durumu: ${asamaEtiket(s.asama)}.${s.durum === "tamamlandi" ? ` Tutar: ${fmtTL(s.tutar)}.` : ""} — As Egzoz & Makine`;
               whatsappLinkAc(musteri ? musteri.tel : "", mesaj);
-            } }, "💬"),
+            } }, React.createElement(WhatsAppIkon, null)),
             React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => isEmriYazdir(s, cariAd(cariler, s.musteriId), aracEtiket(s)) }, "📄"),
             s.asama === "teslim_edildi" && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "Memnuniyet Anketi Gönder", onClick: () => whatsappAnketGonder(s, cariler) }, "⭐"),
             s.durum === "tamamlandi" && s.garantili && (!s.garantiBitis || s.garantiBitis >= today()) && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, title: "Garanti Kapsamında Tekrar İş Aç", onClick: () => garantiTekrarAc(s) }, "🛡️"),
@@ -1932,7 +1940,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
                     const musteri = cariler.find((c) => c.id === s.musteriId);
                     const mesaj = `Merhaba ${musteri ? musteri.ad : ""}, ${s.isEmriNo || ""} numaralı ${aracEtiket(s)} işleminizin durumu: ${asamaEtiket(s.asama)}.${s.durum === "tamamlandi" ? ` Tutar: ${fmtTL(s.tutar)}.` : ""} — As Egzoz & Makine`;
                     whatsappLinkAc(musteri ? musteri.tel : "", mesaj);
-                  } }, "\u{1F4AC}"),
+                  } }, React.createElement(WhatsAppIkon, null)),
                   React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => isEmriYazdir(s, cariAd(cariler, s.musteriId), aracEtiket(s)) }, "\u{1F4C4}"),
                   s.asama === "teslim_edildi" && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "Memnuniyet Anketi Gönder", onClick: () => whatsappAnketGonder(s, cariler) }, "⭐"),
                   s.durum === "tamamlandi" && s.garantili && (!s.garantiBitis || s.garantiBitis >= today()) && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, title: "Garanti Kapsamında Tekrar İş A\xE7", onClick: () => garantiTekrarAc(s) }, "\u{1F6E1}️"),
@@ -2595,7 +2603,7 @@ function Yapilacaklar() {
                 )
               ),
               /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
-                sorumlu && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "WhatsApp ile g\xF6nder", onClick: () => whatsappGorevGonder(g, sorumlu) }, "\u{1F4F1}"),
+                sorumlu && sorumlu.telefon && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "WhatsApp ile g\xF6nder", onClick: () => whatsappGorevGonder(g, sorumlu) }, /* @__PURE__ */ React.createElement(WhatsAppIkon, null)),
                 /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(g); setHata(""); setModalAcik(true); } }, "✏️"),
                 /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(g.id) }, "🗑️")
               )
@@ -3108,7 +3116,7 @@ function Muhasebe() {
       { style: { ...S.card, borderTop: `3px solid ${C.red}` } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 4 } },
         React.createElement("div", { style: S.secTitle }, "\u23F0 Tahsilat Hat\u0131rlatmalar\u0131 (", odenmemisServisler.length, ")"),
-        hatirlatilabilenServisler.length > 0 && topluHatirlatIndex === null && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: topluHatirlatBaslat }, "\u{1F4AC} T\xFCm\xFCne Hat\u0131rlat (", hatirlatilabilenServisler.length, ")")
+        hatirlatilabilenServisler.length > 0 && topluHatirlatIndex === null && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }, onClick: topluHatirlatBaslat }, React.createElement(WhatsAppIkon, null), "T\xFCm\xFCne Hat\u0131rlat (", hatirlatilabilenServisler.length, ")")
       ),
       React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, "Tamamlanm\u0131\u015F ama \xF6demesi al\u0131nmam\u0131\u015F i\u015Fler. M\xFC\u015Fteriye WhatsApp ile hat\u0131rlatma g\xF6nderebilirsiniz."),
       topluHatirlatIndex !== null && React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 14px", background: C.accent + "18", borderRadius: 8, marginBottom: 12 } },
@@ -3122,7 +3130,7 @@ function Muhasebe() {
         "div",
         { key: s.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", background: C.surface, borderRadius: 8, flexWrap: "wrap", gap: 8 } },
         React.createElement("span", { style: { fontSize: 12.5, color: C.text } }, React.createElement("strong", { style: { color: C.white } }, cariAd(cariler, s.musteriId)), " \u2014 ", s.isEmriNo || "", " \u2014 ", React.createElement("strong", { style: { color: C.red } }, fmtTL(s.tutar))),
-        React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => whatsappTahsilatHatirlat(s, cariler) }, "\u{1F4AC} Hat\u0131rlat")
+        React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }, onClick: () => whatsappTahsilatHatirlat(s, cariler) }, React.createElement(WhatsAppIkon, null), "Hat\u0131rlat")
       )))
     ),
 
