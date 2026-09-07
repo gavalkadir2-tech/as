@@ -1630,7 +1630,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
           setSahipForm({ ad: secilenAracSahibi ? secilenAracSahibi.ad : "", tel: secilenAracSahibi ? secilenAracSahibi.tel : "", adres: secilenAracSahibi ? secilenAracSahibi.adres : "" });
           setSahipDuzenAcik(true);
         } }, "\u270F\uFE0F D\xFCzenle")),
-        secilenAracSahibi ? React.createElement(React.Fragment, null, React.createElement("div", { style: { marginTop: 6 } }, secilenAracSahibi.ad), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.tel || "Telefon yok"), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.adres || "Adres yok")) : React.createElement("div", { style: { color: C.yellow, marginTop: 6 } }, "\u26A0\uFE0F Bu ara\xE7\u0131n sahibi tan\u0131ml\u0131 de\u011Fil, l\xFCtfen d\xFCzenleyin.")
+        secilenAracSahibi ? React.createElement(React.Fragment, null, React.createElement("div", { style: { marginTop: 6 } }, secilenAracSahibi.ad), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.tel || "Telefon yok"), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.adres || "Adres yok")) : React.createElement("div", { style: { color: C.muted, marginTop: 6 } }, "Bilinmiyor")
       ),
       React.createElement(FG, { label: "Sorumlu Personel (opsiyonel)" }, React.createElement(
         "div",
