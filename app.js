@@ -825,6 +825,9 @@ function SiraliTablo({ columns, rows, rowKey, bosMesaj = "Kayıt yok.", classNam
 function cariAd(cariler, id) {
   return (cariler.find((c) => c.id === id) || {}).ad || "\u2014";
 }
+function aracSahibiAd(cariler, id) {
+  return (cariler.find((c) => c.id === id) || {}).ad || "Bilinmiyor";
+}
 function urunAd(urunler, id) {
   return (urunler.find((u) => u.id === id) || {}).ad || "\u2014";
 }
@@ -1621,7 +1624,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       React.createElement(FG, { label: "Ara\xE7 (Plaka)" }, React.createElement(
         "div",
         { style: { display: "flex", gap: 8 } },
-        React.createElement("select", { style: S.sel, value: form.aracId || "", onChange: (e) => aracSec(e.target.value) }, React.createElement("option", { value: "" }, "\u2014 Plaka se\xE7iniz \u2014"), araclarSirali.map((a) => React.createElement("option", { key: a.id, value: a.id }, a.plaka, a.marka ? ` \xB7 ${a.marka} ${a.model || ""}` : "", " ", `(${cariAd(cariler, a.musteriId)})`))),
+        React.createElement("select", { style: S.sel, value: form.aracId || "", onChange: (e) => aracSec(e.target.value) }, React.createElement("option", { value: "" }, "\u2014 Plaka se\xE7iniz \u2014"), araclarSirali.map((a) => React.createElement("option", { key: a.id, value: a.id }, a.plaka, a.marka ? ` \xB7 ${a.marka} ${a.model || ""}` : "", " ", `(${aracSahibiAd(cariler, a.musteriId)})`))),
         React.createElement("button", { type: "button", style: S.btnO, onClick: () => setYeniAracAcik(true) }, "\u2795 Yeni Ara\xE7")
       )),
       secilenArac && React.createElement(
@@ -3488,7 +3491,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
     { key: "grup", baslik: "Grup", sirala: (a) => ARAC_GRUP_LABEL[a.grup || "otomobil"] || "", render: (a) => ARAC_GRUP_LABEL[a.grup || "otomobil"] || ARAC_GRUP_LABEL.otomobil },
     { key: "markaModel", baslik: "Marka/Model", sirala: (a) => `${a.marka || ""} ${a.model || ""}`, render: (a) => React.createElement(React.Fragment, null, a.marka, " ", a.model) },
     { key: "yil", baslik: "Yıl", sirala: (a) => a.yil || "", render: (a) => a.yil || "—" },
-    { key: "sahibi", baslik: "Sahibi", sirala: (a) => cariAd(cariler, a.musteriId), render: (a) => cariAd(cariler, a.musteriId) },
+    { key: "sahibi", baslik: "Sahibi", sirala: (a) => aracSahibiAd(cariler, a.musteriId), render: (a) => aracSahibiAd(cariler, a.musteriId) },
     { key: "gecmis", baslik: "Servis Geçmişi", sirala: (a) => aracServisleri(a.id).length, render: (a) => { const gecmis = aracServisleri(a.id); return React.createElement("span", { style: { ...S.badge(C.blue), cursor: "pointer" }, onClick: () => setDetayAracId(a.id) }, gecmis.length, " servis kaydı"); } },
     { key: "islemler", baslik: "", render: (a) => React.createElement("div", { style: { display: "flex", gap: 6 } }, React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => aracDuzenle(a) }, "✏️"), React.createElement("button", { style: S.btnR, onClick: () => sil(a.id) }, "🗑️")) }
   ]
