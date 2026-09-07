@@ -264,6 +264,35 @@ function plakaParcala(deger) {
 function plakaBirlestir(il, harf, rakam) {
   return plakaNormalize(`${il || ""} ${harf || ""} ${rakam || ""}`);
 }
+function sesTanimaDesteklerMi() {
+  return typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+function SesliGirisButonu({ deger, onDeger }) {
+  const [dinliyor, setDinliyor] = useState(false);
+  const taniyiciRef = useRef(null);
+  if (!sesTanimaDesteklerMi()) return null;
+  const baslatDurdur = () => {
+    if (dinliyor) {
+      taniyiciRef.current && taniyiciRef.current.stop();
+      return;
+    }
+    const Taniyici = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const taniyici = new Taniyici();
+    taniyici.lang = "tr-TR";
+    taniyici.interimResults = false;
+    taniyici.maxAlternatives = 1;
+    taniyici.onresult = (e) => {
+      const metin = e.results[0][0].transcript;
+      onDeger(((deger || "").trim() ? deger.trim() + " " : "") + metin);
+    };
+    taniyici.onerror = () => setDinliyor(false);
+    taniyici.onend = () => setDinliyor(false);
+    taniyiciRef.current = taniyici;
+    taniyici.start();
+    setDinliyor(true);
+  };
+  return React.createElement("button", { type: "button", title: dinliyor ? "Dinlemeyi durdur" : "Konuşarak yaz", style: { ...S.btnO, padding: "6px 10px", background: dinliyor ? C.red + "22" : void 0, borderColor: dinliyor ? C.red : void 0, flexShrink: 0 }, onClick: baslatDurdur }, dinliyor ? "\u{1F534}" : "\u{1F3A4}");
+}
 function PlakaGirisi({ il, harf, rakam, onIl, onHarf, onRakam }) {
   const harfRef = useRef(null);
   const rakamRef = useRef(null);
@@ -609,6 +638,13 @@ function bildirimleriKontrolEt() {
   if (yaklasanGaranti.length > 0) {
     bildirimGoster("\u{1F6E1}️ Garanti Bitişi Yaklaşıyor", `${yaklasanGaranti.length} işin garantisi 7 g\xFCn i\xE7inde bitiyor.`);
   }
+  const bugunGun = /* @__PURE__ */ new Date().getDate();
+  resmiHatirlaticilarGetir().forEach((r) => {
+    const kalanGun = r.gun - bugunGun;
+    if (kalanGun === 3 || kalanGun === 0) {
+      bildirimGoster("\u{1F4C4} Resmi Ödeme Hatırlatması", `${r.ad}${kalanGun === 0 ? " bug\xFCn" : ` ${kalanGun} g\xFCn sonra`} (her ayın ${r.gun}ı).`);
+    }
+  });
   localStorage.setItem(gonderildiKey, "1");
 }
 async function dosyaMigrasyonuYap() {
@@ -652,8 +688,18 @@ const DEFAULT_SETTINGS = {
   googleClientId: "",
   tema: "koyu",
   hizmetTurleri: null,
-  giderKategorileri: null
+  giderKategorileri: null,
+  resmiHatirlaticilar: null
 };
+const RESMI_HATIRLATICI_VARSAYILAN = [
+  { id: "kdv", ad: "KDV Beyannamesi", gun: 26 },
+  { id: "muhtasar", ad: "Muhtasar Beyanname", gun: 26 },
+  { id: "sgk", ad: "SGK Prim Ödemesi", gun: 30 }
+];
+function resmiHatirlaticilarGetir() {
+  const ayar = getSettings().resmiHatirlaticilar;
+  return Array.isArray(ayar) ? ayar : RESMI_HATIRLATICI_VARSAYILAN;
+}
 const KDV_ORANLARI_VARSAYILAN = [0, 10, 20];
 function kdvOranlariGetir() {
   const ayar = getSettings().kdvOranlari;
@@ -1225,6 +1271,8 @@ function Takvim() {
     const a = araclar.find((x) => x.id === s.aracId);
     return a ? a.plaka : s.aracPlaka || "—";
   };
+  const resmiHatirlaticilar = resmiHatirlaticilarGetir();
+  const gununResmiHatirlaticilari = (gun) => resmiHatirlaticilar.filter((r) => r.gun === gun);
   const gununIsleri = (tarih) => servisler.filter((s) => s.tarih === tarih && s.durum !== "iptal");
   const bugunIsleri = gununIsleri(today());
   const seciliIsleri = gununIsleri(seciliGun);
@@ -1284,13 +1332,15 @@ function Takvim() {
         if (g === null) return /* @__PURE__ */ React.createElement("div", { key: "b" + i });
         const tarih = gunStr(yil, ay, g);
         const isler = gununIsleri(tarih);
+        const resmiler = gununResmiHatirlaticilari(g);
         const bugunMu = tarih === today();
         const seciliMi = tarih === seciliGun;
         return /* @__PURE__ */ React.createElement(
           "div",
-          { key: tarih, onClick: () => setSeciliGun(tarih), style: { padding: "8px 4px", borderRadius: 8, textAlign: "center", cursor: "pointer", minHeight: 52, background: seciliMi ? C.accent + "33" : bugunMu ? C.surface : "transparent", border: `1px solid ${seciliMi ? C.accent : bugunMu ? C.border : "transparent"}` } },
+          { key: tarih, title: resmiler.map((r) => r.ad).join(", "), onClick: () => setSeciliGun(tarih), style: { padding: "8px 4px", borderRadius: 8, textAlign: "center", cursor: "pointer", minHeight: 52, background: seciliMi ? C.accent + "33" : bugunMu ? C.surface : "transparent", border: `1px solid ${seciliMi ? C.accent : bugunMu ? C.border : "transparent"}` } },
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: bugunMu ? C.accent : C.text, fontWeight: bugunMu ? 800 : 400 } }, g),
-          isler.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 2 } }, /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.blue), fontSize: 9.5, padding: "1px 6px" } }, isler.length))
+          isler.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 2 } }, /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.blue), fontSize: 9.5, padding: "1px 6px" } }, isler.length)),
+          resmiler.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 2 } }, /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.yellow), fontSize: 9.5, padding: "1px 6px" } }, "\u{1F4C4}"))
         );
       }))
     ),
@@ -1298,7 +1348,7 @@ function Takvim() {
       "div",
       { style: S.card },
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 4 } },
-        /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, fmtDate(seciliGun), " Tarihli İşler (", seciliIsleri.length, ")"),
+        /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, fmtDate(seciliGun), " Tarihli İşler (", seciliIsleri.length, ")", gununResmiHatirlaticilari(+seciliGun.slice(8, 10)).length > 0 && /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.yellow), fontSize: 10.5, marginLeft: 8 } }, "\u{1F4C4} ", gununResmiHatirlaticilari(+seciliGun.slice(8, 10)).map((r) => r.ad).join(", "))),
         seciliHatirlatilabilenler.length > 0 && topluHatirlatIndex === null && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: topluHatirlatBaslat }, "\u{1F4AC} T\xFCm\xFCne Hatırlat (", seciliHatirlatilabilenler.length, ")")
       ),
       topluHatirlatIndex !== null && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 14px", background: C.accent + "18", borderRadius: 8, marginBottom: 12 } },
@@ -1726,7 +1776,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
         React.createElement("select", { style: S.sel, value: form.personelId || "", onChange: (e) => setForm((f) => ({ ...f, personelId: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), personelListesi.map((p) => React.createElement("option", { key: p.id, value: p.id }, p.ad, p.pozisyon ? ` (${p.pozisyon})` : ""))),
         React.createElement("button", { type: "button", style: S.btnO, onClick: aiTeknisyenOner, disabled: aiOneriDevam }, aiOneriDevam ? "\u23F3" : "\u{1F916} AI \xD6ner")
       ), aiOneriMetni && React.createElement("div", { style: { marginTop: 8, padding: "8px 12px", background: C.surface, borderRadius: 8, fontSize: 12, color: C.text } }, aiOneriMetni)),
-      React.createElement(FG, { label: "A\xE7\u0131klama" }, React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.aciklama || "", onChange: (e) => setForm((f) => ({ ...f, aciklama: e.target.value })) })),
+      React.createElement(FG, { label: "A\xE7\u0131klama" }, React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "flex-start" } }, React.createElement("textarea", { style: { ...S.inp, minHeight: 60, flex: 1 }, value: form.aciklama || "", onChange: (e) => setForm((f) => ({ ...f, aciklama: e.target.value })) }), React.createElement(SesliGirisButonu, { deger: form.aciklama, onDeger: (v) => setForm((f) => ({ ...f, aciklama: v })) }))),
 
       form.hizmetTuru === "chiptuning" && React.createElement(
         React.Fragment,
@@ -3101,6 +3151,7 @@ function Ayarlar() {
       hizmetTurleri: Array.isArray(s.hizmetTurleri) ? s.hizmetTurleri.map((x) => ({ ...x })) : HIZMET_TIP_VARSAYILAN_DIGER.map((x) => ({ ...x })),
       giderKategorileri: Array.isArray(s.giderKategorileri) && s.giderKategorileri.length > 0 ? [...s.giderKategorileri] : [...GIDER_KATEGORILERI_VARSAYILAN],
       kdvOranlari: Array.isArray(s.kdvOranlari) && s.kdvOranlari.length > 0 ? [...s.kdvOranlari] : [...KDV_ORANLARI_VARSAYILAN],
+      resmiHatirlaticilar: Array.isArray(s.resmiHatirlaticilar) ? s.resmiHatirlaticilar.map((x) => ({ ...x })) : RESMI_HATIRLATICI_VARSAYILAN.map((x) => ({ ...x })),
       rolSayfaIzin: {
         usta: Array.isArray(s.rolSayfaIzin?.usta) ? s.rolSayfaIzin.usta : [...ROL_SAYFA_IZIN_VARSAYILAN.usta],
         kasiyer: Array.isArray(s.rolSayfaIzin?.kasiyer) ? s.rolSayfaIzin.kasiyer : [...ROL_SAYFA_IZIN_VARSAYILAN.kasiyer]
@@ -3146,6 +3197,12 @@ function Ayarlar() {
   const kdvSil = (i) => {
     if (!confirm("Bu KDV oranı kaldırılsın mı?")) return;
     setForm((f) => ({ ...f, kdvOranlari: f.kdvOranlari.filter((_, idx) => idx !== i) }));
+  };
+  const resmiHatirlaticiEkle = () => setForm((f) => ({ ...f, resmiHatirlaticilar: [...(f.resmiHatirlaticilar || []), { id: uid(), ad: "", gun: 1 }] }));
+  const resmiHatirlaticiGuncelle = (id, patch) => setForm((f) => ({ ...f, resmiHatirlaticilar: f.resmiHatirlaticilar.map((r) => r.id === id ? { ...r, ...patch } : r) }));
+  const resmiHatirlaticiSil = (id) => {
+    if (!confirm("Bu hatırlatıcı kaldırılsın mı?")) return;
+    setForm((f) => ({ ...f, resmiHatirlaticilar: f.resmiHatirlaticilar.filter((r) => r.id !== id) }));
   };
   const bulutTestEt = async () => {
     setBulutIslemDevam(true);
@@ -3289,6 +3346,26 @@ function Ayarlar() {
       ))
     ),
     React.createElement("button", { type: "button", style: S.btnO, onClick: kdvEkle }, "\u2795 Yeni Oran Ekle")
+  ),
+  React.createElement(
+    "div",
+    { style: S.card },
+    React.createElement("div", { style: S.secTitle }, "\u{1F4C4} Resmi Ödeme Hatırlatıcıları"),
+    React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "KDV, muhtasar, SGK gibi d\xF6nemsel \xF6demeleri hat\u0131rlatmak i\xE7in her ay\u0131n hangi g\xFCn\xFCnde uyar\u0131lmak istedi\u011Finizi girin. Tarihler \xF6rnektir, muhasebecinizle teyit edin."),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 } },
+      (form.resmiHatirlaticilar || []).map((r) => React.createElement(
+        "div",
+        { key: r.id, style: { display: "flex", alignItems: "center", gap: 8 } },
+        React.createElement("input", { style: { ...S.inp, flex: 1 }, value: r.ad, placeholder: "\xD6rn: KDV Beyannamesi", onChange: (e) => resmiHatirlaticiGuncelle(r.id, { ad: e.target.value }) }),
+        React.createElement("span", { style: { color: C.muted, fontSize: 12, whiteSpace: "nowrap" } }, "her ay\u0131n"),
+        React.createElement("input", { type: "number", min: 1, max: 31, style: { ...S.inp, width: 70 }, value: r.gun, onChange: (e) => resmiHatirlaticiGuncelle(r.id, { gun: Math.min(31, Math.max(1, +e.target.value || 1)) }) }),
+        React.createElement("span", { style: { color: C.muted, fontSize: 12 } }, "\u0131"),
+        React.createElement("button", { type: "button", style: S.btnR, onClick: () => resmiHatirlaticiSil(r.id) }, "\u{1F5D1}\ufe0f")
+      ))
+    ),
+    React.createElement("button", { type: "button", style: S.btnO, onClick: resmiHatirlaticiEkle }, "\u2795 Yeni Hat\u0131rlat\u0131c\u0131 Ekle")
   ),
 /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F3E2} Firma Bilgileri"), /* @__PURE__ */ React.createElement(FG, { label: "Firma Ad\u0131" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.firmaAdi || "", onChange: (e) => setForm((f) => ({ ...f, firmaAdi: e.target.value })) })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.firmaTel || "", onChange: (e) => setForm((f) => ({ ...f, firmaTel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Varsay\u0131lan KDV Oran\u0131" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.kdvOrani ?? "", onChange: (e) => setForm((f) => ({ ...f, kdvOrani: +e.target.value })) }, (form.kdvOranlari || KDV_ORANLARI_VARSAYILAN).map((o) => /* @__PURE__ */ React.createElement("option", { key: o, value: o }, "%", o))))), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.firmaAdres || "", onChange: (e) => setForm((f) => ({ ...f, firmaAdres: e.target.value })) }))), React.createElement("div", { style: S.card },
     React.createElement("div", { style: S.secTitle }, "\u{1F510} Roller ve Yetkiler"),
