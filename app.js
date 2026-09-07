@@ -1189,7 +1189,7 @@ function hesapHareketiKaydet(hesapId, yon, tutar, tarih, aciklama, kaynak, yonte
   const yeniHesaplar = hesaplar.map((h) => h.id === hesapId ? { ...h, bakiye: (+h.bakiye || 0) + (yon === "giris" ? +tutar : -tutar) } : h);
   LS.set("hesaplar", yeniHesaplar);
 }
-function fisYazdir(baslik, satirlar, toplam, musteriAdi) {
+function fisYazdir(baslik, satirlar, toplam, musteriAdi, kdvOrani) {
   const settings = getSettings();
   const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>${baslik}</title>
   <style>
@@ -1208,6 +1208,7 @@ function fisYazdir(baslik, satirlar, toplam, musteriAdi) {
   ${musteriAdi ? `<div style="margin-bottom:10px;font-size:14px;"><strong>M\xFC\u015Fteri:</strong> ${musteriAdi}</div>` : ""}
   <table><thead><tr><th>A\xE7\u0131klama</th><th style="text-align:right;">Tutar</th></tr></thead>
   <tbody>${satirlar.map((s) => `<tr><td>${s.aciklama}</td><td style="text-align:right;">${fmtTL(s.tutar)}</td></tr>`).join("")}</tbody></table>
+  ${(+kdvOrani || 0) > 0 ? `<div style="text-align:right;font-size:13px;color:#666;">KDV (%${kdvOrani}) dahil: ${fmtTL(Math.round((+toplam || 0) * (+kdvOrani || 0) / (100 + (+kdvOrani || 0)) * 100) / 100)}</div>` : ""}
   <div class="toplam">Toplam: ${fmtTL(toplam)}</div>
   </body></html>`;
   htmlBelgeIndir(html, `${baslik.replace(/[^\wÀ-ſ ]+/g, "").trim() || "fis"}.pdf`);
@@ -1238,6 +1239,7 @@ function isEmriYazdir(s, musteriAdi, aracEtiket) {
   ${s.hizmetTuru === "chiptuning" && (s.kessEcuMarka || s.kessProtokol || s.kessStage) ? `<div class="satir"><strong>KESS V3:</strong> ${[s.kessEcuMarka && `ECU: ${s.kessEcuMarka}`, s.kessProtokol && `Protokol: ${s.kessProtokol}`, s.kessStage && `Stage: ${s.kessStage}`, s.kessChecksum && "Checksum d\xFCzeltildi"].filter(Boolean).join(" \xB7 ")}${s.kessDosyaNotu ? ` (${s.kessDosyaNotu})` : ""}</div>` : ""}
   <table><thead><tr><th>Kalem</th><th>Adet</th><th style="text-align:right;">Birim</th><th style="text-align:right;">Tutar</th></tr></thead>
   <tbody>${kalemler.map((k) => `<tr><td>${k.ad}</td><td>${k.adet || 1}</td><td style="text-align:right;">${fmtTL(k.birimFiyat)}</td><td style="text-align:right;">${fmtTL(k.tutar)}</td></tr>`).join("")}</tbody></table>
+  ${(+s.kdvOrani || 0) > 0 ? `<div class="satir" style="text-align:right;">KDV (%${s.kdvOrani}) dahil: ${fmtTL(Math.round((+s.tutar || 0) * (+s.kdvOrani || 0) / (100 + (+s.kdvOrani || 0)) * 100) / 100)}</div>` : ""}
   <div class="toplam">Toplam: ${fmtTL(s.tutar)}</div>
   ${s.garantili ? `<div class="satir" style="margin-top:14px;">\u{1F6E1}\uFE0F Bu i\u015Flem ${s.garantiBitis ? fmtDate(s.garantiBitis) + " tarihine kadar" : ""} garanti kapsam\u0131ndad\u0131r.</div>` : ""}
   </body></html>`;
@@ -1873,7 +1875,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     return kalanGun >= 0 ? { metin: `Garanti: ${kalanGun} g\xFCn kald\u0131`, renk: C.green } : { metin: "Garanti bitti", renk: C.muted };
   };
   const yeniIsEmriAc = () => {
-    setForm({ tarih: today(), saat: nowTime(), asama: "tamirde", tutar: 0, personelId: sonKullanilanPersonelId(), hizmetTuru: sonKullanilanHizmetTuru() });
+    setForm({ tarih: today(), saat: nowTime(), asama: "tamirde", tutar: 0, kdvOrani: 0, personelId: sonKullanilanPersonelId(), hizmetTuru: sonKullanilanHizmetTuru() });
     setHata("");
     setModalAcik(true);
   };
@@ -2072,7 +2074,11 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       ),
 
 
-      React.createElement(FG, { label: "Toplam (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: form.tutar || "", onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
+      React.createElement(Grid2, null,
+        React.createElement(FG, { label: "Toplam (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: form.tutar || "", onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
+        React.createElement(FG, { label: "KDV Oran\u0131" }, React.createElement("select", { style: S.sel, value: form.kdvOrani ?? 0, onChange: (e) => setForm((f) => ({ ...f, kdvOrani: +e.target.value })) }, kdvOranlariGetir().map((o) => React.createElement("option", { key: o, value: o }, "%", o))))
+      ),
+      (+form.kdvOrani || 0) > 0 && React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginTop: -8, marginBottom: 14 } }, "Toplam KDV dahildir \u2014 KDV tutar\u0131: ", fmtTL(Math.round((+form.tutar || 0) * (+form.kdvOrani || 0) / (100 + (+form.kdvOrani || 0)) * 100) / 100)),
       React.createElement(
         "div",
         { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "10px 14px", background: C.surface, borderRadius: 8 } },
@@ -2455,7 +2461,7 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
   useEffect(() => {
     if (!hedef) return;
     if (hedef.tip === "yeni_satis") {
-      setForm({ tarih: today() });
+      setForm({ tarih: today(), kdvOrani: 0 });
       setHata("");
       setModalAcik(true);
     }
@@ -2476,11 +2482,11 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
       return;
     }
     setHata("");
-    const kayit = { id: uid(), tarih: form.tarih || today(), musteriId: form.musteriId, tur: form.tur, aciklama: form.aciklama || "", toplam: +form.tutar, garantili: !!form.garantili, garantiBitis: form.garantili ? form.garantiBitis || "" : "" };
+    const kayit = { id: uid(), tarih: form.tarih || today(), musteriId: form.musteriId, tur: form.tur, aciklama: form.aciklama || "", toplam: +form.tutar, kdvOrani: +form.kdvOrani || 0, garantili: !!form.garantili, garantiBitis: form.garantili ? form.garantiBitis || "" : "" };
     const yeni = [...satislar, kayit];
     LS.set("satislar", yeni);
     setSatislar(yeni);
-    faturaOlustur("el_arabasi", kayit.id, kayit.musteriId, kayit.tarih, kayit.aciklama || EL_ARABASI_TUR_LABEL[kayit.tur], [], kayit.toplam);
+    faturaOlustur("el_arabasi", kayit.id, kayit.musteriId, kayit.tarih, kayit.aciklama || EL_ARABASI_TUR_LABEL[kayit.tur], [], kayit.toplam, kayit.kdvOrani);
     setModalAcik(false);
   };
   const sil = (id) => {
@@ -2510,7 +2516,7 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
     "div",
     { className: "fp-fade" },
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F6D2} El Arabası"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => {
-      setForm({ tarih: today() });
+      setForm({ tarih: today(), kdvOrani: 0 });
       setHata("");
       setModalAcik(true);
     } }, "➕ Yeni Satış")),
@@ -2535,7 +2541,7 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
             return s.garantili ? React.createElement("span", { style: S.badge(garantiAktif ? C.green : C.muted) }, garantiAktif ? "🛡️ Garantide" : "Garanti bitti") : "—";
           } },
           { key: "islemler", baslik: "", render: (s) => React.createElement("div", { style: { display: "flex", gap: 6 } },
-            React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => fisYazdir(EL_ARABASI_TUR_LABEL[s.tur] || "Satış Fişi", [{ aciklama: s.aciklama || EL_ARABASI_TUR_LABEL[s.tur], tutar: s.toplam }], s.toplam, cariAd(cariler, s.musteriId)) }, "📄"),
+            React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => fisYazdir(EL_ARABASI_TUR_LABEL[s.tur] || "Satış Fişi", [{ aciklama: s.aciklama || EL_ARABASI_TUR_LABEL[s.tur], tutar: s.toplam }], s.toplam, cariAd(cariler, s.musteriId), s.kdvOrani) }, "📄"),
             React.createElement("button", { style: S.btnR, onClick: () => sil(s.id) }, "🗑️")
           ) }
         ]
@@ -2552,7 +2558,10 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
       )),
       /* @__PURE__ */ React.createElement(FG, { label: "El Arabası Türü" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.tur || "", onChange: (e) => setForm((f) => ({ ...f, tur: e.target.value })) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "— Seçiniz —"), Object.entries(EL_ARABASI_TUR_LABEL).map(([k, l]) => /* @__PURE__ */ React.createElement("option", { key: k, value: k }, l)))),
       /* @__PURE__ */ React.createElement(FG, { label: "Açıklama (opsiyonel)" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.aciklama || "", onChange: (e) => setForm((f) => ({ ...f, aciklama: e.target.value })) })),
-      /* @__PURE__ */ React.createElement(FG, { label: "Fiyat (₺)" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.tutar ?? "", onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
+      /* @__PURE__ */ React.createElement(Grid2, null,
+        /* @__PURE__ */ React.createElement(FG, { label: "Fiyat (₺)" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.tutar ?? "", onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
+        /* @__PURE__ */ React.createElement(FG, { label: "KDV Oranı" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.kdvOrani ?? 0, onChange: (e) => setForm((f) => ({ ...f, kdvOrani: +e.target.value })) }, kdvOranlariGetir().map((o) => /* @__PURE__ */ React.createElement("option", { key: o, value: o }, "%", o))))
+      ),
       /* @__PURE__ */ React.createElement(
         "div",
         { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "10px 14px", background: C.surface, borderRadius: 8 } },
