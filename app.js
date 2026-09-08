@@ -301,16 +301,27 @@ async function googleTakvimEtkinlikSil(googleEtkinlikId) {
 async function aiSor(promptMetni, denemeNo = 0) {
   const apiKey = getSettings().aiApiKey;
   if (!apiKey) throw new Error("\xD6nce Ayarlar \u2192 Yapay Zeka'dan bir API key girin.");
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptMetni }] }]
-      })
-    }
-  );
+  const kontrolci = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const zamanAsimi = kontrolci ? setTimeout(() => kontrolci.abort(), 2e4) : null;
+  let r;
+  try {
+    r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptMetni }] }]
+        }),
+        signal: kontrolci ? kontrolci.signal : void 0
+      }
+    );
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("Zaman a\u015F\u0131m\u0131: Gemini'ye 20 saniyede yan\u0131t al\u0131namad\u0131. \u0130nternet ba\u011Flant\u0131n\u0131 kontrol edip tekrar dene.");
+    throw new Error(`Ba\u011Flant\u0131 hatas\u0131: ${e.message}`);
+  } finally {
+    if (zamanAsimi) clearTimeout(zamanAsimi);
+  }
   if (!r.ok) {
     if ((r.status === 503 || r.status === 429) && denemeNo < 2) {
       await bekle(1500 * (denemeNo + 1));
@@ -4714,7 +4725,7 @@ function elArabasiMigrasyonu() {
 }
 const AS_SAYFA_IDLERI = ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "personel", "cariler", "yapilacaklar", "muhasebe", "cop_kutusu", "ayarlar"];
 function asSistemPromptuOlustur() {
-  return `Sen "AS" isimli, bir oto egzoz/chiptuning/el arabas\u0131 \xFCretim at\xF6lyesinin y\xF6netim uygulamas\u0131 i\xE7inde \xE7al\u0131\u015Fan yapay zeka asistan\u0131s\u0131n. Kullan\u0131c\u0131ya (at\xF6lye sahibi/\xE7al\u0131\u015Fan\u0131) T\xFCrk\xE7e, k\u0131sa ve net cevap ver. Sana verilen "G\xFCncel Durum" bilgisini kullanarak analiz/\xF6zet sorular\u0131n\u0131 yan\u0131tlayabilirsin.
+  return `Sen "AS" isimli, bir oto egzoz/chiptuning/el arabas\u0131 \xFCretim at\xF6lyesinin y\xF6netim uygulamas\u0131 i\xE7inde \xE7al\u0131\u015Fan yapay zeka asistan\u0131s\u0131n. Kullan\u0131c\u0131ya (at\xF6lye sahibi/\xE7al\u0131\u015Fan\u0131) T\xFCrk\xE7e cevap ver. Cevaplar\u0131n mutlaka KISA olsun: normal sorularda en fazla 2-3 c\xFCmle, gereksiz gire\u015F/tekrar/\xF6z\xFCr yazma, do\u011Frudan konuya gir. Sana verilen "G\xFCncel Durum" bilgisini kullanarak analiz/\xF6zet sorular\u0131n\u0131 yan\u0131tlayabilirsin.
 Eğer kullanıcı senden bir sayfaya gitmeni istiyorsa (örn. "cariler sayfasını aç", "muhasebeye git"), cevabının EN SONUNA yeni bir satırda tam olarak şu formatta yaz:
 AKSIYON:{"tip":"sayfaya_git","sayfa":"<id>"}
 <id> şunlardan biri olmalı: ${AS_SAYFA_IDLERI.join(", ")}.
@@ -4975,10 +4986,13 @@ ${sonuc}`;
         /* @__PURE__ */ React.createElement("button", { title: "Kapat", onClick: () => setAcik(false), style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15 } }, "✕")
       )
     ),
-    !apiKeyVar && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 14px", fontSize: 11.5, color: C.yellow } }, "⚠️ \xD6nce Ayarlar → Yapay Zeka'dan bir Gemini API key girmelisin."),
+    !apiKeyVar && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 14px", fontSize: 11.5, color: C.yellow, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" } }, "⚠️ \xD6nce Ayarlar → Yapay Zeka'dan bir Gemini API key girmelisin.", /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "3px 10px", fontSize: 11, flexShrink: 0 }, onClick: () => { sayfayaGit && sayfayaGit("ayarlar"); setAcik(false); } }, "Ayarlar'a Git")),
     /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 } },
-      mesajlar.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { alignSelf: m.rol === "kullanici" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.rol === "kullanici" ? C.accent : C.surface, color: m.rol === "kullanici" ? "#161311" : C.text, padding: "8px 12px", borderRadius: 10, fontSize: 12.5, whiteSpace: "pre-wrap" } }, m.metin)),
-      yukleniyor && /* @__PURE__ */ React.createElement("div", { style: { alignSelf: "flex-start", color: C.muted, fontSize: 12 } }, "AS yazıyor…"),
+      mesajlar.map((m, i) => {
+        const hataMi = m.rol === "asistan" && m.metin.startsWith("⚠️");
+        return /* @__PURE__ */ React.createElement("div", { key: i, style: { alignSelf: m.rol === "kullanici" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.rol === "kullanici" ? C.accent : hataMi ? C.red + "18" : C.surface, color: m.rol === "kullanici" ? "#161311" : hataMi ? C.red : C.text, padding: "8px 12px", borderRadius: 10, fontSize: 12.5, whiteSpace: "pre-wrap" } }, m.metin);
+      }),
+      yukleniyor && /* @__PURE__ */ React.createElement("div", { style: { alignSelf: "flex-start", background: C.surface, color: C.muted, fontSize: 12, padding: "8px 12px", borderRadius: 10 } }, "AS yazıyor …"),
       /* @__PURE__ */ React.createElement("div", { ref: sohbetSonRef })
     ),
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, padding: 10, borderTop: `1px solid ${C.border}` } },
