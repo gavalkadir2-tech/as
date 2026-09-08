@@ -2576,7 +2576,7 @@ function HizliAracFormu({ onClose, onEklendi, cariler: mevcutCariler }) {
     null,
     /* @__PURE__ */ React.createElement(PlakaKameraTarayici, { onSonuc: kameraSonuc }),
     /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il, harf, rakam, onIl: setIl, onHarf: setHarf, onRakam: setRakam })),
-    canliPlakaCakisan && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.red, marginTop: -8, marginBottom: 12 } }, "⚠️ Bu plaka zaten kayıtlı: ", canliPlakaCakisan.plaka),
+    canliPlakaCakisan && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.red, marginTop: -8, marginBottom: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } }, "⚠️ Bu plaka zaten kayıtlı: ", canliPlakaCakisan.plaka, /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btnO, padding: "3px 10px", fontSize: 11 }, onClick: () => onEklendi(canliPlakaCakisan, LS.get("araclar"), LS.get("cariler")) }, "Aracı Seç")),
     /* @__PURE__ */ React.createElement(MarkaModelSecici, { grup, marka, model, onGrup: (v) => { setGrup(v); setMarka(""); setModel(""); }, onMarka: setMarka, onModel: setModel }),
     /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "\u{1F464} Ara\xE7 Sahibi"),
     /* @__PURE__ */ React.createElement(FG, { label: "M\u00FC\u015Fteri / Firma Ad\u0131 (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: musteriAdi, onChange: (e) => setMusteriAdi(e.target.value) })),
@@ -3979,7 +3979,7 @@ function Ayarlar() {
       googleTakvimTest === "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Bağlandı! Bundan sonraki iş emirleri Google Takvim\u0027e eklenecek."),
       googleTakvimTest && googleTakvimTest !== "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", googleTakvimTest)
     )
-  ), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F916} Yapay Zeka (Teknisyen \xD6nerisi, KESS V3 Yard\u0131m\u0131)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Yeni bir servis i\u015Fi eklerken hangi teknisyene atanmas\u0131 gerekti\u011Fini, chiptuning i\u015Flerinde KESS V3 i\u00e7in stage/protokol \u00f6nerisini ve genel KESS V3 kullan\u0131m sorular\u0131n\u0131 yapay zekaya sordurabilirsiniz. ", /* @__PURE__ */ React.createElement("a", { href: "https://aistudio.google.com/apikey", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "aistudio.google.com/apikey"), "'dan Google hesab\u0131n\u0131zla, kredi kart\u0131 istemeden \xFCcretsiz bir Gemini API key alabilirsiniz."), /* @__PURE__ */ React.createElement(FG, { label: "Gemini API Key" }, /* @__PURE__ */ React.createElement("input", { type: "password", style: S.inp, value: form.aiApiKey || "", onChange: (e) => setForm((f) => ({ ...f, aiApiKey: e.target.value.trim() })), placeholder: "AIzaSy..." })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.red, marginBottom: 10 } }, "\u26A0\uFE0F Bu key taray\u0131c\u0131n\u0131zda saklan\u0131r ve do\u011Frudan Google'a g\xF6nderilir. Herkesle payla\u015Fmay\u0131n, ba\u015Fkalar\u0131n\u0131n kulland\u0131\u011F\u0131 bir bilgisayara girmeyin."), /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: aiTestEt, disabled: aiTestDevam }, aiTestDevam ? "\u23F3 Test ediliyor..." : "\u{1F50C} Ba\u011Flant\u0131y\u0131 Test Et"), aiTest === "basarili" && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Yapay zeka ba\u011Flant\u0131s\u0131 \xE7al\u0131\u015F\u0131yor."), aiTest && aiTest !== "basarili" && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", aiTest))), sekme === "veri" && React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4BE} Veri Y\xF6netimi (Dosya Olarak)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "T\xFCm verilerinizi tek bir dosya olarak indirin veya geri y\xFCkleyin."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => {
+  ), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F916} Yapay Zeka (AS Asistan, Teknisyen \xD6nerisi, KESS V3 Yard\u0131m\u0131)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Yeni bir servis i\u015Fi eklerken hangi teknisyene atanmas\u0131 gerekti\u011Fini, chiptuning i\u015Flerinde KESS V3 i\u00e7in stage/protokol \u00f6nerisini ve genel KESS V3 kullan\u0131m sorular\u0131n\u0131 yapay zekaya sordurabilirsiniz. ", /* @__PURE__ */ React.createElement("a", { href: "https://aistudio.google.com/apikey", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "aistudio.google.com/apikey"), "'dan Google hesab\u0131n\u0131zla, kredi kart\u0131 istemeden \xFCcretsiz bir Gemini API key alabilirsiniz."), /* @__PURE__ */ React.createElement(FG, { label: "Gemini API Key" }, /* @__PURE__ */ React.createElement("input", { type: "password", style: S.inp, value: form.aiApiKey || "", onChange: (e) => setForm((f) => ({ ...f, aiApiKey: e.target.value.trim() })), placeholder: "AIzaSy..." })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.red, marginBottom: 10 } }, "\u26A0\uFE0F Bu key taray\u0131c\u0131n\u0131zda saklan\u0131r ve do\u011Frudan Google'a g\xF6nderilir. Herkesle payla\u015Fmay\u0131n, ba\u015Fkalar\u0131n\u0131n kulland\u0131\u011F\u0131 bir bilgisayara girmeyin."), /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: aiTestEt, disabled: aiTestDevam }, aiTestDevam ? "\u23F3 Test ediliyor..." : "\u{1F50C} Ba\u011Flant\u0131y\u0131 Test Et"), aiTest === "basarili" && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Yapay zeka ba\u011Flant\u0131s\u0131 \xE7al\u0131\u015F\u0131yor."), aiTest && aiTest !== "basarili" && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", aiTest))), sekme === "veri" && React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4BE} Veri Y\xF6netimi (Dosya Olarak)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "T\xFCm verilerinizi tek bir dosya olarak indirin veya geri y\xFCkleyin."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => {
     const veri = {};
     [...ALL_DATA_KEYS, "ayarlar"].forEach((k) => veri[k] = k === "ayarlar" ? getSettings() : LS.get(k));
     const blob = new Blob([JSON.stringify(veri, null, 2)], { type: "application/json" });
@@ -4395,7 +4395,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
 })), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Aracı Düzenle" : "Yeni Araç", onClose: () => setModalAcik(false), width: 480 }, !form.id && /* @__PURE__ */ React.createElement(PlakaKameraTarayici, { onSonuc: (deger) => {
     const p = plakaParcala(deger);
     setForm((f) => ({ ...f, plakaIl: p.il, plakaHarf: p.harf, plakaRakam: p.rakam }));
-  } }), /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il: form.plakaIl, harf: form.plakaHarf, rakam: form.plakaRakam, onIl: (v) => setForm((f) => ({ ...f, plakaIl: v })), onHarf: (v) => setForm((f) => ({ ...f, plakaHarf: v })), onRakam: (v) => setForm((f) => ({ ...f, plakaRakam: v })) })), canliPlakaCakisan && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.red, marginTop: -8, marginBottom: 12 } }, "⚠️ Bu plaka zaten kayıtlı: ", canliPlakaCakisan.plaka), /* @__PURE__ */ React.createElement(MarkaModelSecici, { grup: form.grup || "otomobil", marka: form.marka, model: form.model, onGrup: (v) => setForm((f) => ({ ...f, grup: v, marka: "", model: "" })), onMarka: (v) => setForm((f) => ({ ...f, marka: v })), onModel: (v) => setForm((f) => ({ ...f, model: v })) }), /* @__PURE__ */ React.createElement(FG, { label: "Model Yılı" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.yil || "", onChange: (e) => setForm((f) => ({ ...f, yil: +e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Şasi No (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.sasiNo || "", onChange: (e) => setForm((f) => ({ ...f, sasiNo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "👤 Araç Sahibi (Müşteri/Firma, opsiyonel)"), /* @__PURE__ */ React.createElement(FG, { label: "Müşteri / Firma Adı (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdi || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdi: e.target.value })) })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriTel || "", onChange: (e) => setForm((f) => ({ ...f, musteriTel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdres || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdres: e.target.value })) }))), /* @__PURE__ */ React.createElement(BenzerCariUyarisi, { cariler, ad: form.musteriAdi, tel: form.musteriTel, haricId: form.musteriId }), /* @__PURE__ */ React.createElement(FG, { label: "Notlar" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.notlar || "", onChange: (e) => setForm((f) => ({ ...f, notlar: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), detayArac && /* @__PURE__ */ React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: aracServisleri(detayArac.id), onClose: () => setDetayAracId(null), onGuncelle: (patch) => aracGuncelle(detayArac.id, patch) }));
+  } }), /* @__PURE__ */ React.createElement(FG, { label: "Plaka" }, /* @__PURE__ */ React.createElement(PlakaGirisi, { il: form.plakaIl, harf: form.plakaHarf, rakam: form.plakaRakam, onIl: (v) => setForm((f) => ({ ...f, plakaIl: v })), onHarf: (v) => setForm((f) => ({ ...f, plakaHarf: v })), onRakam: (v) => setForm((f) => ({ ...f, plakaRakam: v })) })), canliPlakaCakisan && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.red, marginTop: -8, marginBottom: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } }, "⚠️ Bu plaka zaten kayıtlı: ", canliPlakaCakisan.plaka, /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btnO, padding: "3px 10px", fontSize: 11 }, onClick: () => { setModalAcik(false); setDetayAracId(canliPlakaCakisan.id); } }, "Aracı Seç")), /* @__PURE__ */ React.createElement(MarkaModelSecici, { grup: form.grup || "otomobil", marka: form.marka, model: form.model, onGrup: (v) => setForm((f) => ({ ...f, grup: v, marka: "", model: "" })), onMarka: (v) => setForm((f) => ({ ...f, marka: v })), onModel: (v) => setForm((f) => ({ ...f, model: v })) }), /* @__PURE__ */ React.createElement(FG, { label: "Model Yılı" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.yil || "", onChange: (e) => setForm((f) => ({ ...f, yil: +e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Şasi No (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.sasiNo || "", onChange: (e) => setForm((f) => ({ ...f, sasiNo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { ...S.secTitle, fontSize: 13, marginTop: 4 } }, "👤 Araç Sahibi (Müşteri/Firma, opsiyonel)"), /* @__PURE__ */ React.createElement(FG, { label: "Müşteri / Firma Adı (opsiyonel)" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdi || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdi: e.target.value })) })), /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriTel || "", onChange: (e) => setForm((f) => ({ ...f, musteriTel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.musteriAdres || "", onChange: (e) => setForm((f) => ({ ...f, musteriAdres: e.target.value })) }))), /* @__PURE__ */ React.createElement(BenzerCariUyarisi, { cariler, ad: form.musteriAdi, tel: form.musteriTel, haricId: form.musteriId }), /* @__PURE__ */ React.createElement(FG, { label: "Notlar" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.notlar || "", onChange: (e) => setForm((f) => ({ ...f, notlar: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "İptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), detayArac && /* @__PURE__ */ React.createElement(AracDetayModal, { arac: detayArac, cariler, servisler: aracServisleri(detayArac.id), onClose: () => setDetayAracId(null), onGuncelle: (patch) => aracGuncelle(detayArac.id, patch) }));
 }
 function AracFotoThumb({ foto, onSil }) {
   const [veri, setVeri] = useState(null);
@@ -4712,6 +4712,176 @@ function elArabasiMigrasyonu() {
   if (degisti) LS.set("faturalar", yeniFaturalar);
   localStorage.setItem("fp_el_arabasi_migrasyon_v1", "1");
 }
+const AS_SAYFA_IDLERI = ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "personel", "cariler", "yapilacaklar", "muhasebe", "cop_kutusu", "ayarlar"];
+const AS_SISTEM_PROMPTU = `Sen "AS" isimli, bir oto egzoz/chiptuning/el arabası \xFCretim at\xF6lyesinin y\xF6netim uygulaması i\xE7inde \xE7alışan yapay zeka asistanısın. Kullanıcıya (at\xF6lye sahibi/\xE7alışanı) T\xFCrk\xE7e, kısa ve net cevap ver. Sana verilen "G\xFCncel Durum" bilgisini kullanarak analiz/\xF6zet sorularını yanıtlayabilirsin.
+Eğer kullanıcı senden bir sayfaya gitmeni istiyorsa (\xF6rn. "cariler sayfasını a\xE7", "muhasebeye git"), cevabının EN SONUNA yeni bir satırda tam olarak şu formatta yaz:
+AKSIYON:{"tip":"sayfaya_git","sayfa":"<id>"}
+<id> şunlardan biri olmalı: ${AS_SAYFA_IDLERI.join(", ")}.
+Eğer kullanıcı senden bir g\xF6rev/hatırlatma eklemeni istiyorsa, cevabının sonuna:
+AKSIYON:{"tip":"yeni_gorev","baslik":"<başlık>","oncelik":"dusuk|orta|yuksek"}
+Eğer kullanıcı senden yeni bir cari/m\xFCşteri eklemeni istiyorsa, cevabının sonuna:
+AKSIYON:{"tip":"yeni_cari","ad":"<ad>","tel":"<telefon veya boş>"}
+Bu \xFC\xE7 durumun dışında AKSIYON satırı ekleme, sadece normal cevap ver. Emin değilsen ya da uygulamada yapamayacağın bir şey istenirse bunu a\xE7ık\xE7a s\xF6yle, uydurma.`;
+function asBaglamOlustur() {
+  const servisler = LS.get("servisIsleri");
+  const cariler = LS.get("cariler");
+  const araclar = LS.get("araclar");
+  const gorevler = LS.get("yapilacaklar");
+  const bugun = today();
+  const acikIsler = servisler.filter((s) => s.durum !== "tamamlandi" && s.durum !== "iptal");
+  const odenmemis = servisler.filter((s) => servisOdemeDurumu(s) !== "odendi" && s.durum === "tamamlandi");
+  const odenmemisToplam = odenmemis.reduce((t, s) => t + servisKalanTutar(s), 0);
+  const bugunRandevu = servisler.filter((s) => s.tarih === bugun && s.durum !== "iptal");
+  const acikGorevler = gorevler.filter((g) => !g.tamamlandi);
+  const gecikenGorevler = acikGorevler.filter((g) => g.bitisTarihi && g.bitisTarihi < bugun);
+  return `Bug\xFCn\xFCn tarihi: ${bugun}.
+Toplam cari sayısı: ${cariler.length}.
+Toplam ara\xE7 sayısı: ${araclar.length}.
+A\xE7ık (devam eden) iş sayısı: ${acikIsler.length}.
+Bug\xFCn planlı iş/randevu sayısı: ${bugunRandevu.length}.
+\xD6denmemiş/kısmi \xF6denmiş iş sayısı: ${odenmemis.length}, toplam alacak: ${fmtTL(odenmemisToplam)}.
+A\xE7ık g\xF6rev sayısı: ${acikGorevler.length} (${gecikenGorevler.length} tanesi gecikmiş).`;
+}
+function asAksiyonAyristir(metin) {
+  const m = (metin || "").match(/AKSIYON:\s*(\{[^\n]*\})\s*$/);
+  if (!m) return { temizMetin: (metin || "").trim(), aksiyon: null };
+  try {
+    const aksiyon = JSON.parse(m[1]);
+    return { temizMetin: metin.slice(0, m.index).trim(), aksiyon };
+  } catch {
+    return { temizMetin: metin.trim(), aksiyon: null };
+  }
+}
+function asAksiyonUygula(aksiyon, sayfayaGit) {
+  if (!aksiyon || !aksiyon.tip) return null;
+  if (aksiyon.tip === "sayfaya_git" && AS_SAYFA_IDLERI.includes(aksiyon.sayfa)) {
+    sayfayaGit && sayfayaGit(aksiyon.sayfa);
+    return `\u{1F4CD} ${aksiyon.sayfa} sayfasına gidildi.`;
+  }
+  if (aksiyon.tip === "yeni_gorev" && aksiyon.baslik) {
+    const liste = LS.get("yapilacaklar");
+    const kayit = { id: uid(), baslik: aksiyon.baslik, oncelik: ["dusuk", "orta", "yuksek"].includes(aksiyon.oncelik) ? aksiyon.oncelik : "orta", olusturmaTarihi: today(), tamamlandi: false };
+    LS.set("yapilacaklar", [...liste, kayit]);
+    return `✅ G\xF6rev eklendi: ${aksiyon.baslik}`;
+  }
+  if (aksiyon.tip === "yeni_cari" && aksiyon.ad) {
+    const liste = LS.get("cariler");
+    const kayit = { id: uid(), ad: aksiyon.ad, tel: aksiyon.tel || "", adres: "" };
+    LS.set("cariler", [...liste, kayit]);
+    return `✅ Cari eklendi: ${aksiyon.ad}`;
+  }
+  return null;
+}
+function AsAsistani({ sayfayaGit }) {
+  const [acik, setAcik] = useState(false);
+  const [mesajlar, setMesajlar] = useState([{ rol: "asistan", metin: "Merhaba, ben AS! Sana nasıl yardımcı olabilirim?" }]);
+  const [girdi, setGirdi] = useState("");
+  const [yukleniyor, setYukleniyor] = useState(false);
+  const [dinliyor, setDinliyor] = useState(false);
+  const [sesliCevap, setSesliCevap] = useState(false);
+  const taniyiciRef = useRef(null);
+  const sohbetSonRef = useRef(null);
+  const apiKeyVar = !!getSettings().aiApiKey;
+  useEffect(() => {
+    if (acik && sohbetSonRef.current) sohbetSonRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [mesajlar, acik]);
+  const seslendir = (metin) => {
+    if (!sesliCevap || typeof window === "undefined" || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(metin.replace(/AKSIYON:.*$/s, ""));
+      u.lang = "tr-TR";
+      window.speechSynthesis.speak(u);
+    } catch {
+    }
+  };
+  const gonder = async (metinParam) => {
+    const metin = (metinParam ?? girdi).trim();
+    if (!metin || yukleniyor) return;
+    const yeniMesajlar = [...mesajlar, { rol: "kullanici", metin }];
+    setMesajlar(yeniMesajlar);
+    setGirdi("");
+    setYukleniyor(true);
+    try {
+      const gecmis = yeniMesajlar.slice(-8).map((m) => `${m.rol === "kullanici" ? "Kullanıcı" : "AS"}: ${m.metin}`).join("\n");
+      const tamPrompt = `${AS_SISTEM_PROMPTU}
+
+G\xFCncel Durum:
+${asBaglamOlustur()}
+
+${gecmis}
+AS:`;
+      const cevapHam = await aiSor(tamPrompt);
+      const { temizMetin, aksiyon } = asAksiyonAyristir(cevapHam || "");
+      let sonMetin = temizMetin || "Anlayamadım, tekrar s\xF6yler misin?";
+      if (aksiyon) {
+        const sonuc = asAksiyonUygula(aksiyon, sayfayaGit);
+        if (sonuc) sonMetin += `
+
+${sonuc}`;
+      }
+      setMesajlar((m) => [...m, { rol: "asistan", metin: sonMetin }]);
+      seslendir(sonMetin);
+    } catch (e) {
+      setMesajlar((m) => [...m, { rol: "asistan", metin: `⚠️ ${e.message}` }]);
+    } finally {
+      setYukleniyor(false);
+    }
+  };
+  const sesleGonder = () => {
+    if (!sesTanimaDesteklerMi()) return;
+    if (dinliyor) {
+      taniyiciRef.current && taniyiciRef.current.stop();
+      return;
+    }
+    const Taniyici = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const taniyici = new Taniyici();
+    taniyici.lang = "tr-TR";
+    taniyici.interimResults = false;
+    taniyici.maxAlternatives = 1;
+    taniyici.onresult = (e) => {
+      const metin = e.results[0][0].transcript;
+      gonder(metin);
+    };
+    taniyici.onerror = () => setDinliyor(false);
+    taniyici.onend = () => setDinliyor(false);
+    taniyiciRef.current = taniyici;
+    taniyici.start();
+    setDinliyor(true);
+  };
+  if (!acik) {
+    return /* @__PURE__ */ React.createElement("button", {
+      onClick: () => setAcik(true),
+      title: "AS Asistan",
+      style: { position: "fixed", bottom: 20, right: 20, width: 56, height: 56, borderRadius: "50%", background: C.accent, color: "#161311", border: "none", boxShadow: "0 4px 16px #00000055", fontSize: 16, fontWeight: 800, cursor: "pointer", zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center" }
+    }, "AS");
+  }
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    { style: { position: "fixed", bottom: 20, right: 20, width: "min(360px,92vw)", height: "min(520px,76vh)", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, boxShadow: "0 8px 30px #00000066", zIndex: 900, display: "flex", flexDirection: "column", overflow: "hidden" } },
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderBottom: `1px solid ${C.border}` } },
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
+        /* @__PURE__ */ React.createElement("span", { style: { width: 26, height: 26, borderRadius: "50%", background: C.accent, color: "#161311", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12 } }, "AS"),
+        /* @__PURE__ */ React.createElement("strong", { style: { color: C.white, fontSize: 13.5 } }, "AS Asistan")
+      ),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center" } },
+        /* @__PURE__ */ React.createElement("button", { title: sesliCevap ? "Sesli cevabı kapat" : "Sesli cevabı a\xE7", onClick: () => setSesliCevap((v) => !v), style: { background: "none", border: "none", color: sesliCevap ? C.accent : C.muted, cursor: "pointer", fontSize: 15 } }, sesliCevap ? "\u{1F50A}" : "\u{1F507}"),
+        /* @__PURE__ */ React.createElement("button", { title: "Kapat", onClick: () => setAcik(false), style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15 } }, "✕")
+      )
+    ),
+    !apiKeyVar && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 14px", fontSize: 11.5, color: C.yellow } }, "⚠️ \xD6nce Ayarlar → Yapay Zeka'dan bir Gemini API key girmelisin."),
+    /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 } },
+      mesajlar.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { alignSelf: m.rol === "kullanici" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.rol === "kullanici" ? C.accent : C.surface, color: m.rol === "kullanici" ? "#161311" : C.text, padding: "8px 12px", borderRadius: 10, fontSize: 12.5, whiteSpace: "pre-wrap" } }, m.metin)),
+      yukleniyor && /* @__PURE__ */ React.createElement("div", { style: { alignSelf: "flex-start", color: C.muted, fontSize: 12 } }, "AS yazıyor…"),
+      /* @__PURE__ */ React.createElement("div", { ref: sohbetSonRef })
+    ),
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, padding: 10, borderTop: `1px solid ${C.border}` } },
+      sesTanimaDesteklerMi() && /* @__PURE__ */ React.createElement("button", { type: "button", title: dinliyor ? "Dinlemeyi durdur" : "Sesle konuş", onClick: sesleGonder, style: { ...S.btnO, padding: "6px 10px", background: dinliyor ? C.red + "22" : void 0, borderColor: dinliyor ? C.red : void 0 } }, dinliyor ? "\u{1F534}" : "\u{1F3A4}"),
+      /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, flex: 1 }, placeholder: "Bir şey yaz…", value: girdi, onChange: (e) => setGirdi(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") gonder(); } }),
+      /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btn(), onClick: () => gonder(), disabled: yukleniyor }, "G\xF6nder")
+    )
+  );
+}
 function App() {
   seedVeri();
   personelMigrasyonu();
@@ -4847,7 +5017,7 @@ function App() {
     const uzakZaman = await buluttanOku("_sonGuncelleme");
     if (uzakZaman) localStorage.setItem("fp_son_yerel_degisim", String(uzakZaman));
     window.location.reload();
-  } }, "\u015Eimdi Yenile")), /* @__PURE__ */ React.createElement(AktifBilesen, { hedef, hedefTemizle: () => setHedef(null), sayfayaGit })));
+  } }, "\u015Eimdi Yenile")), /* @__PURE__ */ React.createElement(AktifBilesen, { hedef, hedefTemizle: () => setHedef(null), sayfayaGit })), /* @__PURE__ */ React.createElement(AsAsistani, { sayfayaGit }));
 }
 function AnketSayfasi({ isEmriNo, supabaseUrl, anonKey }) {
   const [puan, setPuan] = useState(0);
