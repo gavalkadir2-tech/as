@@ -306,7 +306,7 @@ async function aiSor(promptMetni, denemeNo = 0) {
   let r;
   try {
     r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -3801,6 +3801,7 @@ function Ayarlar() {
     try {
       saveSettings(form);
       if (!form.supabaseUrl || !form.supabaseAnonKey) throw new Error("\u00d6nce Supabase URL ve Anon Key girin.");
+      if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(form.supabaseUrl.trim())) throw new Error('Supabase Project URL hatal\u0131 g\xF6r\xFCn\xFCyor. Dashboard linkini de\u011fil, Project Settings \u2192 API sayfas\u0131ndaki "Project URL"yi (\xF6rn. https://xxxxxxxx.supabase.co) girin.');
       await bulutaYaz("_baglantiTesti", Date.now());
       setBulutTest("basarili");
     } catch (e) {
