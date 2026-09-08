@@ -133,7 +133,7 @@ const ROL_LABEL = { patron: "\u{1F451} Patron / Y\xF6netici", usta: "\u{1F527} U
 const ROL_SAYFA_IZIN_VARSAYILAN = {
   patron: null,
   usta: ["dashboard", "servis", "takvim", "araclar", "yapilacaklar"],
-  kasiyer: ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "cariler", "muhasebe", "yapilacaklar"]
+  kasiyer: ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "cariler", "muhasebe", "yapilacaklar", "cop_kutusu"]
 };
 let ROL_SAYFA_IZIN = { ...ROL_SAYFA_IZIN_VARSAYILAN };
 function rolYetkileriYenile() {
@@ -322,7 +322,34 @@ async function aiSor(promptMetni, denemeNo = 0) {
   const veri = await r.json();
   return veri.candidates && veri.candidates[0] && veri.candidates[0].content && veri.candidates[0].content.parts && veri.candidates[0].content.parts[0] ? veri.candidates[0].content.parts[0].text : "";
 }
-const ALL_DATA_KEYS = ["cariler", "servisIsleri", "satislar", "faturalar", "giderler", "personel", "araclar", "hesaplar", "kasaHareketleri", "personelOdemeleri", "yapilacaklar"];
+const ALL_DATA_KEYS = ["cariler", "servisIsleri", "satislar", "faturalar", "giderler", "personel", "araclar", "hesaplar", "kasaHareketleri", "personelOdemeleri", "yapilacaklar", "copKutusu"];
+const COP_KUTUSU_SAKLAMA_GUNU = 30;
+const KOLEKSIYON_LABEL = { cariler: "Cari", servisIsleri: "İş Emri", satislar: "El Arabası Satışı", personel: "Personel", araclar: "Araç", yapilacaklar: "Görev", giderler: "Gider", faturalar: "Fatura" };
+function coplendir(koleksiyon, kayit) {
+  const cop = LS.get("copKutusu");
+  LS.set("copKutusu", [...cop, { id: uid(), koleksiyon, kayit, silinmeTarihi: today() }]);
+}
+function copKutusuTemizle() {
+  const cop = LS.get("copKutusu");
+  const bugun = today();
+  const kalan = cop.filter((c) => {
+    const gecenGun = Math.floor((new Date(bugun) - new Date(c.silinmeTarihi)) / 864e5);
+    return gecenGun < COP_KUTUSU_SAKLAMA_GUNU;
+  });
+  if (kalan.length !== cop.length) LS.set("copKutusu", kalan);
+}
+function copKutusundanGeriYukle(copId) {
+  const cop = LS.get("copKutusu");
+  const oge = cop.find((c) => c.id === copId);
+  if (!oge) return;
+  const mevcut = LS.get(oge.koleksiyon);
+  LS.set(oge.koleksiyon, [...mevcut, oge.kayit]);
+  LS.set("copKutusu", cop.filter((c) => c.id !== copId));
+}
+function copKutusundanKaliciSil(copId) {
+  const cop = LS.get("copKutusu");
+  LS.set("copKutusu", cop.filter((c) => c.id !== copId));
+}
 const sonKullanilanPersonelId = () => { try { return localStorage.getItem("fp_son_personelId") || ""; } catch { return ""; } };
 const sonKullanilanHizmetTuru = () => { try { return localStorage.getItem("fp_son_hizmetTuru") || ""; } catch { return ""; } };
 const sonKullanilanKaydet = (personelId, hizmetTuru) => {
@@ -987,11 +1014,13 @@ function IceAktarButonu({ alanlar, onIceAktar, ornekAdi }) {
   };
   return React.createElement("label", { title: `Beklenen s\xFCtunlar: ${alanlar.map((a) => a.baslik).join(", ")}`, style: { ...S.btnO, padding: "5px 10px", cursor: devam ? "default" : "pointer", opacity: devam ? 0.6 : 1 } }, devam ? "⏳ Okunuyor…" : "⬆️ İçe Aktar (CSV/Excel)", React.createElement("input", { type: "file", accept: ".csv,.xlsx,.xls", disabled: devam, style: { display: "none" }, onChange: dosyaSec }));
 }
-function SiraliTablo({ columns, rows, rowKey, bosMesaj = "Kayıt yok.", className, dosyaAdi, baslik }) {
+function SiraliTablo({ columns, rows, rowKey, bosMesaj = "Kayıt yok.", className, dosyaAdi, baslik, topluIslem }) {
   const [sayfa, setSayfa] = useState(1);
   const [sayfaBoyutu, setSayfaBoyutu] = useState(20);
   const [siralamaKey, setSiralamaKey] = useState(null);
   const [siralamaYon, setSiralamaYon] = useState("asc");
+  const [secilenler, setSecilenler] = useState(() => /* @__PURE__ */ new Set());
+  const [whatsappIndex, setWhatsappIndex] = useState(null);
   const basligaTikla = (col) => {
     if (!col.sirala) return;
     if (siralamaKey === col.key) {
@@ -1029,19 +1058,76 @@ function SiraliTablo({ columns, rows, rowKey, bosMesaj = "Kayıt yok.", classNam
   if (rows.length === 0) {
     return React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, bosMesaj);
   }
+  const secilenSatirlar = topluIslem ? rows.filter((r) => secilenler.has(rowKey(r))) : [];
+  const sayfaKeyleri = sayfalanmisSatirlar.map(rowKey);
+  const sayfaHepsiSecili = sayfaKeyleri.length > 0 && sayfaKeyleri.every((k) => secilenler.has(k));
+  const satirSecToggle = (key) => setSecilenler((prev) => {
+    const yeni = new Set(prev);
+    if (yeni.has(key)) yeni.delete(key); else yeni.add(key);
+    return yeni;
+  });
+  const sayfaHepsiniSecToggle = () => setSecilenler((prev) => {
+    const yeni = new Set(prev);
+    if (sayfaHepsiSecili) sayfaKeyleri.forEach((k) => yeni.delete(k));
+    else sayfaKeyleri.forEach((k) => yeni.add(k));
+    return yeni;
+  });
+  const topluWhatsappBaslat = () => {
+    if (secilenSatirlar.length === 0) return;
+    setWhatsappIndex(0);
+    const bilgi = topluIslem.whatsapp(secilenSatirlar[0]);
+    if (bilgi) whatsappLinkAc(bilgi.telefon, bilgi.mesaj);
+  };
+  const topluWhatsappSonraki = () => {
+    const sonraki = whatsappIndex + 1;
+    if (sonraki >= secilenSatirlar.length) {
+      setWhatsappIndex(null);
+      return;
+    }
+    setWhatsappIndex(sonraki);
+    const bilgi = topluIslem.whatsapp(secilenSatirlar[sonraki]);
+    if (bilgi) whatsappLinkAc(bilgi.telefon, bilgi.mesaj);
+  };
+  const topluSilTikla = () => {
+    if (secilenSatirlar.length === 0) return;
+    topluIslem.onSil(secilenSatirlar);
+    setSecilenler(/* @__PURE__ */ new Set());
+    setWhatsappIndex(null);
+  };
   return React.createElement(
     React.Fragment,
     null,
+    topluIslem && secilenSatirlar.length > 0 && React.createElement(
+      "div",
+      { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 14px", background: C.accent + "18", borderRadius: 8, marginBottom: 10 } },
+      React.createElement("span", { style: { fontSize: 12.5, color: C.text } }, secilenSatirlar.length, " kayıt seçili"),
+      React.createElement(
+        "div",
+        { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } },
+        whatsappIndex !== null && React.createElement("span", { style: { fontSize: 11.5, color: C.muted } }, "WhatsApp: ", whatsappIndex + 1, "/", secilenSatirlar.length),
+        topluIslem.whatsapp && (whatsappIndex === null
+          ? React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }, onClick: topluWhatsappBaslat }, React.createElement(WhatsAppIkon, null), "WhatsApp Gönder")
+          : React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: topluWhatsappSonraki }, "Sonraki ▶")),
+        topluIslem.onSil && React.createElement("button", { type: "button", style: S.btnR, onClick: topluSilTikla }, "🗑️ Seçilenleri Sil"),
+        React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setSecilenler(/* @__PURE__ */ new Set()); setWhatsappIndex(null); } }, "Seçimi Temizle")
+      )
+    ),
     React.createElement(
       "table",
       { className, style: S.tbl },
-      React.createElement("thead", null, React.createElement("tr", null, columns.map((col) => React.createElement(
-        "th",
-        { key: col.key, style: { ...S.th, cursor: col.sirala ? "pointer" : "default", userSelect: "none" }, onClick: () => basligaTikla(col) },
-        col.baslik,
-        col.sirala ? (siralamaKey === col.key ? (siralamaYon === "asc" ? " ▲" : " ▼") : " ⇅") : ""
-      )))),
-      React.createElement("tbody", null, sayfalanmisSatirlar.map((row) => React.createElement("tr", { key: rowKey(row) }, columns.map((col) => React.createElement("td", { key: col.key, style: S.td }, col.render(row))))))
+      React.createElement("thead", null, React.createElement("tr", null,
+        topluIslem && React.createElement("th", { style: { ...S.th, width: 30 } }, React.createElement("input", { type: "checkbox", checked: sayfaHepsiSecili, onChange: sayfaHepsiniSecToggle, style: { cursor: "pointer" } })),
+        columns.map((col) => React.createElement(
+          "th",
+          { key: col.key, style: { ...S.th, cursor: col.sirala ? "pointer" : "default", userSelect: "none" }, onClick: () => basligaTikla(col) },
+          col.baslik,
+          col.sirala ? (siralamaKey === col.key ? (siralamaYon === "asc" ? " ▲" : " ▼") : " ⇅") : ""
+        ))
+      )),
+      React.createElement("tbody", null, sayfalanmisSatirlar.map((row) => React.createElement("tr", { key: rowKey(row) },
+        topluIslem && React.createElement("td", { style: S.td }, React.createElement("input", { type: "checkbox", checked: secilenler.has(rowKey(row)), onChange: () => satirSecToggle(rowKey(row)), style: { cursor: "pointer" } })),
+        columns.map((col) => React.createElement("td", { key: col.key, style: S.td }, col.render(row)))
+      )))
     ),
     React.createElement(
       "div",
@@ -1754,12 +1840,25 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
   };
 
   const sil = (id) => {
-    if (!confirm("Bu servis kayd\u0131 silinsin mi?")) return;
+    if (!confirm("Bu servis kayd\u0131 silinsin mi? (\xC7\xF6p kutusundan geri y\xFCkleyebilirsiniz)")) return;
     const silinen = liste.find((x) => x.id === id);
     const yeni = liste.filter((x) => x.id !== id);
     LS.set("servisIsleri", yeni);
     setListe(yeni);
+    if (silinen) coplendir("servisIsleri", silinen);
     if (silinen && silinen.googleEtkinlikId) googleTakvimEtkinlikSil(silinen.googleEtkinlikId);
+  };
+  const topluSil = (secilenler) => {
+    if (secilenler.length === 0) return;
+    if (!confirm(`${secilenler.length} kay\u0131t silinsin mi? (\xC7\xF6p kutusundan geri y\xFCkleyebilirsiniz)`)) return;
+    const secilenIdler = new Set(secilenler.map((x) => x.id));
+    secilenler.forEach((x) => {
+      coplendir("servisIsleri", x);
+      if (x.googleEtkinlikId) googleTakvimEtkinlikSil(x.googleEtkinlikId);
+    });
+    const yeni = liste.filter((x) => !secilenIdler.has(x.id));
+    LS.set("servisIsleri", yeni);
+    setListe(yeni);
   };
 
   const teslimEt = (s) => {
@@ -1954,7 +2053,15 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
             React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(s); setHata(""); setModalAcik(true); } }, "✏️"),
             React.createElement("button", { style: S.btnR, onClick: () => sil(s.id) }, "🗑️")
           ) }
-        ]
+        ],
+        topluIslem: {
+          onSil: topluSil,
+          whatsapp: (s) => {
+            const musteri = cariler.find((c) => c.id === s.musteriId);
+            if (!musteri || !musteri.tel) return null;
+            return { telefon: musteri.tel, mesaj: `Merhaba ${musteri.ad}, ${s.isEmriNo || ""} numaralı ${aracEtiket(s)} işleminizin durumu: ${asamaEtiket(s.asama)}.${s.durum === "tamamlandi" ? ` Tutar: ${fmtTL(s.tutar)}.` : ""} — As Egzoz & Makine` };
+          }
+        }
       })),
       React.createElement(
         "div",
@@ -2490,8 +2597,19 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
     setModalAcik(false);
   };
   const sil = (id) => {
-    if (!confirm("Bu satış kaydı silinsin mi?")) return;
+    if (!confirm("Bu satış kaydı silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)")) return;
+    const silinen = satislar.find((x) => x.id === id);
     const yeni = satislar.filter((x) => x.id !== id);
+    LS.set("satislar", yeni);
+    setSatislar(yeni);
+    if (silinen) coplendir("satislar", silinen);
+  };
+  const topluSil = (secilenler) => {
+    if (secilenler.length === 0) return;
+    if (!confirm(`${secilenler.length} kayıt silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)`)) return;
+    const secilenIdler = new Set(secilenler.map((x) => x.id));
+    secilenler.forEach((x) => coplendir("satislar", x));
+    const yeni = satislar.filter((x) => !secilenIdler.has(x.id));
     LS.set("satislar", yeni);
     setSatislar(yeni);
   };
@@ -2544,7 +2662,15 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
             React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => fisYazdir(EL_ARABASI_TUR_LABEL[s.tur] || "Satış Fişi", [{ aciklama: s.aciklama || EL_ARABASI_TUR_LABEL[s.tur], tutar: s.toplam }], s.toplam, cariAd(cariler, s.musteriId), s.kdvOrani) }, "📄"),
             React.createElement("button", { style: S.btnR, onClick: () => sil(s.id) }, "🗑️")
           ) }
-        ]
+        ],
+        topluIslem: {
+          onSil: topluSil,
+          whatsapp: (s) => {
+            const musteri = cariler.find((c) => c.id === s.musteriId);
+            if (!musteri || !musteri.tel) return null;
+            return { telefon: musteri.tel, mesaj: `Merhaba ${musteri.ad}, ${EL_ARABASI_TUR_LABEL[s.tur] || ""} satın alımınız i\xE7in teşekk\xFCr ederiz. — As Egzoz & Makine` };
+          }
+        }
       }),
     ),
     modalAcik && /* @__PURE__ */ React.createElement(
@@ -2621,10 +2747,12 @@ function Yapilacaklar() {
     }
   };
   const sil = (id) => {
-    if (!confirm("Bu görev silinsin mi?")) return;
+    if (!confirm("Bu görev silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)")) return;
+    const silinen = liste.find((x) => x.id === id);
     const yeni = liste.filter((x) => x.id !== id);
     LS.set("yapilacaklar", yeni);
     setListe(yeni);
+    if (silinen) coplendir("yapilacaklar", silinen);
   };
   const tamamlandiToggle = (g) => {
     const yeni = liste.map((x) => x.id === g.id ? { ...x, tamamlandi: !x.tamamlandi, tamamlanmaTarihi: !x.tamamlandi ? today() : "" } : x);
@@ -2743,8 +2871,24 @@ function Cariler({ hedef, hedefTemizle } = {}) {
       alert("Bu m\xFC\u015Fteriye ait kay\u0131tlar var, \xF6nce onlar\u0131 d\xFCzenleyin/silin.");
       return;
     }
-    if (!confirm("Bu cari silinsin mi?")) return;
+    if (!confirm("Bu cari silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)")) return;
+    const silinen = liste.find((x) => x.id === id);
     const yeni = liste.filter((x) => x.id !== id);
+    LS.set("cariler", yeni);
+    setListe(yeni);
+    if (silinen) coplendir("cariler", silinen);
+  };
+  const topluSil = (secilenler) => {
+    const engellenen = secilenler.filter((c) => servisler.some((s) => s.musteriId === c.id) || satislar.some((s) => s.musteriId === c.id));
+    if (engellenen.length > 0) {
+      alert(`${engellenen.length} cariye ait kayıtlar var, önce onları düzenleyin/silin. Diğerleri silinecek.`);
+    }
+    const silinebilenler = secilenler.filter((c) => !engellenen.includes(c));
+    if (silinebilenler.length === 0) return;
+    if (!confirm(`${silinebilenler.length} cari silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)`)) return;
+    const silinebilenIdler = new Set(silinebilenler.map((x) => x.id));
+    silinebilenler.forEach((x) => coplendir("cariler", x));
+    const yeni = liste.filter((x) => !silinebilenIdler.has(x.id));
     LS.set("cariler", yeni);
     setListe(yeni);
   };
@@ -2801,7 +2945,11 @@ function Cariler({ hedef, hedefTemizle } = {}) {
         React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(c); setModalAcik(true); } }, "✏️"),
         React.createElement("button", { style: S.btnR, onClick: () => sil(c.id) }, "\u{1F5D1}️")
       ) }
-    ]
+    ],
+    topluIslem: {
+      onSil: topluSil,
+      whatsapp: (c) => c.tel ? { telefon: c.tel, mesaj: `Merhaba ${c.ad}, size ulaşmak istedik. — As Egzoz & Makine` } : null
+    }
   })), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Cariyi D\xFCzenle" : "Yeni Cari", onClose: () => setModalAcik(false), width: 420 }, /* @__PURE__ */ React.createElement(FG, { label: "M\xFC\u015Fteri / Firma Ad\u0131" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.ad || "", onChange: (e) => setForm((f) => ({ ...f, ad: e.target.value })), autoFocus: true })), /* @__PURE__ */ React.createElement(FG, { label: "Telefon" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.tel || "", onChange: (e) => setForm((f) => ({ ...f, tel: e.target.value })) })), /* @__PURE__ */ React.createElement(FG, { label: "Adres" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.adres || "", onChange: (e) => setForm((f) => ({ ...f, adres: e.target.value })) })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => setModalAcik(false) }, "\u0130ptal"), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: kaydet }, "Kaydet"))), ekstreCari && /* @__PURE__ */ React.createElement(Modal, { title: `\u{1F4CB} ${ekstreCari.ad} \u2014 Cari Hesap Ekstresi`, onClose: () => setEkstreId(null), width: 640 }, /* @__PURE__ */ React.createElement(Grid2, null, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Toplam \u0130\u015Flem Hacmi"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, fmtTL(harcama(ekstreCari.id)))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 14, borderTop: `3px solid ${C.red}` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "A\xE7\u0131k Bor\xE7"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.red } }, fmtTL(borc(ekstreCari.id))))), ekstreHareketleri.length === 0 ? React.createElement("div", { style: { color: C.muted } }, "Henüz işlem yok.") : React.createElement(SiraliTablo, {
     dosyaAdi: "cari_ekstre",
     rowKey: (h) => h.id,
@@ -3008,8 +3156,19 @@ function Muhasebe() {
     }
   };
   const giderSil = (id) => {
-    if (!confirm("Bu gider kayd\u0131 silinsin mi?")) return;
+    if (!confirm("Bu gider kayd\u0131 silinsin mi? (\u00c7\u00f6p kutusundan geri y\u00fckleyebilirsiniz)")) return;
+    const silinen = giderler.find((x) => x.id === id);
     const yeni = giderler.filter((x) => x.id !== id);
+    LS.set("giderler", yeni);
+    setGiderler(yeni);
+    if (silinen) coplendir("giderler", silinen);
+  };
+  const giderTopluSil = (secilenler) => {
+    if (secilenler.length === 0) return;
+    if (!confirm(`${secilenler.length} gider kayd\u0131 silinsin mi? (\u00c7\u00f6p kutusundan geri y\u00fckleyebilirsiniz)`)) return;
+    const secilenIdler = new Set(secilenler.map((x) => x.id));
+    secilenler.forEach((x) => coplendir("giderler", x));
+    const yeni = giderler.filter((x) => !secilenIdler.has(x.id));
     LS.set("giderler", yeni);
     setGiderler(yeni);
   };
@@ -3130,8 +3289,19 @@ function Muhasebe() {
     setFaturaModal(false);
   };
   const faturaSil = (id) => {
-    if (!confirm("Bu fatura kalıcı olarak silinsin mi?")) return;
+    if (!confirm("Bu fatura silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)")) return;
+    const silinen = faturalar.find((x) => x.id === id);
     const yeni = faturalar.filter((x) => x.id !== id);
+    LS.set("faturalar", yeni);
+    setFaturalar(yeni);
+    if (silinen) coplendir("faturalar", silinen);
+  };
+  const faturaTopluSil = (secilenler) => {
+    if (secilenler.length === 0) return;
+    if (!confirm(`${secilenler.length} fatura silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)`)) return;
+    const secilenIdler = new Set(secilenler.map((x) => x.id));
+    secilenler.forEach((x) => coplendir("faturalar", x));
+    const yeni = faturalar.filter((x) => !secilenIdler.has(x.id));
     LS.set("faturalar", yeni);
     setFaturalar(yeni);
   };
@@ -3231,7 +3401,8 @@ function Muhasebe() {
             React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => faturaDuzenle(f) }, "✏️"),
             React.createElement("button", { style: S.btnR, onClick: () => faturaSil(f.id) }, "🗑️")
           ) }
-        ]
+        ],
+        topluIslem: { onSil: faturaTopluSil }
       })
     ),
 
@@ -3253,7 +3424,8 @@ function Muhasebe() {
             { key: "aciklama", baslik: "Açıklama", sirala: (g) => g.aciklama || "", render: (g) => g.aciklama || "—" },
             { key: "tutar", baslik: "Tutar", sirala: (g) => +g.tutar || 0, render: (g) => React.createElement("strong", { style: { color: C.red } }, "-", fmtTL(g.tutar)) },
             { key: "islemler", baslik: "", render: (g) => React.createElement("div", { style: { display: "flex", gap: 6 } }, React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setGiderForm(g); setHata(""); setGiderModal(true); } }, "✏️"), React.createElement("button", { style: S.btnR, onClick: () => giderSil(g.id) }, "🗑️")) }
-          ]
+          ],
+          topluIslem: { onSil: giderTopluSil }
         })
       )
     ),
@@ -3909,6 +4081,9 @@ function Personel() {
   const [odemeHata, setOdemeHata] = useState("");
   const [odemeler, setOdemeler] = useState(LS.get("personelOdemeleri"));
   const [karneAcikId, setKarneAcikId] = useState(null);
+  const [topluModAcik, setTopluModAcik] = useState(false);
+  const [secilenler, setSecilenler] = useState(() => /* @__PURE__ */ new Set());
+  const [whatsappIndex, setWhatsappIndex] = useState(null);
   const kaydet = () => {
     if (!(form.ad || "").trim()) {
       alert("Personel ad\u0131 zorunludur.");
@@ -3921,8 +4096,19 @@ function Personel() {
     setModalAcik(false);
   };
   const sil = (id) => {
-    if (!confirm("Bu personel silinsin mi?")) return;
+    if (!confirm("Bu personel silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)")) return;
+    const silinen = liste.find((x) => x.id === id);
     const yeni = liste.filter((x) => x.id !== id);
+    LS.set("personel", yeni);
+    setListe(yeni);
+    if (silinen) coplendir("personel", silinen);
+  };
+  const topluSil = (secilenler) => {
+    if (secilenler.length === 0) return;
+    if (!confirm(`${secilenler.length} personel silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)`)) return;
+    const secilenIdler = new Set(secilenler.map((x) => x.id));
+    secilenler.forEach((x) => coplendir("personel", x));
+    const yeni = liste.filter((x) => !secilenIdler.has(x.id));
     LS.set("personel", yeni);
     setListe(yeni);
   };
@@ -3978,14 +4164,54 @@ function Personel() {
     setListe(yeni);
     alert(`${kayitlar.length} personel eklendi.`);
   };
+  const secToggle = (id) => setSecilenler((prev) => {
+    const yeni = new Set(prev);
+    if (yeni.has(id)) yeni.delete(id); else yeni.add(id);
+    return yeni;
+  });
+  const secilenPersonel = liste.filter((p) => secilenler.has(p.id));
+  const topluWhatsappBaslat = () => {
+    const p = secilenPersonel[0];
+    if (!p) return;
+    setWhatsappIndex(0);
+    if (p.telefon) whatsappLinkAc(p.telefon, `Merhaba ${p.ad}, size ulaşmak istedik. — As Egzoz & Makine`);
+  };
+  const topluWhatsappSonraki = () => {
+    const sonraki = whatsappIndex + 1;
+    if (sonraki >= secilenPersonel.length) {
+      setWhatsappIndex(null);
+      return;
+    }
+    setWhatsappIndex(sonraki);
+    const p = secilenPersonel[sonraki];
+    if (p.telefon) whatsappLinkAc(p.telefon, `Merhaba ${p.ad}, size ulaşmak istedik. — As Egzoz & Makine`);
+  };
+  const topluSilTikla = () => {
+    topluSil(secilenPersonel);
+    setSecilenler(/* @__PURE__ */ new Set());
+    setWhatsappIndex(null);
+  };
   return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F9D1}\u200D\u{1F527} Personel"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(IceAktarButonu, { alanlar: [{ baslik: "Ad", key: "ad", zorunlu: true }, { baslik: "Pozisyon", key: "pozisyon" }, { baslik: "Telefon", key: "telefon" }, { baslik: "Haftal\u0131k Maa\u015F", key: "maas" }], onIceAktar: personelIceAktar }), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => {
     setForm({});
     setModalAcik(true);
-  } }, "\u2795 Yeni Personel"))), liste.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderTop: `3px solid ${C.accent}` } }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u2696\uFE0F Anl\u0131k \u0130\u015F Y\xFCk\xFC"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, 'Her personelin \u015Fu an "Bekliyor" veya "Devam Ediyor" durumundaki a\xE7\u0131k i\u015F say\u0131s\u0131. Yeni bir i\u015F atarken en bo\u015Fta olan\u0131 tercih edebilirsiniz.'), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, liste.map((p) => {
+  } }, "\u2795 Yeni Personel"), /* @__PURE__ */ React.createElement("button", { style: topluModAcik ? S.btn() : S.btnO, onClick: () => { setTopluModAcik((v) => !v); setSecilenler(/* @__PURE__ */ new Set()); setWhatsappIndex(null); } }, "\u2611\ufe0f Toplu \u0130\u015flem"))), topluModAcik && secilenPersonel.length > 0 && /* @__PURE__ */ React.createElement(
+    "div",
+    { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 14px", background: C.accent + "18", borderRadius: 8, marginBottom: 14 } },
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: C.text } }, secilenPersonel.length, " personel se\u00e7ili"),
+    /* @__PURE__ */ React.createElement(
+      "div",
+      { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } },
+      whatsappIndex !== null && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11.5, color: C.muted } }, "WhatsApp: ", whatsappIndex + 1, "/", secilenPersonel.length),
+      whatsappIndex === null
+        ? /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }, onClick: topluWhatsappBaslat }, /* @__PURE__ */ React.createElement(WhatsAppIkon, null), "WhatsApp G\u00f6nder")
+        : /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: topluWhatsappSonraki }, "Sonraki \u25b6"),
+      /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: topluSilTikla }, "\ud83d\uddd1\ufe0f Se\u00e7ilenleri Sil")
+    )
+  ), liste.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderTop: `3px solid ${C.accent}` } }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u2696\uFE0F Anl\u0131k \u0130\u015F Y\xFCk\xFC"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, 'Her personelin \u015Fu an "Bekliyor" veya "Devam Ediyor" durumundaki a\xE7\u0131k i\u015F say\u0131s\u0131. Yeni bir i\u015F atarken en bo\u015Fta olan\u0131 tercih edebilirsiniz.'), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, liste.map((p) => {
     const sayi = acikIsSayisi(p.id);
     return /* @__PURE__ */ React.createElement("div", { key: p.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", background: C.surface, borderRadius: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: C.text } }, p.ad, " ", enBostaOlan && enBostaOlan.id === p.id && sayi === 0 && /* @__PURE__ */ React.createElement("span", { style: { ...S.badge(C.green), marginLeft: 8, fontSize: 10 } }, "En bo\u015Fta")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 800, color: sayi >= 3 ? C.red : C.white } }, sayi, " a\xE7\u0131k i\u015F"));
   }))), liste.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderTop: `3px solid ${C.green}` } }, /* @__PURE__ */ React.createElement("div", { style: S.secTitle }, "\u{1F4C8} Teknisyen Performans Raporu"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Tamamlanm\u0131\u015F i\u015Flere g\xF6re personel ba\u015F\u0131na i\u015F say\u0131s\u0131 ve ciro."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, performans.map(({ p, sayi, ciro }) => /* @__PURE__ */ React.createElement("div", { key: p.id }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: C.text, fontWeight: 600 } }, p.ad), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, sayi, " i\u015F \u2022 ", /* @__PURE__ */ React.createElement("strong", { style: { color: C.white } }, fmtTL(ciro)))), /* @__PURE__ */ React.createElement("div", { style: { height: 6, background: C.surface, borderRadius: 3, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { height: "100%", width: `${ciro / enYuksekCiro * 100}%`, background: C.green, borderRadius: 3 } })))))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 } }, liste.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Hen\xFCz personel eklenmedi."), liste.map(
-    (p) => /* @__PURE__ */ React.createElement("div", { key: p.id, style: S.card }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.white, marginBottom: 4 } }, p.ad), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.accent, marginBottom: 8 } }, p.pozisyon || "\u2014"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 2 } }, p.telefon || "Telefon yok"), p.rol === "patron" ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 12 } }, "\u{1F451} Patron \u2014 maa\u015F tan\u0131mlanmaz, gelirler do\u011Frudan kendisinindir.") : /* @__PURE__ */ React.createElement(React.Fragment, null, p.maas > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 2 } }, "Haftal\u0131k Maa\u015F: ", fmtTL(p.maas)), (+p.avansBakiyesi || 0) > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.yellow, marginBottom: 2 } }, "Avans Bakiyesi: ", fmtTL(p.avansBakiyesi)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 } }, p.maas > 0 && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => odemeAc(p, "haftalik") }, "\u{1F4B5} Haftal\u0131k \xD6de"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => odemeAc(p, "avans") }, "\u2795 Avans Ver"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => odemeAc(p, "bahsis") }, "\u{1F381} Bah\u015Fi\u015F Ver"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, flex: 1 }, onClick: () => setKarneAcikId(p.id) }, "\u{1F4CB} Karne"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "7px 10px" }, onClick: () => {
+    (p) => /* @__PURE__ */ React.createElement("div", { key: p.id, style: S.card }, topluModAcik && /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: secilenler.has(p.id), onChange: () => secToggle(p.id), style: { float: "right", cursor: "pointer", width: 16, height: 16 } }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.white, marginBottom: 4 } }, p.ad), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.accent, marginBottom: 8 } }, p.pozisyon || "\u2014"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 2 } }, p.telefon || "Telefon yok"), p.rol === "patron" ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 12 } }, "\u{1F451} Patron \u2014 maa\u015F tan\u0131mlanmaz, gelirler do\u011Frudan kendisinindir.") : /* @__PURE__ */ React.createElement(React.Fragment, null, p.maas > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 2 } }, "Haftal\u0131k Maa\u015F: ", fmtTL(p.maas)), (+p.avansBakiyesi || 0) > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.yellow, marginBottom: 2 } }, "Avans Bakiyesi: ", fmtTL(p.avansBakiyesi)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 } }, p.maas > 0 && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => odemeAc(p, "haftalik") }, "\u{1F4B5} Haftal\u0131k \xD6de"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => odemeAc(p, "avans") }, "\u2795 Avans Ver"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => odemeAc(p, "bahsis") }, "\u{1F381} Bah\u015Fi\u015F Ver"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, flex: 1 }, onClick: () => setKarneAcikId(p.id) }, "\u{1F4CB} Karne"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnO, padding: "7px 10px" }, onClick: () => {
       setForm(p);
       setModalAcik(true);
     } }, "\u270F\uFE0F"), /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => sil(p.id) }, "\u{1F5D1}\uFE0F")))
@@ -4061,8 +4287,24 @@ function Araclar({ hedef, hedefTemizle } = {}) {
       alert("Bu araca ait servis kayıtları var, önce onları düzenleyin/silin.");
       return;
     }
-    if (!confirm("Bu araç silinsin mi?")) return;
+    if (!confirm("Bu araç silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)")) return;
+    const silinen = liste.find((x) => x.id === id);
     const yeni = liste.filter((x) => x.id !== id);
+    LS.set("araclar", yeni);
+    setListe(yeni);
+    if (silinen) coplendir("araclar", silinen);
+  };
+  const topluSil = (secilenler) => {
+    const engellenen = secilenler.filter((a) => servisler.some((s) => s.aracId === a.id));
+    if (engellenen.length > 0) {
+      alert(`${engellenen.length} araca ait servis kayıtları var, önce onları düzenleyin/silin. Diğerleri silinecek.`);
+    }
+    const silinebilenler = secilenler.filter((a) => !engellenen.includes(a));
+    if (silinebilenler.length === 0) return;
+    if (!confirm(`${silinebilenler.length} araç silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)`)) return;
+    const silinebilenIdler = new Set(silinebilenler.map((x) => x.id));
+    silinebilenler.forEach((x) => coplendir("araclar", x));
+    const yeni = liste.filter((x) => !silinebilenIdler.has(x.id));
     LS.set("araclar", yeni);
     setListe(yeni);
   };
@@ -4113,7 +4355,15 @@ function Araclar({ hedef, hedefTemizle } = {}) {
     { key: "sahibi", baslik: "Sahibi", sirala: (a) => aracSahibiAd(cariler, a.musteriId), render: (a) => aracSahibiAd(cariler, a.musteriId) },
     { key: "gecmis", baslik: "Servis Geçmişi", sirala: (a) => aracServisleri(a.id).length, render: (a) => { const gecmis = aracServisleri(a.id); return React.createElement("span", { style: { ...S.badge(C.blue), cursor: "pointer" }, onClick: () => setDetayAracId(a.id) }, gecmis.length, " servis kaydı"); } },
     { key: "islemler", baslik: "", render: (a) => React.createElement("div", { style: { display: "flex", gap: 6 } }, React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => aracDuzenle(a) }, "✏️"), React.createElement("button", { style: S.btnR, onClick: () => sil(a.id) }, "🗑️")) }
-  ]
+  ],
+  topluIslem: {
+    onSil: topluSil,
+    whatsapp: (a) => {
+      const sahip = cariler.find((c) => c.id === a.musteriId);
+      if (!sahip || !sahip.tel) return null;
+      return { telefon: sahip.tel, mesaj: `Merhaba ${sahip.ad}, ${a.plaka} plakalı aracınızla ilgili size ulaşmak istedik. — As Egzoz & Makine` };
+    }
+  }
 })), modalAcik && /* @__PURE__ */ React.createElement(Modal, { title: form.id ? "Aracı Düzenle" : "Yeni Araç", onClose: () => setModalAcik(false), width: 480 }, !form.id && /* @__PURE__ */ React.createElement(PlakaKameraTarayici, { onSonuc: (deger) => {
     const p = plakaParcala(deger);
     setForm((f) => ({ ...f, plakaIl: p.il, plakaHarf: p.harf, plakaRakam: p.rakam }));
@@ -4237,6 +4487,46 @@ function GirisEkrani({ onGiris }) {
   }
   return /* @__PURE__ */ React.createElement("div", { className: "fp-vh-fix", style: { display: "flex", alignItems: "center", justifyContent: "center", background: C.bg } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 380, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 72, style: { marginBottom: 12 } }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: C.white, marginBottom: 4 } }, getSettings().firmaAdi), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 24 } }, "Devam etmek i\xE7in Google hesab\u0131n\u0131zla giri\u015F yap\u0131n"), /* @__PURE__ */ React.createElement("div", { ref: butonRef, style: { display: "flex", justifyContent: "center" } }), hata && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, color: C.red, fontSize: 12 } }, "\u26A0\uFE0F ", hata)));
 }
+function CopKutusu() {
+  const [liste, setListe] = useState(LS.get("copKutusu"));
+  const guncelle = () => setListe(LS.get("copKutusu"));
+  const geriYukle = (id) => {
+    copKutusundanGeriYukle(id);
+    guncelle();
+  };
+  const kaliciSil = (id) => {
+    if (!confirm("Bu kayıt kalıcı olarak silinsin mi? Bu işlem geri alınamaz.")) return;
+    copKutusundanKaliciSil(id);
+    guncelle();
+  };
+  const kalanGun = (oge) => Math.max(0, COP_KUTUSU_SAKLAMA_GUNU - Math.floor((new Date(today()) - new Date(oge.silinmeTarihi)) / 864e5));
+  const kaydiEtiketle = (oge) => {
+    const k = oge.kayit || {};
+    return k.ad || k.isEmriNo || k.plaka || k.baslik || k.faturaNo || k.aciklama || "Kayıt";
+  };
+  const siraliListe = [...liste].sort((a, b) => (b.silinmeTarihi || "").localeCompare(a.silinmeTarihi || ""));
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    { className: "fp-fade" },
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white, marginBottom: 16 } }, "🗑️ Çöp Kutusu"),
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: C.muted, marginBottom: 16 } }, "Silinen kayıtlar burada ", COP_KUTUSU_SAKLAMA_GUNU, " g\xFCn boyunca tutulur, isterseniz geri y\xFCkleyebilirsiniz. Bu s\xFCre sonunda otomatik olarak kalıcı silinir."),
+    siraliListe.length === 0
+      ? /* @__PURE__ */ React.createElement("div", { style: { ...S.card, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "🗑️"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Çöp kutusu boş."))
+      : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, siraliListe.map((oge) => /* @__PURE__ */ React.createElement(
+          "div",
+          { key: oge.id, style: { ...S.card, marginBottom: 0, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 } },
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("span", { style: S.badge(C.muted) }, KOLEKSIYON_LABEL[oge.koleksiyon] || oge.koleksiyon),
+            /* @__PURE__ */ React.createElement("strong", { style: { color: C.white, marginLeft: 8 } }, kaydiEtiketle(oge)),
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 4 } }, "Silindi: ", fmtDate(oge.silinmeTarihi), " — ", kalanGun(oge), " g\xFCn sonra kalıcı silinir")
+          ),
+          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } },
+            /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => geriYukle(oge.id) }, "♻️ Geri Yükle"),
+            /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => kaliciSil(oge.id) }, "🗑️ Kalıcı Sil")
+          )
+        )))
+  );
+}
 const SAYFALAR = [
   { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
   { id: "servis", label: "\u0130\u015F Emri Olu\u015Ftur", icon: "\u{1F527}", comp: ServisIsleri },
@@ -4247,6 +4537,7 @@ const SAYFALAR = [
   { id: "cariler", label: "Cariler", icon: "\u{1F465}", comp: Cariler },
   { id: "yapilacaklar", label: "Yapılacaklar", icon: "✅", comp: Yapilacaklar },
   { id: "muhasebe", label: "Muhasebe", icon: "\u{1F4B0}", comp: Muhasebe },
+  { id: "cop_kutusu", label: "\u00C7\u00F6p Kutusu", icon: "\u{1F5D1}\uFE0F", comp: CopKutusu },
   { id: "ayarlar", label: "Ayarlar", icon: "\u2699\uFE0F", comp: Ayarlar }
 ];
 function personelMigrasyonu() {
@@ -4358,6 +4649,7 @@ function App() {
   faturaMigrasyonu();
   elArabasiMigrasyonu();
   dosyaMigrasyonuYap();
+  copKutusuTemizle();
   const [sayfa, setSayfa] = useState(() => location.hash.replace("#", "") || "dashboard");
   const [sidebarAcik, setSidebarAcik] = useState(false);
   const [hedef, setHedef] = useState(null);
