@@ -52,13 +52,19 @@ function temaCssUygula() {
   kok.setProperty("--blue", C.blue);
 }
 function temaUygula(mod) {
-  Object.assign(C, mod === "acik" ? TEMA_ACIK : TEMA_KOYU);
+  const gercekMod = mod === "sistem" ? (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "koyu" : "acik") : mod;
+  Object.assign(C, gercekMod === "acik" ? TEMA_ACIK : TEMA_KOYU);
   temaCssUygula();
 }
 function temaDegistir(mod) {
   saveSettings({ ...getSettings(), tema: mod });
   temaUygula(mod);
   window.location.reload();
+}
+if (typeof window !== "undefined" && window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if ((getSettings().tema || "koyu") === "sistem") window.location.reload();
+  });
 }
 const HIZMET_TIP_SABIT = { egzoz_tamir: "\u{1F529} Egzoz Tamiri", chiptuning: "\u26A1 Chiptuning" };
 const HIZMET_TIP_VARSAYILAN_DIGER = [
@@ -2909,8 +2915,8 @@ function Cariler({ hedef, hedefTemizle } = {}) {
     setModalAcik(false);
   };
   const sil = (id) => {
-    if (servisler.some((s) => s.musteriId === id) || satislar.some((s) => s.musteriId === id)) {
-      alert("Bu m\xFC\u015Fteriye ait kay\u0131tlar var, \xF6nce onlar\u0131 d\xFCzenleyin/silin.");
+    if (servisler.some((s) => s.musteriId === id) || satislar.some((s) => s.musteriId === id) || faturalar.some((f) => f.musteriId === id)) {
+      alert("Bu m\xFC\u015Fteriye ait kay\u0131tlar (i\u015F emri, sat\u0131\u015F veya fatura) var, \xF6nce onlar\u0131 d\xFCzenleyin/silin.");
       return;
     }
     if (!confirm("Bu cari silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)")) return;
@@ -2921,7 +2927,7 @@ function Cariler({ hedef, hedefTemizle } = {}) {
     if (silinen) coplendir("cariler", silinen);
   };
   const topluSil = (secilenler) => {
-    const engellenen = secilenler.filter((c) => servisler.some((s) => s.musteriId === c.id) || satislar.some((s) => s.musteriId === c.id));
+    const engellenen = secilenler.filter((c) => servisler.some((s) => s.musteriId === c.id) || satislar.some((s) => s.musteriId === c.id) || faturalar.some((f) => f.musteriId === c.id));
     if (engellenen.length > 0) {
       alert(`${engellenen.length} cariye ait kayıtlar var, önce onları düzenleyin/silin. Diğerleri silinecek.`);
     }
@@ -2935,15 +2941,20 @@ function Cariler({ hedef, hedefTemizle } = {}) {
     setListe(yeni);
   };
   const manuelFaturalar = (id) => faturalar.filter((f) => f.musteriId === id && (f.tur === "satis" || f.tur === "alis"));
+  const faturaBulKaynak = (kaynakId) => faturalar.find((f) => f.kaynakId === kaynakId);
+  const faturaOdenenTutar = (f) => (f.odemeler || []).reduce((t, o) => t + (+o.tutar || 0), 0);
+  const faturaKalanTutar = (f) => Math.max(0, Math.round(((+f.toplam || 0) - faturaOdenenTutar(f)) * 100) / 100);
   const harcama = (id) => servisler.filter((s) => s.musteriId === id).reduce((t, s) => t + (+s.tutar || 0), 0) + satislar.filter((s) => s.musteriId === id).reduce((t, s) => t + (+s.toplam || 0), 0) + manuelFaturalar(id).filter((f) => f.tur === "satis").reduce((t, f) => t + (+f.toplam || 0), 0);
-  const borc = (id) => servisler.filter((s) => s.musteriId === id).reduce((t, s) => t + servisKalanTutar(s), 0);
+  const borc = (id) => servisler.filter((s) => s.musteriId === id).reduce((t, s) => t + servisKalanTutar(s), 0)
+    + satislar.filter((s) => s.musteriId === id).reduce((t, s) => { const f = faturaBulKaynak(s.id); return t + (f ? faturaKalanTutar(f) : 0); }, 0)
+    + manuelFaturalar(id).filter((f) => f.tur === "satis").reduce((t, f) => t + faturaKalanTutar(f), 0);
   const aramaMetni = arama.trim().toLocaleLowerCase("tr-TR");
   const filtreliListe = !aramaMetni ? liste : liste.filter((c) => (c.ad + " " + (c.tel || "") + " " + (c.adres || "")).toLocaleLowerCase("tr-TR").includes(aramaMetni));
   const ekstreCari = ekstreId && liste.find((c) => c.id === ekstreId);
   const ekstreHareketleriGetir = (id) => id ? [
     ...servisler.filter((s) => s.musteriId === id).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F527} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`, tutar: s.tutar, odendi: servisOdemeDurumu(s) === "odendi", kismi: servisOdemeDurumu(s) === "kismi", yontem: s.odemeYontemi || "\u2014" })),
-    ...satislar.filter((s) => s.musteriId === id).map((s) => ({ tarih: s.tarih, aciklama: `\u{1F6D2} ${EL_ARABASI_TUR_LABEL[s.tur] || ""}`, tutar: s.toplam, odendi: true, yontem: "\u2014" })),
-    ...manuelFaturalar(id).map((f) => ({ tarih: f.tarih, aciklama: `${f.tur === "alis" ? "\u{1F4E5} Al\u0131\u015F" : "\u{1F4E4} Sat\u0131\u015F"} \u2014 ${f.aciklama || f.faturaNo}`, tutar: f.tur === "alis" ? -f.toplam : f.toplam, odendi: true, yontem: (f.odemeler && f.odemeler.length > 0) ? f.odemeler[f.odemeler.length - 1].yontem || "\u2014" : "\u2014" }))
+    ...satislar.filter((s) => s.musteriId === id).map((s) => { const f = faturaBulKaynak(s.id); const kalan = f ? faturaKalanTutar(f) : 0; const odenen = f ? faturaOdenenTutar(f) : 0; return { tarih: s.tarih, aciklama: `\u{1F6D2} ${EL_ARABASI_TUR_LABEL[s.tur] || ""}`, tutar: s.toplam, odendi: kalan <= 0, kismi: kalan > 0 && odenen > 0, yontem: f && f.odemeler && f.odemeler.length > 0 ? f.odemeler[f.odemeler.length - 1].yontem || "\u2014" : "\u2014" }; }),
+    ...manuelFaturalar(id).map((f) => { const kalan = f.tur === "alis" ? 0 : faturaKalanTutar(f); const odenen = faturaOdenenTutar(f); return { tarih: f.tarih, aciklama: `${f.tur === "alis" ? "\u{1F4E5} Al\u0131\u015F" : "\u{1F4E4} Sat\u0131\u015F"} \u2014 ${f.aciklama || f.faturaNo}`, tutar: f.tur === "alis" ? -f.toplam : f.toplam, odendi: kalan <= 0, kismi: kalan > 0 && odenen > 0, yontem: (f.odemeler && f.odemeler.length > 0) ? f.odemeler[f.odemeler.length - 1].yontem || "\u2014" : "\u2014" }; })
   ].sort((a, b) => (a.tarih || "").localeCompare(b.tarih || "")).map((h, i) => ({ ...h, id: i })) : [];
   const ekstreHareketleri = ekstreHareketleriGetir(ekstreId);
   const faturaOlusturKaydet = () => {
@@ -3116,6 +3127,63 @@ function Muhasebe() {
   const [yeniFaturaModal, setYeniFaturaModal] = useState(false);
   const [yeniFaturaForm, setYeniFaturaForm] = useState({});
   const [yeniFaturaHata, setYeniFaturaHata] = useState("");
+  const [raporDonemi, setRaporDonemi] = useState(30);
+  const [raporMetni, setRaporMetni] = useState("");
+  const [raporYukleniyor, setRaporYukleniyor] = useState(false);
+  const [raporHata, setRaporHata] = useState("");
+  const raporOzetHesapla = (gunSayisi) => {
+    const bugun = today();
+    const baslangicTarih = /* @__PURE__ */ new Date();
+    baslangicTarih.setDate(baslangicTarih.getDate() - gunSayisi);
+    const baslangic = baslangicTarih.toISOString().slice(0, 10);
+    const donemServisler = servisler.filter((s) => s.tarih >= baslangic && s.tarih <= bugun && s.durum !== "iptal");
+    const donemSatislar = satislar.filter((s) => s.tarih >= baslangic && s.tarih <= bugun);
+    const donemGiderler = giderler.filter((g) => g.tarih >= baslangic && g.tarih <= bugun);
+    const servisGeliri = donemServisler.reduce((t, s) => t + (+s.tutar || 0), 0);
+    const satisGeliri = donemSatislar.reduce((t, s) => t + (+s.toplam || 0), 0);
+    const toplamGelir = servisGeliri + satisGeliri;
+    const toplamGider = donemGiderler.reduce((t, g) => t + (+g.tutar || 0), 0);
+    const netKar = toplamGelir - toplamGider;
+    const hizmetDagilimi = {};
+    donemServisler.forEach((s) => {
+      const l = HIZMET_TIP_LABEL[s.hizmetTuru] || s.hizmetTuru;
+      hizmetDagilimi[l] = (hizmetDagilimi[l] || 0) + (+s.tutar || 0);
+    });
+    const giderKategoriDagilimi = {};
+    donemGiderler.forEach((g) => {
+      giderKategoriDagilimi[g.kategori] = (giderKategoriDagilimi[g.kategori] || 0) + (+g.tutar || 0);
+    });
+    const acikBorclular = cariler.map((c) => ({ ad: c.ad, borc: servisler.filter((s) => s.musteriId === c.id).reduce((t, s) => t + servisKalanTutar(s), 0) })).filter((c) => c.borc > 0).sort((a, b) => b.borc - a.borc).slice(0, 5);
+    const toplamHesapBakiye = hesaplar.reduce((t, h) => t + (+h.bakiye || 0), 0);
+    return { baslangic, bugun, donemServisler, donemSatislar, donemGiderler, servisGeliri, satisGeliri, toplamGelir, toplamGider, netKar, hizmetDagilimi, giderKategoriDagilimi, acikBorclular, toplamHesapBakiye };
+  };
+  const raporOlustur = async () => {
+    setRaporYukleniyor(true);
+    setRaporHata("");
+    setRaporMetni("");
+    try {
+      const o = raporOzetHesapla(raporDonemi);
+      const veri = `D\xF6nem: son ${raporDonemi} g\xFCn (${o.baslangic} — ${o.bugun}).
+Toplam Gelir: ${fmtTL(o.toplamGelir)} (Servis: ${fmtTL(o.servisGeliri)}, El Arabası: ${fmtTL(o.satisGeliri)}).
+Toplam Gider: ${fmtTL(o.toplamGider)}.
+Net K\xE2r/Zarar: ${fmtTL(o.netKar)}.
+Hizmet T\xFCr\xFCne G\xF6re Gelir Dağılımı: ${Object.entries(o.hizmetDagilimi).map(([k, v]) => `${k}: ${fmtTL(v)}`).join(", ") || "veri yok"}.
+Gider Kategorisine G\xF6re Dağılım: ${Object.entries(o.giderKategoriDagilimi).map(([k, v]) => `${k}: ${fmtTL(v)}`).join(", ") || "veri yok"}.
+En \xC7ok Bor\xE7lu M\xFCşteriler: ${o.acikBorclular.map((c) => `${c.ad} (${fmtTL(c.borc)})`).join(", ") || "yok"}.
+Toplam Kasa/Banka Bakiyesi: ${fmtTL(o.toplamHesapBakiye)}.
+İş Sayısı: ${o.donemServisler.length} servis işi, ${o.donemSatislar.length} el arabası satışı.`;
+      const prompt = `Sen bir oto egzoz/chiptuning/el arabası \xFCretim at\xF6lyesi i\xE7in mali analiz yapan bir muhasebe danışmanısın. Aşağıdaki verilere dayanarak T\xFCrk\xE7e, başlıklarla d\xFCzenlenmiş bir mali analiz raporu yaz: genel durum \xF6zeti, dikkat \xE7eken noktalar, riskler (\xF6rn. y\xFCksek bor\xE7, artan gider), ve somut 2-3 \xF6neri. Uydurma sayı kullanma, sadece verilen verileri yorumla, kısa ve net yaz.
+
+Veri:
+${veri}`;
+      const cevap = await aiSor(prompt);
+      setRaporMetni(cevap || "Rapor oluşturulamadı.");
+    } catch (e) {
+      setRaporHata(e.message);
+    } finally {
+      setRaporYukleniyor(false);
+    }
+  };
   const yeniFaturaKaydet = () => {
     if (!yeniFaturaForm.musteriId) {
       setYeniFaturaHata("M\xFCşteri se\xE7imi zorunludur.");
@@ -3385,7 +3453,7 @@ function Muhasebe() {
       React.createElement(StatCard, { color: C.blue, icon: "\u23F3", value: fmtTL(tahsilEdilecek), label: "Tahsil Edilecek" }),
       React.createElement(StatCard, { color: C.accent, icon: "\u{1F3E6}", value: fmtTL(toplamBakiye), label: "Toplam Bakiye (T\xFCm Hesaplar)" }),
     ),
-    React.createElement(TabBar, { tabs: [["faturalar", `\u{1F9FE} Faturalar (${faturalar.length})`], ["giderler", `\u{1F4C9} Giderler (${giderler.length})`], ["hesaplar", "\u{1F3E6} Hesaplar"]], active: sekme, onChange: setSekme }),
+    React.createElement(TabBar, { tabs: [["faturalar", `\u{1F9FE} Faturalar (${faturalar.length})`], ["giderler", `\u{1F4C9} Giderler (${giderler.length})`], ["hesaplar", "\u{1F3E6} Hesaplar"], ["raporlar", "\u{1F4CA} Raporlar"]], active: sekme, onChange: setSekme }),
 
     sekme === "faturalar" && odenmemisServisler.length > 0 && React.createElement(
       "div",
@@ -3503,6 +3571,38 @@ function Muhasebe() {
         ))
       )
     ),
+    sekme === "raporlar" && (() => {
+      const o = raporOzetHesapla(raporDonemi);
+      return React.createElement(
+        "div",
+        null,
+        React.createElement(Grid4, null,
+          React.createElement(StatCard, { color: C.green, icon: "\u{1F4B0}", value: fmtTL(o.toplamGelir), label: "Toplam Gelir" }),
+          React.createElement(StatCard, { color: C.red, icon: "\u{1F4C9}", value: fmtTL(o.toplamGider), label: "Toplam Gider" }),
+          React.createElement(StatCard, { color: o.netKar >= 0 ? C.green : C.red, icon: "\u{1F4C8}", value: fmtTL(o.netKar), label: "Net K\xE2r/Zarar" }),
+          React.createElement(StatCard, { color: C.blue, icon: "\u{1F3E6}", value: fmtTL(o.toplamHesapBakiye), label: "Toplam Bakiye" })
+        ),
+        React.createElement(
+          "div",
+          { style: { ...S.card, marginTop: 14 } },
+          React.createElement("div", { style: S.secTitle }, "\u{1F916} AI Mali Analiz Raporu"),
+          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Se\xE7ilen d\xF6nemdeki gelir/gider/bor\xE7 verilerinizi yapay zekaya g\xF6nderip detaylı bir analiz ve \xF6neri raporu oluşturur."),
+          React.createElement(
+            "div",
+            { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 14 } },
+            React.createElement("select", { style: { ...S.sel, width: "auto" }, value: raporDonemi, onChange: (e) => setRaporDonemi(+e.target.value) },
+              React.createElement("option", { value: 7 }, "Son 7 g\xFCn"),
+              React.createElement("option", { value: 30 }, "Son 30 g\xFCn"),
+              React.createElement("option", { value: 90 }, "Son 90 g\xFCn"),
+              React.createElement("option", { value: 365 }, "Son 12 ay")
+            ),
+            React.createElement("button", { style: S.btn(), onClick: raporOlustur, disabled: raporYukleniyor }, raporYukleniyor ? "⏳ Oluşturuluyor..." : "\u{1F916} Rapor Oluştur")
+          ),
+          raporHata && React.createElement("div", { style: { padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5, marginBottom: 12 } }, "⚠️ ", raporHata),
+          raporMetni && React.createElement("div", { style: { padding: "14px 16px", background: C.surface, borderRadius: 8, fontSize: 13, color: C.text, whiteSpace: "pre-wrap", lineHeight: 1.7 } }, raporMetni)
+        )
+      );
+    })(),
     giderModal && React.createElement(
       Modal,
       { title: giderForm.id ? "Gideri D\xFCzenle" : "Yeni Gider", onClose: () => setGiderModal(false), width: 460 },
@@ -3892,7 +3992,8 @@ function Ayarlar() {
       "div",
       { style: { display: "flex", gap: 10 } },
       React.createElement("button", { type: "button", style: (form.tema || "koyu") === "koyu" ? S.btn() : S.btnO, onClick: () => temaDegistir("koyu") }, "\u{1F319} Koyu Mod"),
-      React.createElement("button", { type: "button", style: form.tema === "acik" ? S.btn() : S.btnO, onClick: () => temaDegistir("acik") }, "\u2600\uFE0F A\xE7\u0131k Mod")
+      React.createElement("button", { type: "button", style: form.tema === "acik" ? S.btn() : S.btnO, onClick: () => temaDegistir("acik") }, "\u2600\uFE0F A\xE7\u0131k Mod"),
+      React.createElement("button", { type: "button", style: form.tema === "sistem" ? S.btn() : S.btnO, onClick: () => temaDegistir("sistem") }, "\u{1F4F1} Sistem")
     )
   ), React.createElement("div", { style: S.card },
     React.createElement("div", { style: S.secTitle }, "\u{1F510} Roller ve Yetkiler"),
