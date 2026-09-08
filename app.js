@@ -4489,6 +4489,7 @@ function GirisEkrani({ onGiris }) {
 }
 function CopKutusu() {
   const [liste, setListe] = useState(LS.get("copKutusu"));
+  const [secilenler, setSecilenler] = useState(() => /* @__PURE__ */ new Set());
   const guncelle = () => setListe(LS.get("copKutusu"));
   const geriYukle = (id) => {
     copKutusundanGeriYukle(id);
@@ -4505,6 +4506,27 @@ function CopKutusu() {
     return k.ad || k.isEmriNo || k.plaka || k.baslik || k.faturaNo || k.aciklama || "Kayıt";
   };
   const siraliListe = [...liste].sort((a, b) => (b.silinmeTarihi || "").localeCompare(a.silinmeTarihi || ""));
+  const secToggle = (id) => setSecilenler((prev) => {
+    const yeni = new Set(prev);
+    if (yeni.has(id)) yeni.delete(id); else yeni.add(id);
+    return yeni;
+  });
+  const hepsiSecili = siraliListe.length > 0 && siraliListe.every((oge) => secilenler.has(oge.id));
+  const hepsiniSecToggle = () => setSecilenler(() => hepsiSecili ? /* @__PURE__ */ new Set() : new Set(siraliListe.map((oge) => oge.id)));
+  const secilenSayisi = secilenler.size;
+  const topluGeriYukle = () => {
+    if (secilenSayisi === 0) return;
+    secilenler.forEach((id) => copKutusundanGeriYukle(id));
+    setSecilenler(/* @__PURE__ */ new Set());
+    guncelle();
+  };
+  const topluKaliciSil = () => {
+    if (secilenSayisi === 0) return;
+    if (!confirm(`${secilenSayisi} kayıt kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`)) return;
+    secilenler.forEach((id) => copKutusundanKaliciSil(id));
+    setSecilenler(/* @__PURE__ */ new Set());
+    guncelle();
+  };
   return /* @__PURE__ */ React.createElement(
     "div",
     { className: "fp-fade" },
@@ -4512,19 +4534,41 @@ function CopKutusu() {
     /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: C.muted, marginBottom: 16 } }, "Silinen kayıtlar burada ", COP_KUTUSU_SAKLAMA_GUNU, " g\xFCn boyunca tutulur, isterseniz geri y\xFCkleyebilirsiniz. Bu s\xFCre sonunda otomatik olarak kalıcı silinir."),
     siraliListe.length === 0
       ? /* @__PURE__ */ React.createElement("div", { style: { ...S.card, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "🗑️"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Çöp kutusu boş."))
-      : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, siraliListe.map((oge) => /* @__PURE__ */ React.createElement(
-          "div",
-          { key: oge.id, style: { ...S.card, marginBottom: 0, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 } },
-          /* @__PURE__ */ React.createElement("div", null,
-            /* @__PURE__ */ React.createElement("span", { style: S.badge(C.muted) }, KOLEKSIYON_LABEL[oge.koleksiyon] || oge.koleksiyon),
-            /* @__PURE__ */ React.createElement("strong", { style: { color: C.white, marginLeft: 8 } }, kaydiEtiketle(oge)),
-            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 4 } }, "Silindi: ", fmtDate(oge.silinmeTarihi), " — ", kalanGun(oge), " g\xFCn sonra kalıcı silinir")
+      : /* @__PURE__ */ React.createElement(React.Fragment, null,
+          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 } },
+            /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: C.text, cursor: "pointer" } },
+              /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: hepsiSecili, onChange: hepsiniSecToggle, style: { cursor: "pointer" } }),
+              "Tümünü Seç"
+            ),
+            secilenSayisi > 0 && /* @__PURE__ */ React.createElement(
+              "div",
+              { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "8px 14px", background: C.accent + "18", borderRadius: 8 } },
+              /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: C.text } }, secilenSayisi, " kayıt seçili"),
+              /* @__PURE__ */ React.createElement(
+                "div",
+                { style: { display: "flex", gap: 8 } },
+                /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: topluGeriYukle }, "♻️ Seçilenleri Geri Yükle"),
+                /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: topluKaliciSil }, "🗑️ Seçilenleri Kalıcı Sil")
+              )
+            )
           ),
-          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } },
-            /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => geriYukle(oge.id) }, "♻️ Geri Yükle"),
-            /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => kaliciSil(oge.id) }, "🗑️ Kalıcı Sil")
-          )
-        )))
+          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, siraliListe.map((oge) => /* @__PURE__ */ React.createElement(
+            "div",
+            { key: oge.id, style: { ...S.card, marginBottom: 0, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 } },
+            /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "flex-start", gap: 10 } },
+              /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: secilenler.has(oge.id), onChange: () => secToggle(oge.id), style: { marginTop: 4, cursor: "pointer", width: 16, height: 16, flexShrink: 0 } }),
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("span", { style: S.badge(C.muted) }, KOLEKSIYON_LABEL[oge.koleksiyon] || oge.koleksiyon),
+                /* @__PURE__ */ React.createElement("strong", { style: { color: C.white, marginLeft: 8 } }, kaydiEtiketle(oge)),
+                /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 4 } }, "Silindi: ", fmtDate(oge.silinmeTarihi), " — ", kalanGun(oge), " g\xFCn sonra kalıcı silinir")
+              )
+            ),
+            /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } },
+              /* @__PURE__ */ React.createElement("button", { style: S.btnO, onClick: () => geriYukle(oge.id) }, "♻️ Geri Yükle"),
+              /* @__PURE__ */ React.createElement("button", { style: S.btnR, onClick: () => kaliciSil(oge.id) }, "🗑️ Kalıcı Sil")
+            )
+          )))
+        )
   );
 }
 const SAYFALAR = [
