@@ -4970,15 +4970,15 @@ ${sonuc}`;
     return /* @__PURE__ */ React.createElement("button", {
       onClick: () => setAcik(true),
       title: "AS Asistan",
-      style: { position: "fixed", bottom: 20, right: 20, width: 56, height: 56, borderRadius: "50%", background: C.accent, color: "#161311", border: "none", boxShadow: "0 4px 16px #00000055", fontSize: 16, fontWeight: 800, cursor: "pointer", zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center" }
-    }, "AS");
+      style: { position: "fixed", bottom: 20, right: 20, width: 56, height: 56, borderRadius: "50%", background: C.accent, border: "none", boxShadow: "0 4px 16px #00000055", cursor: "pointer", zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: 6 }
+    }, /* @__PURE__ */ React.createElement(LogoImg, { size: 40 }));
   }
   return /* @__PURE__ */ React.createElement(
     "div",
     { style: { position: "fixed", bottom: 20, right: 20, width: "min(360px,92vw)", height: "min(520px,76vh)", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, boxShadow: "0 8px 30px #00000066", zIndex: 900, display: "flex", flexDirection: "column", overflow: "hidden" } },
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderBottom: `1px solid ${C.border}` } },
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
-        /* @__PURE__ */ React.createElement("span", { style: { width: 26, height: 26, borderRadius: "50%", background: C.accent, color: "#161311", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12 } }, "AS"),
+        /* @__PURE__ */ React.createElement("span", { style: { width: 30, height: 30, borderRadius: "50%", background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 4 } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 22 })),
         /* @__PURE__ */ React.createElement("strong", { style: { color: C.white, fontSize: 13.5 } }, "AS Asistan")
       ),
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center" } },
