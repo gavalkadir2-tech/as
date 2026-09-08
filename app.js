@@ -1887,7 +1887,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       aciklama: `\u{1F6E1}\uFE0F Garanti kapsam\u0131nda tekrar i\u015F \u2014 kaynak: ${s.isEmriNo || ""}`,
       garantiKaynakIsId: s.id,
       tutar: 0,
-      asama: "tamirde"
+      asama: "teslim_edildi"
     });
     setHata("");
     setModalAcik(true);
@@ -1974,7 +1974,7 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
     return kalanGun >= 0 ? { metin: `Garanti: ${kalanGun} g\xFCn kald\u0131`, renk: C.green } : { metin: "Garanti bitti", renk: C.muted };
   };
   const yeniIsEmriAc = () => {
-    setForm({ tarih: today(), saat: nowTime(), asama: "tamirde", tutar: 0, kdvOrani: 0, personelId: sonKullanilanPersonelId(), hizmetTuru: sonKullanilanHizmetTuru() });
+    setForm({ tarih: today(), saat: nowTime(), asama: "teslim_edildi", tutar: 0, kdvOrani: 0, personelId: sonKullanilanPersonelId(), hizmetTuru: sonKullanilanHizmetTuru() });
     setHata("");
     setModalAcik(true);
   };
@@ -4573,8 +4573,8 @@ function CopKutusu() {
 }
 const SAYFALAR = [
   { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
-  { id: "servis", label: "\u0130\u015F Emri Olu\u015Ftur", icon: "\u{1F527}", comp: ServisIsleri },
   { id: "takvim", label: "Randevu Takvimi", icon: "\u{1F4C5}", comp: Takvim },
+  { id: "servis", label: "\u0130\u015F Emri", icon: "\u{1F527}", comp: ServisIsleri },
   { id: "araclar", label: "Ara\xE7 Kay\u0131tlar\u0131", icon: "\u{1F697}", comp: Araclar },
   { id: "el_arabasi", label: "El Arabas\u0131", icon: "\u{1F6D2}", comp: ElArabasi },
   { id: "personel", label: "Personel", icon: "\u{1F9D1}\u200D\u{1F527}", comp: Personel },
