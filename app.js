@@ -4713,15 +4713,22 @@ function elArabasiMigrasyonu() {
   localStorage.setItem("fp_el_arabasi_migrasyon_v1", "1");
 }
 const AS_SAYFA_IDLERI = ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "personel", "cariler", "yapilacaklar", "muhasebe", "cop_kutusu", "ayarlar"];
-const AS_SISTEM_PROMPTU = `Sen "AS" isimli, bir oto egzoz/chiptuning/el arabası \xFCretim at\xF6lyesinin y\xF6netim uygulaması i\xE7inde \xE7alışan yapay zeka asistanısın. Kullanıcıya (at\xF6lye sahibi/\xE7alışanı) T\xFCrk\xE7e, kısa ve net cevap ver. Sana verilen "G\xFCncel Durum" bilgisini kullanarak analiz/\xF6zet sorularını yanıtlayabilirsin.
-Eğer kullanıcı senden bir sayfaya gitmeni istiyorsa (\xF6rn. "cariler sayfasını a\xE7", "muhasebeye git"), cevabının EN SONUNA yeni bir satırda tam olarak şu formatta yaz:
+function asSistemPromptuOlustur() {
+  return `Sen "AS" isimli, bir oto egzoz/chiptuning/el arabas\u0131 \xFCretim at\xF6lyesinin y\xF6netim uygulamas\u0131 i\xE7inde \xE7al\u0131\u015Fan yapay zeka asistan\u0131s\u0131n. Kullan\u0131c\u0131ya (at\xF6lye sahibi/\xE7al\u0131\u015Fan\u0131) T\xFCrk\xE7e, k\u0131sa ve net cevap ver. Sana verilen "G\xFCncel Durum" bilgisini kullanarak analiz/\xF6zet sorular\u0131n\u0131 yan\u0131tlayabilirsin.
+Eğer kullanıcı senden bir sayfaya gitmeni istiyorsa (örn. "cariler sayfasını aç", "muhasebeye git"), cevabının EN SONUNA yeni bir satırda tam olarak şu formatta yaz:
 AKSIYON:{"tip":"sayfaya_git","sayfa":"<id>"}
 <id> şunlardan biri olmalı: ${AS_SAYFA_IDLERI.join(", ")}.
-Eğer kullanıcı senden bir g\xF6rev/hatırlatma eklemeni istiyorsa, cevabının sonuna:
+Eğer kullanıcı senden bir görev/hatırlatma eklemeni istiyorsa, cevabının sonuna:
 AKSIYON:{"tip":"yeni_gorev","baslik":"<başlık>","oncelik":"dusuk|orta|yuksek"}
-Eğer kullanıcı senden yeni bir cari/m\xFCşteri eklemeni istiyorsa, cevabının sonuna:
+Eğer kullanıcı senden yeni bir cari/müşteri eklemeni istiyorsa, cevabının sonuna:
 AKSIYON:{"tip":"yeni_cari","ad":"<ad>","tel":"<telefon veya boş>"}
-Bu \xFC\xE7 durumun dışında AKSIYON satırı ekleme, sadece normal cevap ver. Emin değilsen ya da uygulamada yapamayacağın bir şey istenirse bunu a\xE7ık\xE7a s\xF6yle, uydurma.`;
+Eğer kullanıcı senden yeni bir iş emri oluşturmanı istiyorsa (plaka mutlaka gerekli, yoksa kullanıcıya plaka sor ve AKSIYON yazma), cevabının sonuna:
+AKSIYON:{"tip":"yeni_is_emri","musteri":"<ad veya boş>","plaka":"<plaka>","hizmetTuru":"<key>","tutar":<sayı>,"aciklama":"<opsiyonel>"}
+hizmetTuru şunlardan biri olmalı: ${Object.keys(HIZMET_TIP_LABEL).join(", ")}.
+Eğer kullanıcı bir iş için ödeme/tahsilat almanı istiyorsa, cevabının sonuna:
+AKSIYON:{"tip":"odeme_al","isEmriNo":"<varsa, yoksa boş>","plaka":"<varsa, yoksa boş>","musteri":"<varsa, yoksa boş>","tutar":<opsiyonel sayı, verilmezse kalan tutarın tamamı alınır>}
+Bu durumların dışında AKSIYON satırı ekleme, sadece normal cevap ver. Emin değilsen ya da uygulamada yapamayacağın bir şey istenirse bunu açıkça söyle, uydurma.`;
+}
 function asBaglamOlustur() {
   const servisler = LS.get("servisIsleri");
   const cariler = LS.get("cariler");
@@ -4770,7 +4777,106 @@ function asAksiyonUygula(aksiyon, sayfayaGit) {
     LS.set("cariler", [...liste, kayit]);
     return `✅ Cari eklendi: ${aksiyon.ad}`;
   }
+  if (aksiyon.tip === "yeni_is_emri") {
+    return asYeniIsEmriOlustur(aksiyon);
+  }
+  if (aksiyon.tip === "odeme_al") {
+    return asOdemeAl(aksiyon);
+  }
   return null;
+}
+function asYeniIsEmriOlustur(aksiyon) {
+  if (!(aksiyon.plaka || "").trim()) return "⚠️ İş emri oluşturmak için plaka bilgisi gerekli.";
+  const cariler = LS.get("cariler");
+  const araclar = LS.get("araclar");
+  const servisler = LS.get("servisIsleri");
+  const musteriAdi = (aksiyon.musteri || "").trim();
+  let musteriId = "";
+  if (musteriAdi) {
+    const musteriNorm = musteriAdi.toLocaleLowerCase("tr-TR");
+    const bulunanCari = cariler.find((c) => (c.ad || "").trim().toLocaleLowerCase("tr-TR") === musteriNorm);
+    if (bulunanCari) musteriId = bulunanCari.id;
+  }
+  const normalize = plakaNormalize(aksiyon.plaka);
+  let bulunanArac = araclar.find((a) => plakaNormalize(a.plaka) === normalize);
+  let guncelCariler = cariler;
+  if (!bulunanArac) {
+    if (!musteriId && musteriAdi) {
+      const yeniCari = { id: uid(), ad: musteriAdi, tel: "", adres: "" };
+      guncelCariler = [...cariler, yeniCari];
+      LS.set("cariler", guncelCariler);
+      musteriId = yeniCari.id;
+    }
+    bulunanArac = { id: uid(), musteriId, plaka: normalize, grup: "otomobil", marka: "", model: "" };
+    LS.set("araclar", [...araclar, bulunanArac]);
+  } else if (!musteriId) {
+    musteriId = bulunanArac.musteriId || "";
+  }
+  const hizmetTuru = HIZMET_TIP_LABEL[aksiyon.hizmetTuru] ? aksiyon.hizmetTuru : Object.keys(HIZMET_TIP_LABEL)[0];
+  const tutar = +aksiyon.tutar || 0;
+  const asama = "teslim_edildi";
+  const kayit = {
+    id: uid(),
+    isEmriNo: sonrakiIsEmriNo(),
+    tarih: today(),
+    saat: nowTime(),
+    musteriId,
+    aracId: bulunanArac.id,
+    hizmetTuru,
+    aciklama: aksiyon.aciklama || "",
+    tutar,
+    kdvOrani: 0,
+    asama,
+    durum: asamaDurum(asama),
+    kalemler: [{ id: uid(), tur: "iscilik", ad: HIZMET_TIP_LABEL[hizmetTuru] || "Hizmet", adet: 1, birimFiyat: tutar, tutar }],
+    durumGecmisi: [{ tarih: today(), asama, not: "AS asistan ile oluşturuldu." }]
+  };
+  LS.set("servisIsleri", [...servisler, kayit]);
+  if (musteriId) {
+    faturaOlustur("servis", kayit.id, musteriId, kayit.tarih, `${kayit.isEmriNo} — ${HIZMET_TIP_LABEL[hizmetTuru] || ""}`, kayit.kalemler, tutar);
+  }
+  return `✅ İş emri oluşturuldu: ${kayit.isEmriNo} — ${bulunanArac.plaka} (${fmtTL(tutar)})`;
+}
+function asOdemeAl(aksiyon) {
+  const servisler = LS.get("servisIsleri");
+  const araclar = LS.get("araclar");
+  const cariler = LS.get("cariler");
+  const hesaplar = LS.get("hesaplar");
+  if (hesaplar.length === 0) return "⚠️ Ödeme alınamadı: önce Muhasebe'den bir hesap (kasa/banka) eklemelisin.";
+  let adaylar = servisler.filter((s) => servisOdemeDurumu(s) !== "odendi");
+  if ((aksiyon.isEmriNo || "").trim()) {
+    const norm = aksiyon.isEmriNo.trim().toLocaleLowerCase("tr-TR");
+    adaylar = adaylar.filter((s) => (s.isEmriNo || "").toLocaleLowerCase("tr-TR") === norm);
+  } else {
+    if ((aksiyon.plaka || "").trim()) {
+      const normalize = plakaNormalize(aksiyon.plaka);
+      adaylar = adaylar.filter((s) => {
+        const a = araclar.find((x) => x.id === s.aracId);
+        return a && plakaNormalize(a.plaka) === normalize || plakaNormalize(s.aracPlaka || "") === normalize;
+      });
+    }
+    if ((aksiyon.musteri || "").trim()) {
+      const musteriNorm = aksiyon.musteri.trim().toLocaleLowerCase("tr-TR");
+      adaylar = adaylar.filter((s) => {
+        const c = cariler.find((x) => x.id === s.musteriId);
+        return c && (c.ad || "").trim().toLocaleLowerCase("tr-TR").includes(musteriNorm);
+      });
+    }
+  }
+  adaylar.sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""));
+  const hedefIs = adaylar[0];
+  if (!hedefIs) return "⚠️ Eşleşen, ödemesi bekleyen bir iş bulunamadı.";
+  const kalan = servisKalanTutar(hedefIs);
+  const girilenTutar = Math.min(+aksiyon.tutar || kalan, kalan);
+  if (!(girilenTutar > 0)) return `⚠️ ${hedefIs.isEmriNo || ""} zaten tamamen ödenmiş.`;
+  const hesap = hesaplar[0];
+  hesapHareketiKaydet(hesap.id, "giris", girilenTutar, today(), `Servis \xF6demesi (AS) — ${hedefIs.isEmriNo || ""}`, "servis", "Nakit");
+  const yeniOdemeler = [...(hedefIs.odemeler || []), { id: uid(), tarih: today(), tutar: girilenTutar, yontem: "Nakit", hesapId: hesap.id }];
+  const tamOdendi = servisKalanTutar({ ...hedefIs, odemeler: yeniOdemeler }) <= 0;
+  const yeni = servisler.map((x) => x.id === hedefIs.id ? { ...x, odemeler: yeniOdemeler, odendi: tamOdendi, odemeHesapId: hesap.id, odemeYontemi: "Nakit" } : x);
+  LS.set("servisIsleri", yeni);
+  const yeniKalan = servisKalanTutar({ ...hedefIs, odemeler: yeniOdemeler });
+  return `✅ ${hedefIs.isEmriNo || ""} i\xE7in ${fmtTL(girilenTutar)} ödeme alındı (${hesap.ad}, Nakit).${yeniKalan > 0 ? ` Kalan: ${fmtTL(yeniKalan)}` : ""}`;
 }
 function AsAsistani({ sayfayaGit }) {
   const [acik, setAcik] = useState(false);
@@ -4804,7 +4910,7 @@ function AsAsistani({ sayfayaGit }) {
     setYukleniyor(true);
     try {
       const gecmis = yeniMesajlar.slice(-8).map((m) => `${m.rol === "kullanici" ? "Kullanıcı" : "AS"}: ${m.metin}`).join("\n");
-      const tamPrompt = `${AS_SISTEM_PROMPTU}
+      const tamPrompt = `${asSistemPromptuOlustur()}
 
 G\xFCncel Durum:
 ${asBaglamOlustur()}
