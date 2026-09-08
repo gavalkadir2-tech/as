@@ -1671,7 +1671,7 @@ function Takvim() {
     )
   );
 }
-function ServisIsleri({ hedef, hedefTemizle } = {}) {
+function ServisIsleri({ hedef, hedefTemizle, sayfayaGit } = {}) {
   const [cariler, setCariler] = useState(LS.get("cariler"));
   const [araclar, setAraclar] = useState(LS.get("araclar"));
   const [personelListesi] = useState(LS.get("personel"));
@@ -1997,7 +1997,10 @@ Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\
       "div",
       { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } },
       React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F527} \u0130\u015F Emri Olu\u015Ftur"),
-      React.createElement("button", { style: S.btn(), onClick: yeniIsEmriAc }, "\u2795 \u0130\u015F Emri Olu\u015Ftur")
+      React.createElement("div", { style: { display: "flex", gap: 8 } },
+        sayfayaGit && React.createElement("button", { style: S.btnO, onClick: () => sayfayaGit("takvim") }, "\u{1F4C5} Randevu Takvimi"),
+        React.createElement("button", { style: S.btn(), onClick: yeniIsEmriAc }, "\u2795 \u0130\u015F Emri Olu\u015Ftur")
+      )
     ),
     React.createElement(
       "div",
@@ -3936,7 +3939,7 @@ function Ayarlar() {
     ["usta", "kasiyer"].map((rol) => React.createElement("div", { key: rol, style: { marginBottom: 14 } },
       React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.white, marginBottom: 8 } }, ROL_LABEL[rol]),
       React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
-        SAYFALAR.map((s) => React.createElement("label", { key: s.id, style: { display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: C.surface, borderRadius: 8, fontSize: 12, cursor: "pointer" } },
+        SAYFALAR.filter((s) => !s.gizli).map((s) => React.createElement("label", { key: s.id, style: { display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: C.surface, borderRadius: 8, fontSize: 12, cursor: "pointer" } },
           React.createElement("input", { type: "checkbox", checked: (form.rolSayfaIzin[rol] || []).includes(s.id), onChange: () => rolYetkiDegistir(rol, s.id) }),
           " ", s.icon, " ", s.label
         ))
@@ -4573,7 +4576,7 @@ function CopKutusu() {
 }
 const SAYFALAR = [
   { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
-  { id: "takvim", label: "Randevu Takvimi", icon: "\u{1F4C5}", comp: Takvim },
+  { id: "takvim", label: "Randevu Takvimi", icon: "\u{1F4C5}", comp: Takvim, gizli: true },
   { id: "servis", label: "\u0130\u015F Emri", icon: "\u{1F527}", comp: ServisIsleri },
   { id: "araclar", label: "Ara\xE7 Kay\u0131tlar\u0131", icon: "\u{1F697}", comp: Araclar },
   { id: "el_arabasi", label: "El Arabas\u0131", icon: "\u{1F6D2}", comp: ElArabasi },
@@ -4809,7 +4812,7 @@ function App() {
         )
       )
     ),
-    /* @__PURE__ */ React.createElement("div", { className: "fp-navlist" }, gorunurSayfalar.map(
+    /* @__PURE__ */ React.createElement("div", { className: "fp-navlist" }, gorunurSayfalar.filter((s) => !s.gizli).map(
     (s) => /* @__PURE__ */ React.createElement("div", { key: s.id, className: "fp-navitem", style: S.navBtn(sayfa === s.id), onClick: () => sayfayaGit(s.id) }, /* @__PURE__ */ React.createElement("span", { className: "fp-navicon" }, s.icon), /* @__PURE__ */ React.createElement("span", { className: "fp-navlabel" }, s.label))
   )), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-spacer", style: { flex: 1 } }), kullanici && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "10px", display: "flex", alignItems: "center", gap: 8, borderTop: `1px solid ${C.border}`, marginTop: 12, paddingTop: 14 } }, kullanici.foto && /* @__PURE__ */ React.createElement("img", { src: kullanici.foto, alt: "", style: { width: 28, height: 28, borderRadius: "50%" } }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, kullanici.ad)), /* @__PURE__ */ React.createElement("button", { onClick: cikisYap, title: "\xC7\u0131k\u0131\u015F Yap", style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 14 } }, "\u23FB")), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "12px 10px", fontSize: 10.5, color: C.muted, borderTop: kullanici ? "none" : `1px solid ${C.border}`, marginTop: kullanici ? 0 : 12, paddingTop: kullanici ? 4 : 14 } }, "As v1.0 \u2014 Yerel veri deposu")), /* @__PURE__ */ React.createElement("div", { className: "fp-main", style: S.main }, yeniVeriVar && /* @__PURE__ */ React.createElement("div", { className: "fp-yeni-veri-uyari", style: { position: "sticky", top: 0, zIndex: 50, background: C.accent, color: "#161311", padding: "10px 16px", borderRadius: 8, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700 } }, "\u{1F504} Ba\u015Fka bir cihazda de\u011Fi\u015Fiklik yap\u0131ld\u0131.", /* @__PURE__ */ React.createElement("button", { style: { background: "#161311", color: C.white, border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700 }, onClick: async () => {
     for (const anahtar of ALL_DATA_KEYS) {
@@ -4819,7 +4822,7 @@ function App() {
     const uzakZaman = await buluttanOku("_sonGuncelleme");
     if (uzakZaman) localStorage.setItem("fp_son_yerel_degisim", String(uzakZaman));
     window.location.reload();
-  } }, "\u015Eimdi Yenile")), /* @__PURE__ */ React.createElement(AktifBilesen, { hedef, hedefTemizle: () => setHedef(null) })));
+  } }, "\u015Eimdi Yenile")), /* @__PURE__ */ React.createElement(AktifBilesen, { hedef, hedefTemizle: () => setHedef(null), sayfayaGit })));
 }
 function AnketSayfasi({ isEmriNo, supabaseUrl, anonKey }) {
   const [puan, setPuan] = useState(0);
