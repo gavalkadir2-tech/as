@@ -1833,8 +1833,6 @@ function ServisIsleri({ hedef, hedefTemizle, sayfayaGit } = {}) {
   const [odemeHesapId, setOdemeHesapId] = useState("");
   const [odemeYontemi, setOdemeYontemi] = useState("Nakit");
   const [odemeTutari, setOdemeTutari] = useState(0);
-  const [aiOneriDevam, setAiOneriDevam] = useState(false);
-  const [aiOneriMetni, setAiOneriMetni] = useState("");
   const [aciklamaOneriDevam, setAciklamaOneriDevam] = useState(false);
   const [aciklamaOneriHata, setAciklamaOneriHata] = useState("");
   const [gecmisModal, setGecmisModal] = useState(null);
@@ -1860,36 +1858,12 @@ function ServisIsleri({ hedef, hedefTemizle, sayfayaGit } = {}) {
     return personelListesi.find((p) => (p.ad || "").trim().toLocaleLowerCase("tr-TR") === k.ad.trim().toLocaleLowerCase("tr-TR")) || null;
   })();
 
-  const aiTeknisyenOner = async () => {
-    if (!form.hizmetTuru) {
-      setAiOneriMetni("\xD6nce hizmet t\xFCr\xFCn\xFC se\xE7in.");
-      return;
-    }
-    setAiOneriDevam(true);
-    setAiOneriMetni("");
-    try {
-      const yukListesi = personelListesi.map((p) => {
-        const acikIs = liste.filter((s) => s.personelId === p.id && s.durum !== "tamamlandi" && s.durum !== "iptal").length;
-        return `${p.ad} (${p.pozisyon || "pozisyon belirtilmemi\u015F"}): ${acikIs} a\xE7\u0131k i\u015F`;
-      }).join("\\n");
-      const prompt = `Bir oto tamir at\xF6lyesinde yeni bir servis i\u015Fi geldi: "${HIZMET_TIP_LABEL[form.hizmetTuru]}".
-Mevcut teknisyenler ve a\xE7\u0131k i\u015F y\xFCkleri:
-${yukListesi}
-Bu i\u015Fi hangi teknisyene atamal\u0131y\u0131m? Sadece teknisyenin ad\u0131n\u0131 ve 1 k\u0131sa c\xFCmlelik gerek\xE7eyi yaz, ba\u015Fka hi\xE7bir \u015Fey ekleme. Format: "\u0130sim \u2014 gerek\xE7e"`;
-      const cevap = await aiSor(prompt);
-      setAiOneriMetni(cevap.trim());
-    } catch (e) {
-      setAiOneriMetni("Hata: " + e.message);
-    }
-    setAiOneriDevam(false);
-  };
   const fiyatOnerisiHesapla = () => {
     if (!form.hizmetTuru) return null;
     const benzerIsler = liste.filter((s) => s.hizmetTuru === form.hizmetTuru && s.durum !== "iptal" && (+s.tutar || 0) > 0 && s.id !== form.id);
     if (benzerIsler.length === 0) return null;
-    const tutarlar = benzerIsler.map((s) => +s.tutar || 0);
-    const ortalama = Math.round(tutarlar.reduce((t, v) => t + v, 0) / tutarlar.length);
-    return { ortalama, min: Math.min(...tutarlar), max: Math.max(...tutarlar), sayisi: benzerIsler.length };
+    const sonIs = [...benzerIsler].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""))[0];
+    return { tutar: +sonIs.tutar || 0, tarih: sonIs.tarih, sayisi: benzerIsler.length };
   };
   const aciklamadanOner = async () => {
     if (!(form.aciklama || "").trim()) {
@@ -2184,9 +2158,7 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
     ),
     React.createElement(Grid4, null,
       React.createElement(StatCard, { color: C.accent, icon: "\u{1F527}", value: liste.length, label: "Toplam \u0130\u015F Emri" }),
-      React.createElement(StatCard, { color: C.blue, icon: "\u{1F4C5}", value: liste.filter((s) => s.tarih === today() && s.durum !== "iptal").length, label: "Bug\xFCnk\xFC \u0130\u015Fler" }),
-      React.createElement(StatCard, { color: C.red, icon: "\u23F3", value: fmtTL(liste.filter((s) => s.durum === "tamamlandi").reduce((t, s) => t + servisKalanTutar(s), 0)), label: "Tahsil Edilecek" }),
-      React.createElement(StatCard, { color: C.green, icon: "\u{1F4B0}", value: fmtTL(liste.filter((s) => s.tarih && s.tarih.startsWith(today().slice(0, 7)) && s.durum !== "iptal").reduce((t, s) => t + (+s.tutar || 0), 0)), label: "Bu Ay Ciro" })
+      React.createElement(StatCard, { color: C.blue, icon: "\u{1F4C5}", value: liste.filter((s) => s.tarih === today() && s.durum !== "iptal").length, label: "Bug\xFCnk\xFC \u0130\u015Fler" })
     ),
     React.createElement(
       "div",
@@ -2278,12 +2250,7 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
         } }, "\u270F\uFE0F D\xFCzenle")),
         secilenAracSahibi ? React.createElement(React.Fragment, null, React.createElement("div", { style: { marginTop: 6 } }, secilenAracSahibi.ad), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.tel || "Telefon yok"), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.adres || "Adres yok")) : React.createElement("div", { style: { color: C.muted, marginTop: 6 } }, "Bilinmiyor")
       ),
-      React.createElement(FG, { label: "Sorumlu Personel (opsiyonel)" }, React.createElement(
-        "div",
-        { style: { display: "flex", gap: 8 } },
-        React.createElement("select", { style: S.sel, value: form.personelId || "", onChange: (e) => setForm((f) => ({ ...f, personelId: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), personelListesi.map((p) => React.createElement("option", { key: p.id, value: p.id }, p.ad, p.pozisyon ? ` (${p.pozisyon})` : ""))),
-        React.createElement("button", { type: "button", style: S.btnO, onClick: aiTeknisyenOner, disabled: aiOneriDevam }, aiOneriDevam ? "\u23F3" : "\u{1F916} AI \xD6ner")
-      ), aiOneriMetni && React.createElement("div", { style: { marginTop: 8, padding: "8px 12px", background: C.surface, borderRadius: 8, fontSize: 12, color: C.text } }, aiOneriMetni)),
+      React.createElement(FG, { label: "Sorumlu Personel (opsiyonel)" }, React.createElement("select", { style: S.sel, value: form.personelId || "", onChange: (e) => setForm((f) => ({ ...f, personelId: e.target.value })) }, React.createElement("option", { value: "" }, "— Seçiniz —"), personelListesi.map((p) => React.createElement("option", { key: p.id, value: p.id }, p.ad, p.pozisyon ? ` (${p.pozisyon})` : "")))),
       React.createElement(FG, { label: "A\xE7\u0131klama" }, React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "flex-start" } }, React.createElement("textarea", { style: { ...S.inp, minHeight: 60, flex: 1 }, value: form.aciklama || "", onChange: (e) => setForm((f) => ({ ...f, aciklama: e.target.value })) }), React.createElement(SesliGirisButonu, { deger: form.aciklama, onDeger: (v) => setForm((f) => ({ ...f, aciklama: v })) }), React.createElement("button", { type: "button", title: "A\xE7ıklamadan temiz metin ve tutar \xF6ner", style: { ...S.btnO, padding: "6px 10px", flexShrink: 0 }, onClick: aciklamadanOner, disabled: aciklamaOneriDevam }, aciklamaOneriDevam ? "⏳" : "\u{1F916}"))),
       aciklamaOneriHata && React.createElement("div", { style: { color: C.red, fontSize: 11.5, marginBottom: 12 } }, "⚠️ ", aciklamaOneriHata),
 
@@ -2334,7 +2301,7 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
       (() => {
         const oneri = fiyatOnerisiHesapla();
         if (!oneri) return null;
-        return React.createElement("div", { style: { fontSize: 11.5, color: C.blue, marginTop: -8, marginBottom: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } }, "\u{1F4A1} Ge\xE7mi\u015f ", oneri.sayisi, " benzer i\u015fe g\xF6re ortalama: ", React.createElement("strong", null, fmtTL(oneri.ortalama)), ` (${fmtTL(oneri.min)}\u2013${fmtTL(oneri.max)})`, React.createElement("button", { type: "button", style: { ...S.btnO, padding: "3px 10px", fontSize: 11 }, onClick: () => setForm((f) => ({ ...f, tutar: oneri.ortalama })) }, "Uygula"));
+        return React.createElement("div", { style: { fontSize: 11.5, color: C.blue, marginTop: -8, marginBottom: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } }, "💡 En son benzer iş (", fmtDate(oneri.tarih), "): ", React.createElement("strong", null, fmtTL(oneri.tutar)), ` (toplam ${oneri.sayisi} benzer iş var)`, React.createElement("button", { type: "button", style: { ...S.btnO, padding: "3px 10px", fontSize: 11 }, onClick: () => setForm((f) => ({ ...f, tutar: oneri.tutar })) }, "Uygula"));
       })(),
       React.createElement(
         "div",
@@ -3089,7 +3056,7 @@ function Cariler({ hedef, hedefTemizle } = {}) {
   } }, "\u2795 Yeni Cari"))), /* @__PURE__ */ React.createElement(Grid4, null,
     /* @__PURE__ */ React.createElement(StatCard, { color: C.accent, icon: "\u{1F465}", value: liste.length, label: "Toplam Cari" }),
     /* @__PURE__ */ React.createElement(StatCard, { color: C.red, icon: "⚠️", value: fmtTL(liste.reduce((t, c) => t + borc(c.id), 0)), label: "Toplam A\xE7\u0131k Bor\xE7", sub: `${liste.filter((c) => borc(c.id) > 0).length} cari bor\xE7lu` }),
-    /* @__PURE__ */ React.createElement(StatCard, { color: C.green, icon: "\u{1F4B0}", value: fmtTL(liste.reduce((t, c) => t + harcama(c.id), 0)), label: "Toplam İşlem Hacmi" }),
+    
     /* @__PURE__ */ React.createElement(StatCard, { color: C.blue, icon: "\u{1F697}", value: araclar.length, label: "Kayıtlı Ara\xE7 Sayısı" })
   ), /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, marginBottom: 16, maxWidth: 360 }, placeholder: "\u{1F50D} \u0130sim, telefon veya adreste ara\u2026", value: arama, onChange: (e) => setArama(e.target.value) }), liste.length === 0 ? React.createElement("div", { style: { ...S.card, textAlign: "center", padding: 32 } }, React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "\u{1F465}"), React.createElement("div", { style: { color: C.white, fontWeight: 700, marginBottom: 6 } }, "Hen\u00fcz cari eklenmedi"), React.createElement("div", { style: { color: C.muted, fontSize: 12.5, marginBottom: 14 } }, "\u0130lk m\u00fc\u015fterinizi veya tedarik\u00e7inizi ekleyerek ba\u015flay\u0131n."), React.createElement("button", { style: S.btn(), onClick: () => { setForm({}); setModalAcik(true); } }, "\u2795 Yeni Cari Ekle")) : React.createElement("div", { style: S.card }, React.createElement(SiraliTablo, {
     dosyaAdi: "cariler",
@@ -3859,7 +3826,7 @@ ${veri}`;
     giderModal && React.createElement(
       Modal,
       { title: giderForm.id ? "Gideri D\xFCzenle" : "Yeni Gider", onClose: () => setGiderModal(false), width: 460 },
-      !giderForm.id && React.createElement("label", { style: { ...S.btnO, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", marginBottom: 14 } }, fisOkunuyor ? "⏳ Fiş okunuyor..." : "\u{1F4F7} Fişten Oku", React.createElement("input", { type: "file", accept: "image/*", capture: "environment", disabled: fisOkunuyor, style: { display: "none" }, onChange: fisOku })),
+      !giderForm.id && React.createElement("label", { style: { ...S.btnO, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", marginBottom: 14 } }, fisOkunuyor ? "⏳ Fiş okunuyor..." : "\u{1F4F7} Fişten Oku", React.createElement("input", { type: "file", accept: "image/*", disabled: fisOkunuyor, style: { display: "none" }, onChange: fisOku })),
       fisHata && React.createElement("div", { style: { color: C.red, fontSize: 11.5, marginBottom: 12 } }, "⚠️ ", fisHata),
       React.createElement(FG, { label: "Tarih" }, React.createElement("input", { type: "date", style: S.inp, value: giderForm.tarih || "", onChange: (e) => setGiderForm((f) => ({ ...f, tarih: e.target.value })) })),
       React.createElement(FG, { label: "Kategori" }, React.createElement("select", { style: S.sel, value: giderForm.kategori || "", onChange: (e) => setGiderForm((f) => ({ ...f, kategori: e.target.value })) }, GIDER_KATEGORILERI.map((k) => React.createElement("option", { key: k, value: k }, k)))),
@@ -4740,8 +4707,6 @@ function Araclar({ hedef, hedefTemizle } = {}) {
     setModalAcik(true);
   } }, "➕ Yeni Araç"))), /* @__PURE__ */ React.createElement(Grid4, null,
     /* @__PURE__ */ React.createElement(StatCard, { color: C.accent, icon: "🚗", value: liste.length, label: "Toplam Araç" }),
-    /* @__PURE__ */ React.createElement(StatCard, { color: C.blue, icon: "👤", value: liste.filter((a) => a.musteriId).length, label: "Sahibi Bilinen Araç" }),
-    /* @__PURE__ */ React.createElement(StatCard, { color: C.yellow, icon: "❓", value: liste.filter((a) => !a.musteriId).length, label: "Sahibi Bilinmiyor" }),
     /* @__PURE__ */ React.createElement(StatCard, { color: C.green, icon: "🔧", value: servisler.filter((s) => s.durum !== "iptal").length, label: "Toplam Servis Kaydı" })
   ), /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, marginBottom: 16, maxWidth: 360 }, placeholder: "🔍 Plaka, marka veya müşteri ara…", value: arama, onChange: (e) => setArama(e.target.value) }), liste.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { ...S.card, textAlign: "center", padding: 32 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "🚗"), /* @__PURE__ */ React.createElement("div", { style: { color: C.white, fontWeight: 700, marginBottom: 6 } }, "Henüz araç eklenmedi"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 12.5, marginBottom: 14 } }, "İlk aracınızı ekleyerek başlayın."), /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => { setForm({}); setModalAcik(true); } }, "➕ Yeni Araç Ekle")) : /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement(SiraliTablo, {
   dosyaAdi: "araclar",
@@ -5483,11 +5448,11 @@ function App() {
     /* @__PURE__ */ React.createElement("div", { className: sidebarAcik ? "fp-sidebar fp-sidebar-open" : "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center" } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 44 }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, getSettings().firmaAdi)),
     /* @__PURE__ */ React.createElement("div", { style: { padding: "0 4px 14px", display: "flex", gap: 6 } },
       /* @__PURE__ */ React.createElement("div", { style: { flex: 1, position: "relative" } },
-        /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, fontSize: 12.5 }, placeholder: "\u{1F50D} Plaka, m\xFCşteri, iş emri ara…", value: globalArama, onChange: (e) => setGlobalArama(e.target.value) }),
+        /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, fontSize: 12.5, height: 38 }, placeholder: "\u{1F50D} Plaka, m\xFCşteri, iş emri ara…", value: globalArama, onChange: (e) => setGlobalArama(e.target.value) }),
         globalSonuclar.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "100%", left: 0, right: 0, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, marginTop: 4, zIndex: 650, maxHeight: 320, overflowY: "auto" } }, globalSonuclar.map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, onClick: () => sonucaGit(s), style: { padding: "8px 10px", cursor: "pointer", borderBottom: i < globalSonuclar.length - 1 ? `1px solid ${C.border}` : "none", display: "flex", gap: 8, alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", null, s.icon), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: C.white, fontWeight: 600 } }, s.baslik), s.alt && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, s.alt)))))
       ),
       /* @__PURE__ */ React.createElement("div", { style: { position: "relative" } },
-        /* @__PURE__ */ React.createElement("button", { type: "button", title: "H\u0131zl\u0131 Ekle", style: { ...S.btn(), padding: "9px 13px", fontSize: 15, lineHeight: 1 }, onClick: () => setHizliMenuAcik((v) => !v) }, "\u2795"),
+        /* @__PURE__ */ React.createElement("button", { type: "button", title: "H\u0131zl\u0131 Ekle", style: { ...S.btn(), height: 38, padding: "0 13px", fontSize: 15, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }, onClick: () => setHizliMenuAcik((v) => !v) }, "\u2795"),
         hizliMenuAcik && /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: "100%", right: 0, minWidth: 190, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, marginTop: 4, zIndex: 650, overflow: "hidden" } },
           /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("servis", { tip: "yeni_is_emri" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.border}` } }, "\u{1F527} İş Emri Oluştur"),
           /* @__PURE__ */ React.createElement("div", { onClick: () => hedefeGit("cariler", { tip: "yeni_cari" }), style: { padding: "9px 12px", cursor: "pointer", fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.border}` } }, "\u{1F465} Yeni Cari"),
