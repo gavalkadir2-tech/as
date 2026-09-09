@@ -135,7 +135,7 @@ const SERVIS_ODEME_LABEL = { odendi: "\u00d6dendi", kismi: "K\u0131smi \u00d6den
 const SERVIS_ODEME_RENK = { odendi: C.green, kismi: C.yellow, odenmedi: C.red };
 let GIDER_KATEGORILERI = [...GIDER_KATEGORILERI_VARSAYILAN];
 const HESAP_TUR_LABEL = { kasa: "\u{1F4B5} Kasa", banka: "\u{1F3E6} Banka", kredi_karti: "\u{1F4B3} Kredi Kart\u0131", pos: "\u{1F5A5}\uFE0F POS" };
-const ROL_LABEL = { patron: "\u{1F451} Patron / Y\xF6netici", usta: "\u{1F527} Usta / Teknisyen", kasiyer: "\u{1F4B0} Kasiyer / Muhasebe" };
+const ROL_LABEL = { patron: "\u{1F451} Patron / Y\xF6netici", usta: "\u{1F527} Usta / Teknisyen", kasiyer: "\u{1F4B0} Kasiyer / Finans" };
 const ROL_SAYFA_IZIN_VARSAYILAN = {
   patron: null,
   usta: ["dashboard", "servis", "takvim", "araclar", "yapilacaklar"],
@@ -4053,7 +4053,7 @@ ${veri}`;
   return React.createElement(
     "div",
     { className: "fp-fade" },
-    React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white, marginBottom: 4 } }, "\u{1F4B0} Muhasebe"),
+    React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white, marginBottom: 4 } }, "\u{1F4B0} Finans"),
     React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16 } }, "Faturalar, gelir/gider ve kasa/banka hesaplar\u0131 tek yerde."),
     React.createElement(
       Grid4,
@@ -4720,7 +4720,7 @@ function Ayarlar() {
         React.createElement("button", { type: "button", style: S.btnR, onClick: () => hizmetSil(h.key) }, "\u{1F5D1}\uFE0F")
       ))
     ),
-    React.createElement("button", { type: "button", style: S.btnO, onClick: hizmetEkle }, "\u2795 Yeni Kategori Ekle")), React.createElement(BildirimlerYoneticisi, { tahsilatGunu: form.tahsilatHatirlatmaGunu, onTahsilatGunuDegistir: (v) => setForm((f) => ({ ...f, tahsilatHatirlatmaGunu: v })), randevuGunuIsEmri: form.randevuHatirlatmaGunuIsEmri, randevuGunuElArabasi: form.randevuHatirlatmaGunuElArabasi, onRandevuGunuDegistir: (patch) => setForm((f) => ({ ...f, ...patch })), gununOzetiAktif: form.gununOzetiAktif, gununOzetiGunler: form.gununOzetiGunler, gununOzetiSaati: form.gununOzetiSaati, onGununOzetiDegistir: (patch) => setForm((f) => ({ ...f, ...patch })) })), sekme === "finans" && React.createElement(React.Fragment, null, React.createElement(KatlanirKart, { title: "\u{1F4B8} Gider Kategorileri" }, React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Muhasebe \u2192 Giderler b\xF6l\xFCm\xFCnde kullan\u0131lan kategorileri d\xFCzenleyin."),
+    React.createElement("button", { type: "button", style: S.btnO, onClick: hizmetEkle }, "\u2795 Yeni Kategori Ekle")), React.createElement(BildirimlerYoneticisi, { tahsilatGunu: form.tahsilatHatirlatmaGunu, onTahsilatGunuDegistir: (v) => setForm((f) => ({ ...f, tahsilatHatirlatmaGunu: v })), randevuGunuIsEmri: form.randevuHatirlatmaGunuIsEmri, randevuGunuElArabasi: form.randevuHatirlatmaGunuElArabasi, onRandevuGunuDegistir: (patch) => setForm((f) => ({ ...f, ...patch })), gununOzetiAktif: form.gununOzetiAktif, gununOzetiGunler: form.gununOzetiGunler, gununOzetiSaati: form.gununOzetiSaati, onGununOzetiDegistir: (patch) => setForm((f) => ({ ...f, ...patch })) })), sekme === "finans" && React.createElement(React.Fragment, null, React.createElement(KatlanirKart, { title: "\u{1F4B8} Gider Kategorileri" }, React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Finans \u2192 Giderler b\xF6l\xFCm\xFCnde kullan\u0131lan kategorileri d\xFCzenleyin."),
     React.createElement(
       "div",
       { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 } },
@@ -5041,7 +5041,7 @@ function Personel() {
     { title: odemeModal.tip === "haftalik" ? `\u{1F4B5} ${odemeModal.personel.ad} \u2014 Haftal\u0131k \xD6de` : odemeModal.tip === "avans" ? `\u2795 ${odemeModal.personel.ad} \u2014 Avans Ver` : `\u{1F381} ${odemeModal.personel.ad} \u2014 Bah\u015Fi\u015F Ver`, onClose: () => setOdemeModal(null), width: 400 },
     odemeModal.tip === "haftalik" && (+odemeModal.personel.avansBakiyesi || 0) > 0 && React.createElement("div", { style: { fontSize: 12, color: C.yellow, marginBottom: 12 } }, "\u26A0\uFE0F Bu personelin ", fmtTL(odemeModal.personel.avansBakiyesi), " avans bakiyesi haftal\u0131k maa\u015Ftan d\xFC\u015F\xFCld\xFC."),
     React.createElement(FG, { label: "Tutar (\u20BA)" }, React.createElement("input", { type: "number", style: S.inp, value: odemeForm.tutar ?? "", onChange: (e) => setOdemeForm((f) => ({ ...f, tutar: +e.target.value })) })),
-    React.createElement(FG, { label: "Hesap (\xE7\u0131k\u0131\u015F)" }, React.createElement("select", { style: S.sel, value: odemeForm.hesapId || "", onChange: (e) => setOdemeForm((f) => ({ ...f, hesapId: e.target.value })) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Muhasebe'den hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad)))),
+    React.createElement(FG, { label: "Hesap (\xE7\u0131k\u0131\u015F)" }, React.createElement("select", { style: S.sel, value: odemeForm.hesapId || "", onChange: (e) => setOdemeForm((f) => ({ ...f, hesapId: e.target.value })) }, hesaplar.length === 0 && React.createElement("option", { value: "" }, "\xD6nce Finans'tan hesap ekleyin"), hesaplar.map((h) => React.createElement("option", { key: h.id, value: h.id }, h.ad)))),
     React.createElement(FG, { label: "Tarih" }, React.createElement("input", { type: "date", style: S.inp, value: odemeForm.tarih || "", onChange: (e) => setOdemeForm((f) => ({ ...f, tarih: e.target.value })) })),
     odemeHata && React.createElement("div", { style: { color: C.red, fontSize: 12.5, marginBottom: 12 } }, "\u26A0\uFE0F ", odemeHata),
     React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "flex-end" } }, React.createElement("button", { style: S.btnO, onClick: () => setOdemeModal(null) }, "\u0130ptal"), React.createElement("button", { style: S.btn(), onClick: odemeYap }, "Onayla"))
@@ -5500,7 +5500,7 @@ const SAYFALAR = [
   { id: "personel", label: "Personel", icon: "\u{1F9D1}\u200D\u{1F527}", comp: Personel },
   { id: "cariler", label: "Cariler", icon: "\u{1F465}", comp: Cariler },
   { id: "yapilacaklar", label: "Yapılacaklar", icon: "✅", comp: Yapilacaklar },
-  { id: "muhasebe", label: "Muhasebe", icon: "\u{1F4B0}", comp: Muhasebe },
+  { id: "muhasebe", label: "Finans", icon: "\u{1F4B0}", comp: Muhasebe },
   { id: "cop_kutusu", label: "\u00C7\u00F6p Kutusu", icon: "\u{1F5D1}\uFE0F", comp: CopKutusu },
   { id: "ayarlar", label: "Ayarlar", icon: "\u2699\uFE0F", comp: Ayarlar }
 ];
@@ -5738,7 +5738,7 @@ function asOdemeAl(aksiyon) {
   const araclar = LS.get("araclar");
   const cariler = LS.get("cariler");
   const hesaplar = LS.get("hesaplar");
-  if (hesaplar.length === 0) return "⚠️ Ödeme alınamadı: önce Muhasebe'den bir hesap (kasa/banka) eklemelisin.";
+  if (hesaplar.length === 0) return "⚠️ Ödeme alınamadı: önce Finans'tan bir hesap (kasa/banka) eklemelisin.";
   let adaylar = servisler.filter((s) => servisOdemeDurumu(s) !== "odendi");
   if ((aksiyon.isEmriNo || "").trim()) {
     const norm = aksiyon.isEmriNo.trim().toLocaleLowerCase("tr-TR");
