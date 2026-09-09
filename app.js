@@ -4419,19 +4419,18 @@ function Ayarlar() {
         React.createElement("button", { type: "button", style: S.btnR, onClick: () => resmiHatirlaticiSil(r.id) }, "\u{1F5D1}\ufe0f")
       ))
     ),
-    React.createElement("button", { type: "button", style: S.btnO, onClick: resmiHatirlaticiEkle }, "\u2795 Yeni Hat\u0131rlat\u0131c\u0131 Ekle"))), sekme === "wp_sablon" && React.createElement(React.Fragment, null, React.createElement(KatlanirKart, { title: "💬 WhatsApp Mesaj Şablonları", varsayilanAcik: true },
+    React.createElement("button", { type: "button", style: S.btnO, onClick: resmiHatirlaticiEkle }, "\u2795 Yeni Hat\u0131rlat\u0131c\u0131 Ekle"))), sekme === "wp_sablon" && React.createElement(React.Fragment, null,
       React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.6 } }, "Aşağıdaki şablonlardaki süslü parantez içindeki değişkenler ({musteri}, {tutar} gibi) gönderirken otomatik dolar. Değişkenleri silmeden metni istediğin gibi düzenleyebilirsin."),
       Object.keys(MESAJ_SABLONU_LABEL).map((key) => React.createElement(
-        "div",
-        { key, style: { marginBottom: 18, paddingBottom: 18, borderBottom: `1px solid ${C.border}` } },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 } },
-          React.createElement("strong", { style: { fontSize: 12.5, color: C.white } }, MESAJ_SABLONU_LABEL[key]),
+        KatlanirKart,
+        { key, title: MESAJ_SABLONU_LABEL[key] },
+        React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: 6 } },
           React.createElement("button", { type: "button", style: { ...S.btnO, padding: "3px 8px", fontSize: 10.5 }, onClick: () => sablonSifirla(key) }, "Varsayılana Döndür")
         ),
         React.createElement("textarea", { style: { ...S.inp, minHeight: 70, fontFamily: "inherit", resize: "vertical" }, value: (form.mesajSablonlari && form.mesajSablonlari[key]) ?? VARSAYILAN_MESAJ_SABLONLARI[key], onChange: (e) => sablonGuncelle(key, e.target.value) }),
         React.createElement("div", { style: { fontSize: 10.5, color: C.muted, marginTop: 4 } }, "Değişkenler: ", MESAJ_SABLONU_DEGISKENLERI[key].map((v) => `{${v}}`).join(", "))
       ))
-    )), sekme === "baglanti" && React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(KatlanirKart, { title: "\u2601\uFE0F Bulut Senkronizasyonu (Supabase)" }, React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Verileriniz farkl\u0131 cihazlarda (telefon, bilgisayar) ayn\u0131 g\xF6r\xFCns\xFCn istiyorsan\u0131z kullan\u0131n. ", React.createElement("a", { href: "https://supabase.com/dashboard/projects", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "supabase.com"), "\u0027da \u00fccretsiz bir hesap a\u00e7\u0131p yeni bir proje olu\u015Fturun. Sonra projenizin SQL Editor\u0027\u00fcnde a\u015Fa\u011F\u0131daki tabloyu olu\u015Fturun:"), React.createElement("pre", { style: { background: "#00000033", padding: "10px 12px", borderRadius: 8, fontSize: 10.5, overflowX: "auto", color: C.text, marginBottom: 14, whiteSpace: "pre-wrap" } }, `create table if not exists veri_kutusu (\n  anahtar text primary key,\n  deger jsonb,\n  guncelleme_zamani timestamptz default now()\n);\nalter table veri_kutusu enable row level security;\ndrop policy if exists "herkese_izin" on veri_kutusu;\ncreate policy "herkese_izin" on veri_kutusu for all using (true) with check (true);`), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Ard\u0131ndan proje ayarlar\u0131ndaki (Settings \u2192 API) Project URL ve anon public key de\u011Ferlerini a\u015Fa\u011F\u0131ya yap\u0131\u015Ft\u0131r\u0131n."), React.createElement(FG, { label: "Supabase Project URL" }, React.createElement("input", { style: S.inp, value: form.supabaseUrl || "", onChange: (e) => setForm((f) => ({ ...f, supabaseUrl: e.target.value.trim() })), placeholder: "https://xxxxxxxx.supabase.co" })), React.createElement(FG, { label: "Supabase Anon Key" }, React.createElement("input", { type: "password", style: S.inp, value: form.supabaseAnonKey || "", onChange: (e) => setForm((f) => ({ ...f, supabaseAnonKey: e.target.value.trim() })), placeholder: "eyJhbGciOi..." })), React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 } }, React.createElement("button", { style: S.btnO, onClick: bulutTestEt, disabled: bulutIslemDevam }, "\u{1F50C} Ba\u011Flant\u0131y\u0131 Test Et"), form.supabaseUrl && form.supabaseAnonKey && React.createElement(React.Fragment, null, React.createElement("button", { style: S.btnO, onClick: bulutaYukle, disabled: bulutIslemDevam }, "\u2B06\uFE0F Buluta Y\xFCkle (Bu Cihazdan)"), React.createElement("button", { style: S.btnO, onClick: buluttanIndir, disabled: bulutIslemDevam }, "\u2B07\uFE0F Buluttan \u0130ndir (Di\u011Fer Cihazdan)"))), bulutTest === "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Ba\u011Flant\u0131 ba\u015Far\u0131l\u0131! Art\u0131k her de\u011Fi\u015Fiklik otomatik olarak buluta kaydedilecek."), bulutTest && bulutTest !== "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", bulutTest), React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 10 } }, "Not: Bu cihazda yapt\u0131\u011F\u0131n\u0131z her de\u011Fi\u015Fiklik otomatik buluta g\xF6nderilir. Uygulama ayr\u0131ca her 5 saniyede bir buluttaki de\u011Fi\u015Fiklikleri arka planda kontrol edip ekran\u0131n\u0131z\u0131 otomatik g\xFCnceller \u2014 ba\u015Fka bir cihazdan yap\u0131lan de\u011Fi\u015Fiklikler k\u0131sa s\xFCrede burada da g\xF6r\xFCn\xFCr.")), /* @__PURE__ */ React.createElement(KatlanirKart, { title: "\u{1F510} Google ile Giri\u015F" }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Uygulamay\u0131 a\xE7an herkesin Google hesab\u0131yla giri\u015F yapmas\u0131n\u0131 zorunlu k\u0131lar. Kurulum i\xE7in:", /* @__PURE__ */ React.createElement("ol", { style: { margin: "8px 0 0", paddingLeft: 20 } }, /* @__PURE__ */ React.createElement("li", null, /* @__PURE__ */ React.createElement("a", { href: "https://console.cloud.google.com/apis/credentials", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "Google Cloud Console \u2192 Credentials"), "'a gidin (\xFCcretsiz Google hesab\u0131yla)"), /* @__PURE__ */ React.createElement("li", null, '"Create Credentials" \u2192 "OAuth client ID" \u2192 Uygulama t\xFCr\xFC: "Web application"'), /* @__PURE__ */ React.createElement("li", null, '"Authorized JavaScript origins" k\u0131sm\u0131na sitenizin adresini ekleyin (\xF6rn. https://kullaniciadi.github.io)'), /* @__PURE__ */ React.createElement("li", null, 'Olu\u015Fan "Client ID"yi a\u015Fa\u011F\u0131ya yap\u0131\u015Ft\u0131r\u0131n'))), /* @__PURE__ */ React.createElement(FG, { label: "Google Client ID" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.googleClientId || "", onChange: (e) => setForm((f) => ({ ...f, googleClientId: e.target.value.trim() })), placeholder: "123456789-xxxx.apps.googleusercontent.com" })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Bo\u015F b\u0131rak\u0131rsan\u0131z Google giri\u015Fi istenmez, uygulama do\u011Frudan a\xE7\u0131l\u0131r.")), /* @__PURE__ */ React.createElement(KatlanirKart, { title: "\u{1F4C5} Google Takvim Senkronizasyonu" }, React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Ba\u011Flan\u0131rsan\u0131z, olu\u015Fturdu\u011Funuz/g\xFCncelledi\u011Finiz i\u015F emirleri otomatik olarak Google Takvim hesab\u0131n\u0131za (birincil takvim) etkinlik olarak eklenir; telefonunuzun kendi takvim uygulamas\u0131ndan da g\xF6r\xFCrs\xFCn\xFCz. Yukar\u0131daki Google Client ID\u0027nin ayn\u0131s\u0131 kullan\u0131l\u0131r, sadece ek olarak takvim izni istenir."),
+    ), sekme === "baglanti" && React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(KatlanirKart, { title: "\u2601\uFE0F Bulut Senkronizasyonu (Supabase)" }, React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Verileriniz farkl\u0131 cihazlarda (telefon, bilgisayar) ayn\u0131 g\xF6r\xFCns\xFCn istiyorsan\u0131z kullan\u0131n. ", React.createElement("a", { href: "https://supabase.com/dashboard/projects", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "supabase.com"), "\u0027da \u00fccretsiz bir hesap a\u00e7\u0131p yeni bir proje olu\u015Fturun. Sonra projenizin SQL Editor\u0027\u00fcnde a\u015Fa\u011F\u0131daki tabloyu olu\u015Fturun:"), React.createElement("pre", { style: { background: "#00000033", padding: "10px 12px", borderRadius: 8, fontSize: 10.5, overflowX: "auto", color: C.text, marginBottom: 14, whiteSpace: "pre-wrap" } }, `create table if not exists veri_kutusu (\n  anahtar text primary key,\n  deger jsonb,\n  guncelleme_zamani timestamptz default now()\n);\nalter table veri_kutusu enable row level security;\ndrop policy if exists "herkese_izin" on veri_kutusu;\ncreate policy "herkese_izin" on veri_kutusu for all using (true) with check (true);`), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Ard\u0131ndan proje ayarlar\u0131ndaki (Settings \u2192 API) Project URL ve anon public key de\u011Ferlerini a\u015Fa\u011F\u0131ya yap\u0131\u015Ft\u0131r\u0131n."), React.createElement(FG, { label: "Supabase Project URL" }, React.createElement("input", { style: S.inp, value: form.supabaseUrl || "", onChange: (e) => setForm((f) => ({ ...f, supabaseUrl: e.target.value.trim() })), placeholder: "https://xxxxxxxx.supabase.co" })), React.createElement(FG, { label: "Supabase Anon Key" }, React.createElement("input", { type: "password", style: S.inp, value: form.supabaseAnonKey || "", onChange: (e) => setForm((f) => ({ ...f, supabaseAnonKey: e.target.value.trim() })), placeholder: "eyJhbGciOi..." })), React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 } }, React.createElement("button", { style: S.btnO, onClick: bulutTestEt, disabled: bulutIslemDevam }, "\u{1F50C} Ba\u011Flant\u0131y\u0131 Test Et"), form.supabaseUrl && form.supabaseAnonKey && React.createElement(React.Fragment, null, React.createElement("button", { style: S.btnO, onClick: bulutaYukle, disabled: bulutIslemDevam }, "\u2B06\uFE0F Buluta Y\xFCkle (Bu Cihazdan)"), React.createElement("button", { style: S.btnO, onClick: buluttanIndir, disabled: bulutIslemDevam }, "\u2B07\uFE0F Buluttan \u0130ndir (Di\u011Fer Cihazdan)"))), bulutTest === "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.green + "18", borderRadius: 8, color: C.green, fontSize: 12.5 } }, "\u2705 Ba\u011Flant\u0131 ba\u015Far\u0131l\u0131! Art\u0131k her de\u011Fi\u015Fiklik otomatik olarak buluta kaydedilecek."), bulutTest && bulutTest !== "basarili" && React.createElement("div", { style: { marginTop: 12, padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5 } }, "\u26A0\uFE0F ", bulutTest), React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 10 } }, "Not: Bu cihazda yapt\u0131\u011F\u0131n\u0131z her de\u011Fi\u015Fiklik otomatik buluta g\xF6nderilir. Uygulama ayr\u0131ca her 5 saniyede bir buluttaki de\u011Fi\u015Fiklikleri arka planda kontrol edip ekran\u0131n\u0131z\u0131 otomatik g\xFCnceller \u2014 ba\u015Fka bir cihazdan yap\u0131lan de\u011Fi\u015Fiklikler k\u0131sa s\xFCrede burada da g\xF6r\xFCn\xFCr.")), /* @__PURE__ */ React.createElement(KatlanirKart, { title: "\u{1F510} Google ile Giri\u015F" }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Uygulamay\u0131 a\xE7an herkesin Google hesab\u0131yla giri\u015F yapmas\u0131n\u0131 zorunlu k\u0131lar. Kurulum i\xE7in:", /* @__PURE__ */ React.createElement("ol", { style: { margin: "8px 0 0", paddingLeft: 20 } }, /* @__PURE__ */ React.createElement("li", null, /* @__PURE__ */ React.createElement("a", { href: "https://console.cloud.google.com/apis/credentials", target: "_blank", rel: "noopener noreferrer", style: { color: C.accent } }, "Google Cloud Console \u2192 Credentials"), "'a gidin (\xFCcretsiz Google hesab\u0131yla)"), /* @__PURE__ */ React.createElement("li", null, '"Create Credentials" \u2192 "OAuth client ID" \u2192 Uygulama t\xFCr\xFC: "Web application"'), /* @__PURE__ */ React.createElement("li", null, '"Authorized JavaScript origins" k\u0131sm\u0131na sitenizin adresini ekleyin (\xF6rn. https://kullaniciadi.github.io)'), /* @__PURE__ */ React.createElement("li", null, 'Olu\u015Fan "Client ID"yi a\u015Fa\u011F\u0131ya yap\u0131\u015Ft\u0131r\u0131n'))), /* @__PURE__ */ React.createElement(FG, { label: "Google Client ID" }, /* @__PURE__ */ React.createElement("input", { style: S.inp, value: form.googleClientId || "", onChange: (e) => setForm((f) => ({ ...f, googleClientId: e.target.value.trim() })), placeholder: "123456789-xxxx.apps.googleusercontent.com" })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Bo\u015F b\u0131rak\u0131rsan\u0131z Google giri\u015Fi istenmez, uygulama do\u011Frudan a\xE7\u0131l\u0131r.")), /* @__PURE__ */ React.createElement(KatlanirKart, { title: "\u{1F4C5} Google Takvim Senkronizasyonu" }, React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Ba\u011Flan\u0131rsan\u0131z, olu\u015Fturdu\u011Funuz/g\xFCncelledi\u011Finiz i\u015F emirleri otomatik olarak Google Takvim hesab\u0131n\u0131za (birincil takvim) etkinlik olarak eklenir; telefonunuzun kendi takvim uygulamas\u0131ndan da g\xF6r\xFCrs\xFCn\xFCz. Yukar\u0131daki Google Client ID\u0027nin ayn\u0131s\u0131 kullan\u0131l\u0131r, sadece ek olarak takvim izni istenir."),
     !form.googleClientId ? React.createElement("div", { style: { color: C.muted, fontSize: 12.5 } }, "\xD6nce yukar\u0131dan bir Google Client ID girip kaydedin.") : React.createElement(React.Fragment, null,
       React.createElement("button", { style: S.btnO, onClick: googleTakvimBaglan, disabled: googleTakvimDevam }, googleTakvimDevam ? "\u23F3 Bağlanıyor..." : form.googleTakvimAktif ? "\u{1F504} Yeniden Bağlan" : "\u{1F4C5} Google Takvim\u0027e Bağlan"),
       form.googleTakvimAktif && React.createElement("button", { style: { ...S.btnO, marginLeft: 8 }, onClick: () => { setForm((f) => ({ ...f, googleTakvimAktif: false })); saveSettings({ ...form, googleTakvimAktif: false }); } }, "Bağlantıyı Kes"),
@@ -5194,7 +5193,21 @@ AKSIYON:{"tip":"yeni_is_emri","musteri":"<ad veya boş>","plaka":"<plaka>","hizm
 hizmetTuru şunlardan biri olmalı: ${Object.keys(HIZMET_TIP_LABEL).join(", ")}.
 Eğer kullanıcı bir iş için ödeme/tahsilat almanı istiyorsa, cevabının sonuna:
 AKSIYON:{"tip":"odeme_al","isEmriNo":"<varsa, yoksa boş>","plaka":"<varsa, yoksa boş>","musteri":"<varsa, yoksa boş>","tutar":<opsiyonel sayı, verilmezse kalan tutarın tamamı alınır>}
-Bu durumların dışında AKSIYON satırı ekleme, sadece normal cevap ver. Emin değilsen ya da uygulamada yapamayacağın bir şey istenirse bunu açıkça söyle, uydurma.`;
+Eğer kullanıcı bir gider eklemeni istiyorsa, cevabının sonuna:
+AKSIYON:{"tip":"gider_ekle","kategori":"<şunlardan biri: ${GIDER_KATEGORILERI.join(", ")}>","tutar":<sayı>,"aciklama":"<opsiyonel>"}
+Eğer kullanıcı bir görevi tamamlandı olarak işaretlemeni istiyorsa, cevabının sonuna:
+AKSIYON:{"tip":"gorev_tamamla","baslik":"<görev başlığı veya bir kısmı>"}
+Eğer kullanıcı bir işi teslim edildi olarak işaretlemeni istiyorsa, cevabının sonuna:
+AKSIYON:{"tip":"servis_teslim_et","isEmriNo":"<varsa, yoksa boş>","plaka":"<varsa, yoksa boş>"}
+Eğer kullanıcı bir işi iptal etmeni istiyorsa, cevabının sonuna:
+AKSIYON:{"tip":"servis_iptal_et","isEmriNo":"<varsa, yoksa boş>","plaka":"<varsa, yoksa boş>"}
+Eğer kullanıcı bir müşteriye kendi yazdığı/istediği özel bir WhatsApp mesajı göndermeni istiyorsa, cevabının sonuna:
+AKSIYON:{"tip":"whatsapp_gonder","musteri":"<ad>","mesaj":"<gönderilecek tam metin>"}
+Eğer kullanıcı bir müşterinin borcunu/geçmişini soruyorsa (aksiyon değil, doğrudan bilgi istemidir, onay gerekmez), cevabının sonuna:
+AKSIYON:{"tip":"cari_sorgula","musteri":"<ad>"}
+Eğer kullanıcı bir plakanın servis geçmişini/harcamasını soruyorsa (onay gerekmez), cevabının sonuna:
+AKSIYON:{"tip":"arac_sorgula","plaka":"<plaka>"}
+Bu durumların dışında AKSIYON satırı ekleme, sadece normal cevap ver. Emin değilsen ya da uygulamada yapamayacağın bir şey istenirse bunu açıkça söyle, uydurma. Veri değiştiren aksiyonlar (görev/cari/iş emri/ödeme/gider ekleme, görev tamamlama, teslim/iptal etme, whatsapp gönderme) kullanıcıya onay ekranında gösterilir, sen sadece doğru AKSIYON'u üretmekten sorumlusun.`;
 }
 function asBaglamOlustur() {
   const servisler = LS.get("servisIsleri");
@@ -5241,10 +5254,25 @@ function asAksiyonOzetle(aksiyon) {
   if (aksiyon.tip === "odeme_al") {
     return `\u{1F4B0} \xD6deme alınacak: ${aksiyon.isEmriNo || aksiyon.plaka || aksiyon.musteri || ""}${aksiyon.tutar ? " — " + fmtTL(aksiyon.tutar) : " (kalan tutarın tamamı)"}`;
   }
+  if (aksiyon.tip === "gider_ekle") {
+    return `\u{1F4B8} Yeni gider eklenecek: ${aksiyon.kategori || ""} — ${fmtTL(aksiyon.tutar)}${aksiyon.aciklama ? " — " + aksiyon.aciklama : ""}`;
+  }
+  if (aksiyon.tip === "gorev_tamamla") {
+    return `✅ Görev tamamlandı işaretlenecek: "${aksiyon.baslik || ""}"`;
+  }
+  if (aksiyon.tip === "servis_teslim_et") {
+    return `✅ İş teslim edildi işaretlenecek: ${aksiyon.isEmriNo || aksiyon.plaka || ""}`;
+  }
+  if (aksiyon.tip === "servis_iptal_et") {
+    return `❌ İş iptal edilecek: ${aksiyon.isEmriNo || aksiyon.plaka || ""}`;
+  }
+  if (aksiyon.tip === "whatsapp_gonder") {
+    return `\u{1F4AC} WhatsApp mesajı gönderilecek: ${aksiyon.musteri || ""} — "${aksiyon.mesaj || ""}"`;
+  }
   return "Bu işlem uygulanacak.";
 }
-const AS_ONAY_GEREKTIREN_AKSIYONLAR = ["yeni_gorev", "yeni_cari", "yeni_is_emri", "odeme_al"];
-const AS_ALAN_LABEL = { baslik: "Başlık", oncelik: "\xD6ncelik", ad: "Ad", tel: "Telefon", musteri: "M\xFCşteri", plaka: "Plaka", hizmetTuru: "Hizmet T\xFCr\xFC", tutar: "Tutar", aciklama: "A\xE7ıklama", isEmriNo: "İş Emri No" };
+const AS_ONAY_GEREKTIREN_AKSIYONLAR = ["yeni_gorev", "yeni_cari", "yeni_is_emri", "odeme_al", "gider_ekle", "gorev_tamamla", "servis_teslim_et", "servis_iptal_et", "whatsapp_gonder"];
+const AS_ALAN_LABEL = { baslik: "Başlık", oncelik: "\xD6ncelik", ad: "Ad", tel: "Telefon", musteri: "M\xFCşteri", plaka: "Plaka", hizmetTuru: "Hizmet T\xFCr\xFC", tutar: "Tutar", aciklama: "A\xE7ıklama", isEmriNo: "İş Emri No", kategori: "Kategori", mesaj: "Mesaj" };
 function asAksiyonUygula(aksiyon, sayfayaGit) {
   if (!aksiyon || !aksiyon.tip) return null;
   if (aksiyon.tip === "sayfaya_git" && AS_SAYFA_IDLERI.includes(aksiyon.sayfa)) {
@@ -5268,6 +5296,27 @@ function asAksiyonUygula(aksiyon, sayfayaGit) {
   }
   if (aksiyon.tip === "odeme_al") {
     return asOdemeAl(aksiyon);
+  }
+  if (aksiyon.tip === "gider_ekle") {
+    return asGiderEkle(aksiyon);
+  }
+  if (aksiyon.tip === "gorev_tamamla") {
+    return asGorevTamamla(aksiyon);
+  }
+  if (aksiyon.tip === "servis_teslim_et") {
+    return asServisDurumDegistir(aksiyon, "teslim_et");
+  }
+  if (aksiyon.tip === "servis_iptal_et") {
+    return asServisDurumDegistir(aksiyon, "iptal_et");
+  }
+  if (aksiyon.tip === "whatsapp_gonder") {
+    return asWhatsappGonder(aksiyon);
+  }
+  if (aksiyon.tip === "cari_sorgula") {
+    return asCariSorgula(aksiyon);
+  }
+  if (aksiyon.tip === "arac_sorgula") {
+    return asAracSorgula(aksiyon);
   }
   return null;
 }
@@ -5363,6 +5412,100 @@ function asOdemeAl(aksiyon) {
   LS.set("servisIsleri", yeni);
   const yeniKalan = servisKalanTutar({ ...hedefIs, odemeler: yeniOdemeler });
   return `✅ ${hedefIs.isEmriNo || ""} i\xE7in ${fmtTL(girilenTutar)} ödeme alındı (${hesap.ad}, Nakit).${yeniKalan > 0 ? ` Kalan: ${fmtTL(yeniKalan)}` : ""}`;
+}
+function asGiderEkle(aksiyon) {
+  if (!(+aksiyon.tutar > 0)) return "⚠️ Gider eklenemedi: tutar 0'dan büyük olmalı.";
+  const giderler = LS.get("giderler");
+  const kategori = GIDER_KATEGORILERI.includes(aksiyon.kategori) ? aksiyon.kategori : GIDER_KATEGORILERI[0];
+  const kayit = { id: uid(), tarih: today(), kategori, aciklama: aksiyon.aciklama || "AS asistan ile eklendi", tutar: +aksiyon.tutar };
+  LS.set("giderler", [...giderler, kayit]);
+  return `✅ Gider eklendi: ${kategori} — ${fmtTL(kayit.tutar)}`;
+}
+function asGorevTamamla(aksiyon) {
+  if (!(aksiyon.baslik || "").trim()) return "⚠️ Hangi görevi tamamlayacağımı anlayamadım.";
+  const gorevler = LS.get("yapilacaklar");
+  const norm = aksiyon.baslik.trim().toLocaleLowerCase("tr-TR");
+  const acikGorevler = gorevler.filter((g) => !g.tamamlandi);
+  const hedef = acikGorevler.find((g) => (g.baslik || "").toLocaleLowerCase("tr-TR").includes(norm));
+  if (!hedef) return `⚠️ "${aksiyon.baslik}" ile eşleşen açık bir görev bulunamadı.`;
+  const yeni = gorevler.map((g) => g.id === hedef.id ? { ...g, tamamlandi: true } : g);
+  LS.set("yapilacaklar", yeni);
+  return `✅ Görev tamamlandı: ${hedef.baslik}`;
+}
+function asServisBul(aksiyon) {
+  const servisler = LS.get("servisIsleri");
+  const araclar = LS.get("araclar");
+  let adaylar = servisler.filter((s) => s.durum !== "iptal");
+  if ((aksiyon.isEmriNo || "").trim()) {
+    const norm = aksiyon.isEmriNo.trim().toLocaleLowerCase("tr-TR");
+    adaylar = adaylar.filter((s) => (s.isEmriNo || "").toLocaleLowerCase("tr-TR") === norm);
+  } else if ((aksiyon.plaka || "").trim()) {
+    const normalize = plakaNormalize(aksiyon.plaka);
+    adaylar = adaylar.filter((s) => {
+      const a = araclar.find((x) => x.id === s.aracId);
+      return a && plakaNormalize(a.plaka) === normalize || plakaNormalize(s.aracPlaka || "") === normalize;
+    });
+  } else {
+    return null;
+  }
+  adaylar.sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""));
+  return adaylar[0] || null;
+}
+function asServisDurumDegistir(aksiyon, islem) {
+  const hedef = asServisBul(aksiyon);
+  if (!hedef) return "⚠️ Eşleşen bir iş emri bulunamadı.";
+  const servisler = LS.get("servisIsleri");
+  const cariler = LS.get("cariler");
+  if (islem === "teslim_et") {
+    if (hedef.asama === "teslim_edildi") return `⚠️ ${hedef.isEmriNo || ""} zaten teslim edilmiş.`;
+    const guncel = { ...hedef, asama: "teslim_edildi", durum: "tamamlandi", durumGecmisi: [...(hedef.durumGecmisi || []), { tarih: today(), asama: "teslim_edildi", not: "AS asistan ile teslim edildi olarak işaretlendi." }] };
+    const yeni = servisler.map((x) => x.id === hedef.id ? guncel : x);
+    LS.set("servisIsleri", yeni);
+    faturaOlustur("servis", hedef.id, hedef.musteriId, today(), `${hedef.isEmriNo} — ${HIZMET_TIP_LABEL[hedef.hizmetTuru] || ""}`, hedef.kalemler, hedef.tutar);
+    whatsappTeslimBildir(guncel, cariler, yeni);
+    return `✅ ${hedef.isEmriNo || ""} teslim edildi olarak işaretlendi.`;
+  }
+  if (hedef.asama === "iptal") return `⚠️ ${hedef.isEmriNo || ""} zaten iptal edilmiş.`;
+  const yeni = servisler.map((x) => x.id === hedef.id ? { ...x, asama: "iptal", durum: "iptal", durumGecmisi: [...(x.durumGecmisi || []), { tarih: today(), asama: "iptal", not: "AS asistan ile iptal edildi." }] } : x);
+  LS.set("servisIsleri", yeni);
+  return `✅ ${hedef.isEmriNo || ""} iptal edildi.`;
+}
+function asMusteriBul(cariler, adMetni) {
+  const norm = (adMetni || "").trim().toLocaleLowerCase("tr-TR");
+  if (!norm) return null;
+  return cariler.find((c) => (c.ad || "").trim().toLocaleLowerCase("tr-TR") === norm) || cariler.find((c) => (c.ad || "").toLocaleLowerCase("tr-TR").includes(norm)) || null;
+}
+function asWhatsappGonder(aksiyon) {
+  const cariler = LS.get("cariler");
+  const musteri = asMusteriBul(cariler, aksiyon.musteri);
+  if (!musteri) return `⚠️ "${aksiyon.musteri || ""}" isimli bir cari bulunamadı.`;
+  if (!musteri.tel) return `⚠️ ${musteri.ad} için telefon numarası kayıtlı değil.`;
+  if (!(aksiyon.mesaj || "").trim()) return "⚠️ Gönderilecek mesaj boş olamaz.";
+  whatsappLinkAc(musteri.tel, aksiyon.mesaj);
+  return `✅ ${musteri.ad} i\xE7in WhatsApp sekmesi açıldı, göndermek için oradan onaylaman gerekiyor.`;
+}
+function asCariSorgula(aksiyon) {
+  const cariler = LS.get("cariler");
+  const musteri = asMusteriBul(cariler, aksiyon.musteri);
+  if (!musteri) return `⚠️ "${aksiyon.musteri || ""}" isimli bir cari bulunamadı.`;
+  const servisler = LS.get("servisIsleri");
+  const musteriServisleri = servisler.filter((s) => s.musteriId === musteri.id && s.durum !== "iptal");
+  const acikBorc = musteriServisleri.reduce((t, s) => t + servisKalanTutar(s), 0);
+  const toplamHarcama = musteriServisleri.reduce((t, s) => t + (+s.tutar || 0), 0);
+  const sonIs = [...musteriServisleri].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""))[0];
+  return `\u{1F464} ${musteri.ad}${musteri.tel ? " (" + musteri.tel + ")" : ""}: toplam ${musteriServisleri.length} iş, ${fmtTL(toplamHarcama)} harcama, ${fmtTL(acikBorc)} açık borç.${sonIs ? ` Son iş: ${fmtDate(sonIs.tarih)} — ${HIZMET_TIP_LABEL[sonIs.hizmetTuru] || ""}.` : ""}`;
+}
+function asAracSorgula(aksiyon) {
+  const araclar = LS.get("araclar");
+  const cariler = LS.get("cariler");
+  const normalize = plakaNormalize(aksiyon.plaka || "");
+  const arac = araclar.find((a) => plakaNormalize(a.plaka) === normalize);
+  if (!arac) return `⚠️ "${aksiyon.plaka || ""}" plakalı bir araç bulunamadı.`;
+  const servisler = LS.get("servisIsleri").filter((s) => s.aracId === arac.id && s.durum !== "iptal");
+  const toplamHarcama = servisler.reduce((t, s) => t + (+s.tutar || 0), 0);
+  const sahibi = cariler.find((c) => c.id === arac.musteriId);
+  const sonServisler = [...servisler].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || "")).slice(0, 3);
+  return `\u{1F697} ${arac.plaka}${arac.marka ? " — " + arac.marka + " " + (arac.model || "") : ""}${sahibi ? ` — Sahibi: ${sahibi.ad}` : ""}: toplam ${servisler.length} servis kaydı, ${fmtTL(toplamHarcama)} harcama.${sonServisler.length > 0 ? " Son işler: " + sonServisler.map((s) => `${fmtDate(s.tarih)} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`).join(", ") + "." : ""}`;
 }
 function AsAsistani({ sayfayaGit }) {
   const [acik, setAcik] = useState(false);
@@ -5553,7 +5696,7 @@ ${sonuc}`;
             "div",
             { key: k, style: { display: "flex", alignItems: "center", gap: 6 } },
             React.createElement("label", { style: { fontSize: 11, color: C.muted, width: 78, flexShrink: 0 } }, AS_ALAN_LABEL[k] || k),
-            k === "hizmetTuru" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) }, Object.entries(HIZMET_TIP_LABEL).map(([key, label]) => React.createElement("option", { key, value: key }, label))) : k === "oncelik" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] || "orta", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) }, React.createElement("option", { value: "dusuk" }, "D\xFCş\xFCk"), React.createElement("option", { value: "orta" }, "Orta"), React.createElement("option", { value: "yuksek" }, "Y\xFCksek")) : React.createElement("input", { type: k === "tutar" ? "number" : "text", style: { ...S.inp, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] ?? "", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) })
+            k === "hizmetTuru" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) }, Object.entries(HIZMET_TIP_LABEL).map(([key, label]) => React.createElement("option", { key, value: key }, label))) : k === "oncelik" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] || "orta", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) }, React.createElement("option", { value: "dusuk" }, "D\xFCş\xFCk"), React.createElement("option", { value: "orta" }, "Orta"), React.createElement("option", { value: "yuksek" }, "Y\xFCksek")) : k === "kategori" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) }, GIDER_KATEGORILERI.map((kat) => React.createElement("option", { key: kat, value: kat }, kat))) : k === "mesaj" ? React.createElement("textarea", { style: { ...S.inp, flex: 1, fontSize: 12, padding: "5px 8px", minHeight: 60, fontFamily: "inherit" }, value: bekleyenAksiyon.taslak[k] ?? "", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) }) : React.createElement("input", { type: k === "tutar" ? "number" : "text", style: { ...S.inp, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] ?? "", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) })
           )),
           React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
             React.createElement("button", { type: "button", style: { ...S.btn(), padding: "5px 12px", fontSize: 11.5 }, onClick: aksiyonOnayla }, "✅ Uygula"),
