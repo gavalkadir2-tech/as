@@ -5253,12 +5253,66 @@ function AsAsistani({ sayfayaGit }) {
   const [yukleniyor, setYukleniyor] = useState(false);
   const [dinliyor, setDinliyor] = useState(false);
   const [sesliCevap, setSesliCevap] = useState(false);
+  const [pos, setPos] = useState(() => {
+    try {
+      const ham = localStorage.getItem("fp_as_asistan_pos");
+      return ham ? JSON.parse(ham) : null;
+    } catch {
+      return null;
+    }
+  });
   const taniyiciRef = useRef(null);
   const sohbetSonRef = useRef(null);
+  const disRef = useRef(null);
+  const surukleRef = useRef({ suruklemeVar: false, tasindi: false });
   const apiKeyVar = !!getSettings().aiApiKey;
   useEffect(() => {
     if (acik && sohbetSonRef.current) sohbetSonRef.current.scrollIntoView({ behavior: "smooth" });
   }, [mesajlar, acik]);
+  const surukleDevam = (e) => {
+    if (!surukleRef.current.suruklemeVar) return;
+    e.preventDefault && e.preventDefault();
+    const nokta = e.touches ? e.touches[0] : e;
+    const dx = nokta.clientX - surukleRef.current.basX;
+    const dy = nokta.clientY - surukleRef.current.basY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) surukleRef.current.tasindi = true;
+    let yeniX = surukleRef.current.baslangicX + dx;
+    let yeniY = surukleRef.current.baslangicY + dy;
+    const maxX = window.innerWidth - surukleRef.current.genislik - 4;
+    const maxY = window.innerHeight - surukleRef.current.yukseklik - 4;
+    yeniX = Math.max(4, Math.min(maxX, yeniX));
+    yeniY = Math.max(4, Math.min(maxY, yeniY));
+    setPos({ x: yeniX, y: yeniY });
+  };
+  const surukleBitir = () => {
+    surukleRef.current.suruklemeVar = false;
+    document.body.style.userSelect = "";
+    window.removeEventListener("mousemove", surukleDevam);
+    window.removeEventListener("mouseup", surukleBitir);
+    window.removeEventListener("touchmove", surukleDevam);
+    window.removeEventListener("touchend", surukleBitir);
+    setPos((p) => {
+      if (p) {
+        try {
+          localStorage.setItem("fp_as_asistan_pos", JSON.stringify(p));
+        } catch {
+        }
+      }
+      return p;
+    });
+  };
+  const suruklemeBaslat = (e) => {
+    if (e.button !== void 0 && e.button !== 0) return;
+    const nokta = e.touches ? e.touches[0] : e;
+    const kutu = disRef.current.getBoundingClientRect();
+    surukleRef.current = { suruklemeVar: true, tasindi: false, basX: nokta.clientX, basY: nokta.clientY, baslangicX: kutu.left, baslangicY: kutu.top, genislik: kutu.width, yukseklik: kutu.height };
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", surukleDevam);
+    window.addEventListener("mouseup", surukleBitir);
+    window.addEventListener("touchmove", surukleDevam, { passive: false });
+    window.addEventListener("touchend", surukleBitir);
+  };
+  const konumStil = pos ? { left: pos.x, top: pos.y, bottom: "auto", right: "auto" } : { bottom: 20, right: 20 };
   const seslendir = (metin) => {
     if (!sesliCevap || typeof window === "undefined" || !window.speechSynthesis) return;
     try {
@@ -5325,16 +5379,19 @@ ${sonuc}`;
   };
   if (!acik) {
     return /* @__PURE__ */ React.createElement("button", {
-      onClick: () => setAcik(true),
-      title: "AS Asistan",
-      style: { position: "fixed", bottom: 20, right: 20, width: 56, height: 56, borderRadius: "50%", background: "#fff", border: `3px solid ${C.accent}`, boxShadow: "0 4px 16px #00000055", cursor: "pointer", zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: 4 }
+      ref: disRef,
+      onClick: () => { if (!surukleRef.current.tasindi) setAcik(true); },
+      onMouseDown: suruklemeBaslat,
+      onTouchStart: suruklemeBaslat,
+      title: "AS Asistan (sürükleyebilirsin)",
+      style: { position: "fixed", ...konumStil, width: 56, height: 56, borderRadius: "50%", background: "#fff", border: `3px solid ${C.accent}`, boxShadow: "0 4px 16px #00000055", cursor: "grab", zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, touchAction: "none" }
     }, /* @__PURE__ */ React.createElement(LogoImg, { size: 40 }));
   }
   return /* @__PURE__ */ React.createElement(
     "div",
-    { style: { position: "fixed", bottom: 20, right: 20, width: "min(360px,92vw)", height: "min(520px,76vh)", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, boxShadow: "0 8px 30px #00000066", zIndex: 900, display: "flex", flexDirection: "column", overflow: "hidden" } },
+    { ref: disRef, style: { position: "fixed", ...konumStil, width: "min(360px,92vw)", height: "min(520px,76vh)", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, boxShadow: "0 8px 30px #00000066", zIndex: 900, display: "flex", flexDirection: "column", overflow: "hidden" } },
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.surface, borderBottom: `1px solid ${C.border}` } },
-      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
+      /* @__PURE__ */ React.createElement("div", { onMouseDown: suruklemeBaslat, onTouchStart: suruklemeBaslat, title: "Sürüklemek için tutun", style: { display: "flex", alignItems: "center", gap: 8, cursor: "grab", touchAction: "none" } },
         /* @__PURE__ */ React.createElement("span", { style: { width: 30, height: 30, borderRadius: "50%", background: "#fff", border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 3, boxSizing: "border-box" } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 22 })),
         /* @__PURE__ */ React.createElement("strong", { style: { color: C.white, fontSize: 13.5 } }, "AS Asistan")
       ),
