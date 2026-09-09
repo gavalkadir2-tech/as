@@ -2021,6 +2021,11 @@ function ServisIsleri({ hedef, hedefTemizle, sayfayaGit } = {}) {
   const [kessHataMetni, setKessHataMetni] = useState("");
   const [kessHataCevap, setKessHataCevap] = useState("");
   const [kessHataDevam, setKessHataDevam] = useState(false);
+  const [analizAcik, setAnalizAcik] = useState(false);
+  const [analizHizmet, setAnalizHizmet] = useState("");
+  const [analizPersonel, setAnalizPersonel] = useState("");
+  const [analizBaslangic, setAnalizBaslangic] = useState("");
+  const [analizBitis, setAnalizBitis] = useState("");
   const benimPersonelim = (() => {
     const k = googleKullanici();
     if (!k || !k.ad) return null;
@@ -2313,7 +2318,34 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
     }
     hedefTemizle && hedefTemizle();
   }, [hedef]);
-  const kessAcik = kessDetayAcik || !!(form.kessEcuMarka || form.kessProtokol || form.kessStage || form.kessDosyaNotu || form.kessChecksum);
+  const SI_RENKLER = [C.accent, C.blue, C.green, C.yellow, C.red, C.steel, C.purple, C.muted];
+  const analizFiltreli = liste.filter((s) => s.durum !== "iptal" && (!analizHizmet || s.hizmetTuru === analizHizmet) && (!analizPersonel || s.personelId === analizPersonel) && (!analizBaslangic || s.tarih >= analizBaslangic) && (!analizBitis || s.tarih <= analizBitis));
+  const analizToplamCiro = analizFiltreli.reduce((t, s) => t + (+s.tutar || 0), 0);
+  const analizOrtIslem = analizFiltreli.length > 0 ? analizToplamCiro / analizFiltreli.length : 0;
+  const analizTamamlanan = analizFiltreli.filter((s) => s.durum === "tamamlandi").length;
+  const siHizmetDagilimi = Object.entries(analizFiltreli.reduce((acc, s) => {
+    const h = HIZMET_TIP_LABEL[s.hizmetTuru] || s.hizmetTuru || "Diğer";
+    acc[h] = (acc[h] || 0) + (+s.tutar || 0);
+    return acc;
+  }, {})).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  const siPersonelDagilimi = Object.entries(analizFiltreli.reduce((acc, s) => {
+    const p = personelListesi.find((x) => x.id === s.personelId);
+    const ad = p ? p.ad : "Atanmamış";
+    acc[ad] = (acc[ad] || 0) + (+s.tutar || 0);
+    return acc;
+  }, {})).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  const siAylikTrend = (() => {
+    const gruplar = {};
+    analizFiltreli.forEach((s) => {
+      const ay = (s.tarih || "").slice(0, 7);
+      if (!ay) return;
+      gruplar[ay] = (gruplar[ay] || 0) + (+s.tutar || 0);
+    });
+    return Object.entries(gruplar).sort((a, b) => a[0].localeCompare(b[0])).slice(-12).map(([ay, tutar]) => {
+      const [y, m] = ay.split("-");
+      return { ay: `${AY_ADLARI[+m - 1]?.slice(0, 3) || m} '${y.slice(2)}`, Ciro: tutar };
+    });
+  })();
 
   return React.createElement(
     "div",
@@ -2321,15 +2353,59 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
     React.createElement(
       "div",
       { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } },
-      React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F527} \u0130\u015F Emri Olu\u015Ftur"),
+      React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F527} İş Emri Oluştur"),
       React.createElement("div", { style: { display: "flex", gap: 8 } },
+        React.createElement("button", { style: S.btnO, onClick: () => setAnalizAcik((v) => !v) }, "\u{1F4C8} Detay"),
         sayfayaGit && React.createElement("button", { style: S.btnO, onClick: () => sayfayaGit("takvim") }, "\u{1F4C5} Randevu Takvimi"),
-        React.createElement("button", { style: S.btn(), onClick: () => yeniIsEmriAc() }, "\u2795 \u0130\u015F Emri Olu\u015Ftur")
+        React.createElement("button", { style: S.btn(), onClick: () => yeniIsEmriAc() }, "➕ İş Emri Oluştur")
       )
     ),
     React.createElement(Grid4, null,
-      React.createElement(StatCard, { color: C.accent, icon: "\u{1F527}", value: liste.length, label: "Toplam \u0130\u015F Emri" }),
-      React.createElement(StatCard, { color: C.blue, icon: "\u{1F4C5}", value: liste.filter((s) => s.tarih === today() && s.durum !== "iptal").length, label: "Bug\xFCnk\xFC \u0130\u015Fler" })
+      React.createElement(StatCard, { color: C.accent, icon: "\u{1F527}", value: liste.length, label: "Toplam İş Emri" }),
+      React.createElement(StatCard, { color: C.blue, icon: "\u{1F4C5}", value: liste.filter((s) => s.tarih === today() && s.durum !== "iptal").length, label: "Bugünkü İşler" })
+    ),
+    analizAcik && React.createElement(
+      "div",
+      { style: { ...S.card, marginBottom: 16 } },
+      React.createElement("div", { style: S.secTitle }, "\u{1F4C8} Detaylı Analiz"),
+      React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 } },
+        React.createElement("select", { style: { ...S.sel, width: "auto" }, value: analizHizmet, onChange: (e) => setAnalizHizmet(e.target.value) },
+          React.createElement("option", { value: "" }, "Tüm Hizmet Türleri"),
+          Object.entries(HIZMET_TIP_LABEL).map(([k, l]) => React.createElement("option", { key: k, value: k }, l))
+        ),
+        React.createElement("select", { style: { ...S.sel, width: "auto" }, value: analizPersonel, onChange: (e) => setAnalizPersonel(e.target.value) },
+          React.createElement("option", { value: "" }, "Tüm Personel"),
+          personelListesi.map((p) => React.createElement("option", { key: p.id, value: p.id }, p.ad))
+        ),
+        React.createElement("input", { type: "date", style: { ...S.inp, width: "auto" }, value: analizBaslangic, onChange: (e) => setAnalizBaslangic(e.target.value) }),
+        React.createElement("input", { type: "date", style: { ...S.inp, width: "auto" }, value: analizBitis, onChange: (e) => setAnalizBitis(e.target.value) })
+      ),
+      React.createElement(Grid4, null,
+        React.createElement(StatCard, { color: C.accent, icon: "\u{1F527}", value: analizFiltreli.length, label: "Filtrelenen İş" }),
+        React.createElement(StatCard, { color: C.blue, icon: "\u{1F4B0}", value: fmtTL(analizToplamCiro), label: "Toplam Ciro" }),
+        React.createElement(StatCard, { color: C.green, icon: "\u{1F4CA}", value: fmtTL(analizOrtIslem), label: "Ortalama İşlem" }),
+        React.createElement(StatCard, { color: C.yellow, icon: "✅", value: analizTamamlanan, label: "Tamamlanan" })
+      ),
+      React.createElement(Grid2, null,
+        React.createElement("div", { style: { ...S.card, marginTop: 14 } },
+          React.createElement("div", { style: S.secTitle }, "\u{1F527} Hizmet Türüne Göre Ciro"),
+          RC.PieChart && siHizmetDagilimi.length > 0 ? React.createElement(ResponsiveContainer, { width: "100%", height: 220 }, React.createElement(PieChart, null, React.createElement(Pie, { data: siHizmetDagilimi, dataKey: "value", nameKey: "name", cx: "50%", cy: "50%", innerRadius: 45, outerRadius: 78, paddingAngle: 3, label: ({ name, value }) => `${name}: ${fmtTL(value)}` }, siHizmetDagilimi.map((e, i) => React.createElement(Cell, { key: i, fill: SI_RENKLER[i % SI_RENKLER.length] }))), React.createElement(Tooltip, { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }, formatter: (v) => fmtTL(v) }))) : React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Veri yok.")
+        ),
+        React.createElement("div", { style: { ...S.card, marginTop: 14 } },
+          React.createElement("div", { style: S.secTitle }, "\u{1F9D1}‍\u{1F527} Personele Göre Ciro"),
+          RC.PieChart && siPersonelDagilimi.length > 0 ? React.createElement(ResponsiveContainer, { width: "100%", height: 220 }, React.createElement(PieChart, null, React.createElement(Pie, { data: siPersonelDagilimi, dataKey: "value", nameKey: "name", cx: "50%", cy: "50%", innerRadius: 45, outerRadius: 78, paddingAngle: 3, label: ({ name, value }) => `${name}: ${fmtTL(value)}` }, siPersonelDagilimi.map((e, i) => React.createElement(Cell, { key: i, fill: SI_RENKLER[i % SI_RENKLER.length] }))), React.createElement(Tooltip, { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }, formatter: (v) => fmtTL(v) }))) : React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Veri yok.")
+        )
+      ),
+      React.createElement("div", { style: { ...S.card, marginTop: 14 } },
+        React.createElement("div", { style: S.secTitle }, "\u{1F4C8} Aylık Ciro Trendi"),
+        RC.BarChart && siAylikTrend.length > 0 ? React.createElement(ResponsiveContainer, { width: "100%", height: 220 }, React.createElement(BarChart, { data: siAylikTrend },
+          React.createElement(CartesianGrid, { strokeDasharray: "3 3", stroke: C.border }),
+          React.createElement(XAxis, { dataKey: "ay", tick: { fill: C.muted, fontSize: 10 } }),
+          React.createElement(YAxis, { tick: { fill: C.muted, fontSize: 10 } }),
+          React.createElement(Tooltip, { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }, formatter: (v) => fmtTL(v) }),
+          React.createElement(Bar, { dataKey: "Ciro", fill: C.accent, radius: [4, 4, 0, 0] })
+        )) : React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "Veri yok.")
+      )
     ),
     React.createElement(
       "div",
@@ -2991,7 +3067,7 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
     "div",
     { className: "fp-fade" },
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "\u{1F6D2} El Arabası"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } },
-      React.createElement("button", { style: S.btnO, onClick: () => setDetayAcik((v) => !v) }, "\u{1F50D} Detay"),
+      React.createElement("button", { style: S.btnO, onClick: () => setDetayAcik((v) => !v) }, "📈 Detay"),
       React.createElement("button", { style: S.btnO, onClick: () => setTakvimAcik((v) => !v) }, "\u{1F4C5} Randevu Takvimi"),
       /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => {
       setForm({ tarih: today(), kdvOrani: 0 });
@@ -3002,7 +3078,7 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
     detayAcik && React.createElement(
       "div",
       { style: { ...S.card, marginBottom: 16 } },
-      React.createElement("div", { style: S.secTitle }, "\u{1F50D} Detaylı Analiz"),
+      React.createElement("div", { style: S.secTitle }, "📈 Detaylı Analiz"),
       React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 } },
         React.createElement("select", { style: { ...S.sel, width: "auto" }, value: detayTur, onChange: (e) => setDetayTur(e.target.value) },
           React.createElement("option", { value: "" }, "T\xFCm T\xFCrler"),
@@ -5110,7 +5186,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
     return Object.entries(gruplar).filter(([, v]) => v > 0).map(([ad, adet]) => ({ ad, adet }));
   })();
   const ANALIZ_RENKLER = [C.accent, C.blue, C.green, C.yellow, C.red, C.steel, C.purple, C.muted];
-  return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "🚗 Araç Kayıtları"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, React.createElement("button", { style: S.btnO, onClick: () => setAnalizAcik((v) => !v) }, "\u{1F50D} Detay"), /* @__PURE__ */ /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => {
+  return /* @__PURE__ */ React.createElement("div", { className: "fp-fade" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.white } }, "🚗 Araç Kayıtları"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, React.createElement("button", { style: S.btnO, onClick: () => setAnalizAcik((v) => !v) }, "📈 Detay"), /* @__PURE__ */ /* @__PURE__ */ React.createElement("button", { style: S.btn(), onClick: () => {
     setForm({});
     setModalAcik(true);
   } }, "➕ Yeni Araç"))), /* @__PURE__ */ React.createElement(Grid4, null,
@@ -5120,7 +5196,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
   analizAcik && React.createElement(
     "div",
     { style: { ...S.card, marginBottom: 16 } },
-    React.createElement("div", { style: S.secTitle }, "\u{1F50D} Detaylı Analiz"),
+    React.createElement("div", { style: S.secTitle }, "📈 Detaylı Analiz"),
     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 } },
       React.createElement("select", { style: { ...S.sel, width: "auto" }, value: analizMarka, onChange: (e) => setAnalizMarka(e.target.value) },
         React.createElement("option", { value: "" }, "T\xFCm Markalar"),
