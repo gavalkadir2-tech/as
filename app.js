@@ -304,11 +304,14 @@ async function googleTakvimEtkinlikSil(googleEtkinlikId) {
   } catch {
   }
 }
-async function aiSor(promptMetni, denemeNo = 0) {
+async function aiSor(promptMetni, denemeNo = 0, disSinyal) {
   const apiKey = getSettings().aiApiKey;
   if (!apiKey) throw new Error("\xD6nce Ayarlar \u2192 Yapay Zeka'dan bir API key girin.");
+  if (disSinyal && disSinyal.aborted) throw new Error("\u0130ptal edildi.");
   const kontrolci = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const zamanAsimi = kontrolci ? setTimeout(() => kontrolci.abort(), 6e4) : null;
+  const zamanAsimi = kontrolci ? setTimeout(() => kontrolci.abort(), 3e4) : null;
+  const disIptalDinle = () => kontrolci && kontrolci.abort();
+  if (disSinyal) disSinyal.addEventListener("abort", disIptalDinle);
   let r;
   try {
     r = await fetch(
@@ -323,15 +326,19 @@ async function aiSor(promptMetni, denemeNo = 0) {
       }
     );
   } catch (e) {
-    if (e.name === "AbortError") throw new Error("Zaman a\u015F\u0131m\u0131: Gemini'ye 60 saniyede yan\u0131t al\u0131namad\u0131. \u0130nternet ba\u011Flant\u0131n\u0131 kontrol edip tekrar dene.");
+    if (e.name === "AbortError") {
+      if (disSinyal && disSinyal.aborted) throw new Error("\u0130ptal edildi.");
+      throw new Error("Zaman a\u015F\u0131m\u0131: Gemini'ye 30 saniyede yan\u0131t al\u0131namad\u0131. \u0130nternet ba\u011Flant\u0131n\u0131 kontrol edip tekrar dene.");
+    }
     throw new Error(`Ba\u011Flant\u0131 hatas\u0131: ${e.message}`);
   } finally {
     if (zamanAsimi) clearTimeout(zamanAsimi);
+    if (disSinyal) disSinyal.removeEventListener("abort", disIptalDinle);
   }
   if (!r.ok) {
-    if ((r.status === 503 || r.status === 429) && denemeNo < 2) {
+    if ((r.status === 503 || r.status === 429) && denemeNo < 1 && !(disSinyal && disSinyal.aborted)) {
       await bekle(1500 * (denemeNo + 1));
-      return aiSor(promptMetni, denemeNo + 1);
+      return aiSor(promptMetni, denemeNo + 1, disSinyal);
     }
     const hata = await r.text();
     throw new Error(`AI iste\u011Fi ba\u015Far\u0131s\u0131z (${r.status}): ${hata.slice(0, 200)}`);
@@ -5710,9 +5717,7 @@ function asYeniIsEmriOlustur(aksiyon) {
     durumGecmisi: [{ tarih: today(), asama, not: "AS asistan ile oluşturuldu." }]
   };
   LS.set("servisIsleri", [...servisler, kayit]);
-  if (musteriId) {
-    faturaOlustur("servis", kayit.id, musteriId, kayit.tarih, `${kayit.isEmriNo} — ${HIZMET_TIP_LABEL[hizmetTuru] || ""}`, kayit.kalemler, tutar);
-  }
+  faturaOlustur("servis", kayit.id, musteriId, kayit.tarih, `${kayit.isEmriNo} — ${HIZMET_TIP_LABEL[hizmetTuru] || ""}`, kayit.kalemler, tutar);
   return `✅ İş emri oluşturuldu: ${kayit.isEmriNo} — ${bulunanArac.plaka} (${fmtTL(tutar)})`;
 }
 function asOdemeAl(aksiyon) {
@@ -5826,6 +5831,7 @@ function AsAsistani({ sayfayaGit }) {
     }
   });
   const taniyiciRef = useRef(null);
+  const iptalControllerRef = useRef(null);
   const sohbetSonRef = useRef(null);
   const disRef = useRef(null);
   const surukleRef = useRef({ suruklemeVar: false, tasindi: false });
@@ -5902,6 +5908,8 @@ function AsAsistani({ sayfayaGit }) {
     setMesajlar(yeniMesajlar);
     setGirdi("");
     setYukleniyor(true);
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    iptalControllerRef.current = controller;
     try {
       const gecmis = yeniMesajlar.slice(-5).map((m) => `${m.rol === "kullanici" ? "Kullanıcı" : "AS"}: ${m.metin}`).join("\n");
       const tamPrompt = `${asSistemPromptuOlustur()}
@@ -5911,7 +5919,7 @@ ${asBaglamOlustur()}
 
 ${gecmis}
 AS:`;
-      const cevapHam = await aiSor(tamPrompt);
+      const cevapHam = await aiSor(tamPrompt, 0, controller ? controller.signal : void 0);
       const { temizMetin, aksiyonlar } = asAksiyonAyristir(cevapHam || "");
       let sonMetin = temizMetin || "Anlayamadım, tekrar s\xF6yler misin?";
       const onayGerekenler = aksiyonlar.filter((a) => a && AS_ONAY_GEREKTIREN_AKSIYONLAR.includes(a.tip));
@@ -5928,10 +5936,14 @@ ${sonuc}`;
       setMesajlar((m) => [...m, { rol: "asistan", metin: sonMetin }]);
       seslendir(sonMetin);
     } catch (e) {
-      setMesajlar((m) => [...m, { rol: "asistan", metin: `⚠️ ${e.message}` }]);
+      if (e.message !== "İptal edildi.") setMesajlar((m) => [...m, { rol: "asistan", metin: `⚠️ ${e.message}` }]);
     } finally {
       setYukleniyor(false);
+      iptalControllerRef.current = null;
     }
+  };
+  const istegiIptalEt = () => {
+    iptalControllerRef.current && iptalControllerRef.current.abort();
   };
   const aksiyonUygulaVeSil = async (id, kaynakSecici) => {
     const item = bekleyenAksiyonlar.find((x) => x.id === id);
@@ -6026,7 +6038,7 @@ ${sonuc}`;
         const hataMi = m.rol === "asistan" && m.metin.startsWith("⚠️");
         return /* @__PURE__ */ React.createElement("div", { key: i, style: { alignSelf: m.rol === "kullanici" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.rol === "kullanici" ? C.accent : hataMi ? C.red + "18" : C.surface, color: m.rol === "kullanici" ? "#161311" : hataMi ? C.red : C.text, padding: "8px 12px", borderRadius: 10, fontSize: 12.5, whiteSpace: "pre-wrap" } }, m.metin);
       }),
-      yukleniyor && /* @__PURE__ */ React.createElement("div", { style: { alignSelf: "flex-start", background: C.surface, color: C.muted, fontSize: 12, padding: "8px 12px", borderRadius: 10 } }, "AS yazıyor …"),
+      yukleniyor && /* @__PURE__ */ React.createElement("div", { style: { alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 8, background: C.surface, color: C.muted, fontSize: 12, padding: "8px 12px", borderRadius: 10 } }, "AS yazıyor …", React.createElement("button", { type: "button", onClick: istegiIptalEt, style: { background: "none", border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 10.5, padding: "2px 8px", cursor: "pointer" } }, "İptal")),
       bekleyenAksiyonlar.length > 1 && React.createElement(
         "div",
         { style: { alignSelf: "flex-start", display: "flex", gap: 8 } },
