@@ -5507,6 +5507,37 @@ function asAracSorgula(aksiyon) {
   const sonServisler = [...servisler].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || "")).slice(0, 3);
   return `\u{1F697} ${arac.plaka}${arac.marka ? " — " + arac.marka + " " + (arac.model || "") : ""}${sahibi ? ` — Sahibi: ${sahibi.ad}` : ""}: toplam ${servisler.length} servis kaydı, ${fmtTL(toplamHarcama)} harcama.${sonServisler.length > 0 ? " Son işler: " + sonServisler.map((s) => `${fmtDate(s.tarih)} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`).join(", ") + "." : ""}`;
 }
+function asProaktifOzet() {
+  const bugun = today();
+  const servisler = LS.get("servisIsleri");
+  const gorevler = LS.get("yapilacaklar");
+  const parcalar = [];
+  const tahsilatGunu = Math.max(0, +getSettings().tahsilatHatirlatmaGunu || 0);
+  const gecikmisTahsilat = servisler.filter((s) => {
+    if (servisOdemeDurumu(s) === "odendi" || s.durum !== "tamamlandi" || !s.tarih) return false;
+    const gecenGun = Math.floor((new Date(bugun) - new Date(s.tarih)) / 864e5);
+    return gecenGun >= tahsilatGunu;
+  });
+  if (gecikmisTahsilat.length > 0) {
+    const toplam = gecikmisTahsilat.reduce((t, s) => t + servisKalanTutar(s), 0);
+    parcalar.push(`⏰ ${gecikmisTahsilat.length} gecikmiş tahsilat var (${fmtTL(toplam)})`);
+  }
+  const bugunIsler = servisler.filter((s) => s.tarih === bugun && s.durum !== "iptal");
+  const atanmamis = bugunIsler.filter((s) => !s.personelId);
+  if (atanmamis.length > 0) {
+    parcalar.push(`\u{1F527} bugünkü ${atanmamis.length} işte personel atanmamış`);
+  }
+  const yaklasanGaranti = servisler.filter((s) => s.garantili && s.garantiBitis && s.garantiBitis >= bugun).map((s) => ({ ...s, kalanGun: Math.ceil((new Date(s.garantiBitis) - new Date(bugun)) / 864e5) })).filter((s) => s.kalanGun <= 7);
+  if (yaklasanGaranti.length > 0) {
+    parcalar.push(`\u{1F6E1}️ ${yaklasanGaranti.length} işin garantisi 7 gün içinde bitiyor`);
+  }
+  const gecikenGorevler = gorevler.filter((g) => !g.tamamlandi && g.bitisTarihi && g.bitisTarihi < bugun);
+  if (gecikenGorevler.length > 0) {
+    parcalar.push(`⚠️ ${gecikenGorevler.length} görevin son tarihi geçti`);
+  }
+  if (parcalar.length === 0) return null;
+  return `☀️ Bugün için dikkat: ${parcalar.join(", ")}. Yardımcı olmamı ister misin?`;
+}
 function AsAsistani({ sayfayaGit }) {
   const [acik, setAcik] = useState(false);
   const [mesajlar, setMesajlar] = useState([{ rol: "asistan", metin: "Merhaba, ben AS! Sana nasıl yardımcı olabilirim?" }]);
@@ -5531,6 +5562,14 @@ function AsAsistani({ sayfayaGit }) {
   useEffect(() => {
     if (acik && sohbetSonRef.current) sohbetSonRef.current.scrollIntoView({ behavior: "smooth" });
   }, [mesajlar, acik]);
+  useEffect(() => {
+    if (!acik) return;
+    const anahtar = "fp_as_proaktif_" + today();
+    if (localStorage.getItem(anahtar)) return;
+    localStorage.setItem(anahtar, "1");
+    const ozet = asProaktifOzet();
+    if (ozet) setMesajlar((m) => [...m, { rol: "asistan", metin: ozet }]);
+  }, [acik]);
   const surukleDevam = (e) => {
     if (!surukleRef.current.suruklemeVar) return;
     e.preventDefault && e.preventDefault();
