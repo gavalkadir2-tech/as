@@ -5127,6 +5127,25 @@ function asAksiyonAyristir(metin) {
     return { temizMetin: metin.trim(), aksiyon: null };
   }
 }
+function asAksiyonOzetle(aksiyon) {
+  if (!aksiyon || !aksiyon.tip) return "";
+  if (aksiyon.tip === "yeni_gorev") {
+    const oncelikLabel = { dusuk: "d\xFCş\xFCk", orta: "orta", yuksek: "y\xFCksek" }[aksiyon.oncelik] || "orta";
+    return `\u{1F4CB} Yeni g\xF6rev eklenecek: "${aksiyon.baslik || ""}" (\xF6ncelik: ${oncelikLabel})`;
+  }
+  if (aksiyon.tip === "yeni_cari") {
+    return `\u{1F465} Yeni cari eklenecek: ${aksiyon.ad || ""}${aksiyon.tel ? " — " + aksiyon.tel : ""}`;
+  }
+  if (aksiyon.tip === "yeni_is_emri") {
+    return `\u{1F527} Yeni iş emri oluşturulacak: ${aksiyon.plaka || ""}${aksiyon.musteri ? " — " + aksiyon.musteri : ""} — ${HIZMET_TIP_LABEL[aksiyon.hizmetTuru] || aksiyon.hizmetTuru || ""} — ${fmtTL(aksiyon.tutar)}`;
+  }
+  if (aksiyon.tip === "odeme_al") {
+    return `\u{1F4B0} \xD6deme alınacak: ${aksiyon.isEmriNo || aksiyon.plaka || aksiyon.musteri || ""}${aksiyon.tutar ? " — " + fmtTL(aksiyon.tutar) : " (kalan tutarın tamamı)"}`;
+  }
+  return "Bu işlem uygulanacak.";
+}
+const AS_ONAY_GEREKTIREN_AKSIYONLAR = ["yeni_gorev", "yeni_cari", "yeni_is_emri", "odeme_al"];
+const AS_ALAN_LABEL = { baslik: "Başlık", oncelik: "\xD6ncelik", ad: "Ad", tel: "Telefon", musteri: "M\xFCşteri", plaka: "Plaka", hizmetTuru: "Hizmet T\xFCr\xFC", tutar: "Tutar", aciklama: "A\xE7ıklama", isEmriNo: "İş Emri No" };
 function asAksiyonUygula(aksiyon, sayfayaGit) {
   if (!aksiyon || !aksiyon.tip) return null;
   if (aksiyon.tip === "sayfaya_git" && AS_SAYFA_IDLERI.includes(aksiyon.sayfa)) {
@@ -5253,6 +5272,7 @@ function AsAsistani({ sayfayaGit }) {
   const [yukleniyor, setYukleniyor] = useState(false);
   const [dinliyor, setDinliyor] = useState(false);
   const [sesliCevap, setSesliCevap] = useState(false);
+  const [bekleyenAksiyon, setBekleyenAksiyon] = useState(null);
   const [pos, setPos] = useState(() => {
     try {
       const ham = localStorage.getItem("fp_as_asistan_pos");
@@ -5342,7 +5362,9 @@ AS:`;
       const cevapHam = await aiSor(tamPrompt);
       const { temizMetin, aksiyon } = asAksiyonAyristir(cevapHam || "");
       let sonMetin = temizMetin || "Anlayamadım, tekrar s\xF6yler misin?";
-      if (aksiyon) {
+      if (aksiyon && AS_ONAY_GEREKTIREN_AKSIYONLAR.includes(aksiyon.tip)) {
+        setBekleyenAksiyon({ aksiyon, taslak: { ...aksiyon }, duzenleModu: false });
+      } else if (aksiyon) {
         const sonuc = asAksiyonUygula(aksiyon, sayfayaGit);
         if (sonuc) sonMetin += `
 
@@ -5356,6 +5378,20 @@ ${sonuc}`;
       setYukleniyor(false);
     }
   };
+  const aksiyonOnayla = () => {
+    if (!bekleyenAksiyon) return;
+    const kaynak = bekleyenAksiyon.duzenleModu ? bekleyenAksiyon.taslak : bekleyenAksiyon.aksiyon;
+    const uygulanacak = { ...kaynak };
+    if ("tutar" in uygulanacak) uygulanacak.tutar = +uygulanacak.tutar || 0;
+    const sonuc = asAksiyonUygula(uygulanacak, sayfayaGit);
+    setBekleyenAksiyon(null);
+    if (sonuc) setMesajlar((m) => [...m, { rol: "asistan", metin: sonuc }]);
+  };
+  const aksiyonIptal = () => {
+    setBekleyenAksiyon(null);
+    setMesajlar((m) => [...m, { rol: "asistan", metin: "❌ İşlem iptal edildi." }]);
+  };
+  const aksiyonTaslakGuncelle = (alan, deger) => setBekleyenAksiyon((a) => ({ ...a, taslak: { ...a.taslak, [alan]: deger } }));
   const sesleGonder = () => {
     if (!sesTanimaDesteklerMi()) return;
     if (dinliyor) {
@@ -5407,6 +5443,31 @@ ${sonuc}`;
         return /* @__PURE__ */ React.createElement("div", { key: i, style: { alignSelf: m.rol === "kullanici" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.rol === "kullanici" ? C.accent : hataMi ? C.red + "18" : C.surface, color: m.rol === "kullanici" ? "#161311" : hataMi ? C.red : C.text, padding: "8px 12px", borderRadius: 10, fontSize: 12.5, whiteSpace: "pre-wrap" } }, m.metin);
       }),
       yukleniyor && /* @__PURE__ */ React.createElement("div", { style: { alignSelf: "flex-start", background: C.surface, color: C.muted, fontSize: 12, padding: "8px 12px", borderRadius: 10 } }, "AS yazıyor …"),
+      bekleyenAksiyon && React.createElement(
+        "div",
+        { style: { alignSelf: "flex-start", maxWidth: "95%", background: C.surface, border: `1px solid ${C.accent}88`, borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 } },
+        React.createElement("div", { style: { fontSize: 12.5, color: C.text } }, asAksiyonOzetle(bekleyenAksiyon.duzenleModu ? bekleyenAksiyon.taslak : bekleyenAksiyon.aksiyon)),
+        bekleyenAksiyon.duzenleModu ? React.createElement(
+          "div",
+          { style: { display: "flex", flexDirection: "column", gap: 6 } },
+          Object.keys(bekleyenAksiyon.taslak).filter((k) => k !== "tip").map((k) => React.createElement(
+            "div",
+            { key: k, style: { display: "flex", alignItems: "center", gap: 6 } },
+            React.createElement("label", { style: { fontSize: 11, color: C.muted, width: 78, flexShrink: 0 } }, AS_ALAN_LABEL[k] || k),
+            k === "hizmetTuru" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) }, Object.entries(HIZMET_TIP_LABEL).map(([key, label]) => React.createElement("option", { key, value: key }, label))) : k === "oncelik" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] || "orta", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) }, React.createElement("option", { value: "dusuk" }, "D\xFCş\xFCk"), React.createElement("option", { value: "orta" }, "Orta"), React.createElement("option", { value: "yuksek" }, "Y\xFCksek")) : React.createElement("input", { type: k === "tutar" ? "number" : "text", style: { ...S.inp, flex: 1, fontSize: 12, padding: "5px 8px" }, value: bekleyenAksiyon.taslak[k] ?? "", onChange: (e) => aksiyonTaslakGuncelle(k, e.target.value) })
+          )),
+          React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
+            React.createElement("button", { type: "button", style: { ...S.btn(), padding: "5px 12px", fontSize: 11.5 }, onClick: aksiyonOnayla }, "✅ Uygula"),
+            React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 12px", fontSize: 11.5 }, onClick: () => setBekleyenAksiyon((a) => ({ ...a, duzenleModu: false })) }, "◀ Geri")
+          )
+        ) : React.createElement(
+          "div",
+          { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+          React.createElement("button", { type: "button", style: { ...S.btn(), padding: "5px 12px", fontSize: 11.5 }, onClick: aksiyonOnayla }, "✅ Onayla"),
+          React.createElement("button", { type: "button", style: { ...S.btnO, padding: "5px 12px", fontSize: 11.5 }, onClick: () => setBekleyenAksiyon((a) => ({ ...a, duzenleModu: true })) }, "✏️ D\xFCzenle"),
+          React.createElement("button", { type: "button", style: { ...S.btnR, padding: "5px 12px", fontSize: 11.5 }, onClick: aksiyonIptal }, "✖ İptal")
+        )
+      ),
       /* @__PURE__ */ React.createElement("div", { ref: sohbetSonRef })
     ),
     /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, padding: 10, borderTop: `1px solid ${C.border}` } },
