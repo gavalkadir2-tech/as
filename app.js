@@ -1501,6 +1501,43 @@ function isEmriYazdir(s, musteriAdi, aracEtiket) {
   </body></html>`;
   htmlBelgeIndir(html, `${s.isEmriNo || "is-emri"}.pdf`);
 }
+function garantiSertifikasiYazdir(s, musteriAdi, aracEtiket) {
+  const settings = getSettings();
+  const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>Garanti Sertifikası — ${s.isEmriNo || ""}</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;padding:0;color:#111;}
+    .cerceve{border:8px solid #e8622c;border-radius:14px;padding:40px;max-width:640px;margin:30px auto;}
+    .baslik{text-align:center;margin-bottom:24px;}
+    .baslik .firma{font-size:20px;font-weight:800;margin-bottom:4px;}
+    .baslik .muted{color:#666;font-size:12.5px;}
+    .baslik h1{font-size:22px;letter-spacing:1px;color:#e8622c;margin:18px 0 0;}
+    .satir{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;font-size:14px;}
+    .satir .lbl{color:#666;}
+    .satir .val{font-weight:700;text-align:right;}
+    .garanti-kutu{margin-top:24px;padding:16px;background:#fff6f0;border:1px solid #f0c8ac;border-radius:10px;text-align:center;}
+    .garanti-kutu .tarih{font-size:20px;font-weight:800;color:#e8622c;margin-top:4px;}
+    .alt{margin-top:30px;text-align:center;color:#999;font-size:11px;}
+  </style></head><body>
+  <div class="cerceve">
+    <div class="baslik">
+      <div class="firma">${settings.firmaAdi || "Atölye"}</div>
+      <div class="muted">${settings.firmaAdres || ""}${settings.firmaTel ? " · " + settings.firmaTel : ""}</div>
+      <h1>\u{1F6E1}️ GARANTİ SERTİFİKASI</h1>
+    </div>
+    <div class="satir"><span class="lbl">İş Emri No</span><span class="val">${s.isEmriNo || ""}</span></div>
+    <div class="satir"><span class="lbl">Müşteri</span><span class="val">${musteriAdi || ""}</span></div>
+    <div class="satir"><span class="lbl">Araç</span><span class="val">${aracEtiket || ""}</span></div>
+    <div class="satir"><span class="lbl">Hizmet</span><span class="val">${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}</span></div>
+    <div class="satir"><span class="lbl">Teslim Tarihi</span><span class="val">${fmtDate(s.tarih)}</span></div>
+    <div class="garanti-kutu">
+      <div class="lbl">Bu işlem aşağıdaki tarihe kadar garanti kapsamındadır</div>
+      <div class="tarih">${s.garantiBitis ? fmtDate(s.garantiBitis) : "Süresiz"}</div>
+    </div>
+    <div class="alt">Bu belge ${fmtDate(today())} tarihinde otomatik olarak oluşturulmuştur.</div>
+  </div>
+  </body></html>`;
+  htmlBelgeIndir(html, `Garanti-Sertifikasi-${s.isEmriNo || uid()}.pdf`);
+}
 function ozetRaporuIndir(servisler, satislar, giderler, personelListesi) {
   const ayStr = today().slice(0, 7);
   const ayServisler = servisler.filter((s) => s.tarih && s.tarih.startsWith(ayStr) && s.durum === "tamamlandi");
@@ -2122,6 +2159,7 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
     LS.set("servisIsleri", yeni);
     setListe(yeni);
     faturaOlustur("servis", s.id, s.musteriId, today(), `${s.isEmriNo} \u2014 ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`, s.kalemler, s.tutar);
+    if (s.garantili) garantiSertifikasiYazdir(s, cariAd(cariler, s.musteriId), aracEtiket(s));
     whatsappTeslimBildir({ ...s, asama: "teslim_edildi" }, cariler, liste);
   };
 
@@ -2311,6 +2349,7 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
             } }, React.createElement(WhatsAppIkon, null)),
             React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => isEmriYazdir(s, cariAd(cariler, s.musteriId), aracEtiket(s)) }, "📄"),
             s.asama === "teslim_edildi" && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "Memnuniyet Anketi Gönder", onClick: () => whatsappAnketGonder(s, cariler) }, "⭐"),
+            s.garantili && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, title: "Garanti Sertifikası İndir", onClick: () => garantiSertifikasiYazdir(s, cariAd(cariler, s.musteriId), aracEtiket(s)) }, "\u{1F4C3}"),
             s.durum === "tamamlandi" && s.garantili && (!s.garantiBitis || s.garantiBitis >= today()) && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, title: "Garanti Kapsamında Tekrar İş Aç", onClick: () => garantiTekrarAc(s) }, "🛡️"),
             s.asama !== "iptal" && s.asama !== "teslim_edildi" && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11, color: C.red }, title: "İptal Et", onClick: () => iptalEt(s) }, "✕"),
             React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(s); setHata(""); setModalAcik(true); } }, "✏️"),
@@ -3342,10 +3381,11 @@ Tarihi okuyamazsan bug\xFCn\xFCn tarihini (${today()}) kullan. Kategori tam eşl
   const [yeniFaturaForm, setYeniFaturaForm] = useState({});
   const [yeniFaturaHata, setYeniFaturaHata] = useState("");
   const [raporDonemi, setRaporDonemi] = useState(30);
+  const [raporKarsilastirma, setRaporKarsilastirma] = useState("onceki_donem");
   const [raporMetni, setRaporMetni] = useState("");
   const [raporYukleniyor, setRaporYukleniyor] = useState(false);
   const [raporHata, setRaporHata] = useState("");
-  const raporOzetHesapla = (gunSayisi) => {
+  const raporOzetHesapla = (gunSayisi, karsilastirma = "onceki_donem") => {
     const bugun = today();
     const baslangicTarih = /* @__PURE__ */ new Date();
     baslangicTarih.setDate(baslangicTarih.getDate() - gunSayisi);
@@ -3375,10 +3415,24 @@ Tarihi okuyamazsan bug\xFCn\xFCn tarihini (${today()}) kullan. Kategori tam eşl
     });
     const enIyiMusteriler = Object.entries(musteriCirosu).map(([id, tutar]) => ({ ad: cariAd(cariler, id), tutar })).sort((a, b) => b.tutar - a.tutar).slice(0, 5);
     const toplamHesapBakiye = hesaplar.reduce((t, h) => t + (+h.bakiye || 0), 0);
-    const oncekiBaslangicTarih = /* @__PURE__ */ new Date(baslangicTarih);
-    oncekiBaslangicTarih.setDate(oncekiBaslangicTarih.getDate() - gunSayisi);
+    let oncekiBaslangicTarih, oncekiBitisTarih;
+    if (karsilastirma === "gecen_ay") {
+      oncekiBaslangicTarih = /* @__PURE__ */ new Date(baslangicTarih);
+      oncekiBaslangicTarih.setMonth(oncekiBaslangicTarih.getMonth() - 1);
+      oncekiBitisTarih = /* @__PURE__ */ new Date();
+      oncekiBitisTarih.setMonth(oncekiBitisTarih.getMonth() - 1);
+    } else if (karsilastirma === "gecen_yil") {
+      oncekiBaslangicTarih = /* @__PURE__ */ new Date(baslangicTarih);
+      oncekiBaslangicTarih.setFullYear(oncekiBaslangicTarih.getFullYear() - 1);
+      oncekiBitisTarih = /* @__PURE__ */ new Date();
+      oncekiBitisTarih.setFullYear(oncekiBitisTarih.getFullYear() - 1);
+    } else {
+      oncekiBaslangicTarih = /* @__PURE__ */ new Date(baslangicTarih);
+      oncekiBaslangicTarih.setDate(oncekiBaslangicTarih.getDate() - gunSayisi);
+      oncekiBitisTarih = null;
+    }
     const oncekiBaslangic = oncekiBaslangicTarih.toISOString().slice(0, 10);
-    const oncekiBitis = baslangic;
+    const oncekiBitis = oncekiBitisTarih ? oncekiBitisTarih.toISOString().slice(0, 10) : baslangic;
     const oncekiServisler = servisler.filter((s) => s.tarih >= oncekiBaslangic && s.tarih < oncekiBitis && s.durum !== "iptal");
     const oncekiSatislar = satislar.filter((s) => s.tarih >= oncekiBaslangic && s.tarih < oncekiBitis);
     const oncekiGiderler = giderler.filter((g) => g.tarih >= oncekiBaslangic && g.tarih < oncekiBitis);
@@ -3419,7 +3473,7 @@ Tarihi okuyamazsan bug\xFCn\xFCn tarihini (${today()}) kullan. Kategori tam eşl
     setRaporHata("");
     setRaporMetni("");
     try {
-      const o = raporOzetHesapla(raporDonemi);
+      const o = raporOzetHesapla(raporDonemi, raporKarsilastirma);
       const veri = `D\xF6nem: son ${raporDonemi} g\xFCn (${o.baslangic} — ${o.bugun}).
 Toplam Gelir: ${fmtTL(o.toplamGelir)} (Servis: ${fmtTL(o.servisGeliri)}, El Arabası: ${fmtTL(o.satisGeliri)}).
 Toplam Gider: ${fmtTL(o.toplamGider)}.
@@ -3442,7 +3496,7 @@ ${veri}`;
     }
   };
   const raporPdfIndir = () => {
-    const o = raporOzetHesapla(raporDonemi);
+    const o = raporOzetHesapla(raporDonemi, raporKarsilastirma);
     const html = `<div style="font-family:Arial,Helvetica,sans-serif;padding:30px;color:#111;max-width:680px;">
       <h2 style="margin:0 0 4px;">📊 Mali Analiz Raporu</h2>
       <div style="color:#666;font-size:13px;margin-bottom:16px;">${fmtDate(o.baslangic)} — ${fmtDate(o.bugun)}</div>
@@ -3864,11 +3918,12 @@ ${veri}`;
       )
     ),
     sekme === "raporlar" && (() => {
-      const o = raporOzetHesapla(raporDonemi);
+      const o = raporOzetHesapla(raporDonemi, raporKarsilastirma);
       const renkler = [C.accent, C.blue, C.green, C.yellow, C.red, C.steel];
       const hizmetDagilimiArr = Object.entries(o.hizmetDagilimi).map(([name, value]) => ({ name, value }));
       const giderDagilimiArr = Object.entries(o.giderKategoriDagilimi).map(([name, value]) => ({ name, value }));
-      const DegisimEtiketi = ({ deger }) => React.createElement("span", { style: { fontSize: 11.5, fontWeight: 700, color: deger > 0 ? C.green : deger < 0 ? C.red : C.muted } }, deger > 0 ? "▲" : deger < 0 ? "▼" : "—", " ", Math.abs(deger), "% \xF6nceki d\xF6neme g\xF6re");
+      const KARSILASTIRMA_ETIKET = { onceki_donem: "\xF6nceki d\xF6neme g\xF6re", gecen_ay: "ge\xE7en ay aynı d\xF6neme g\xF6re", gecen_yil: "ge\xE7en yıl aynı d\xF6neme g\xF6re" };
+      const DegisimEtiketi = ({ deger }) => React.createElement("span", { style: { fontSize: 11.5, fontWeight: 700, color: deger > 0 ? C.green : deger < 0 ? C.red : C.muted } }, deger > 0 ? "▲" : deger < 0 ? "▼" : "—", " ", Math.abs(deger), "% ", KARSILASTIRMA_ETIKET[raporKarsilastirma] || KARSILASTIRMA_ETIKET.onceki_donem);
       return React.createElement(
         "div",
         null,
@@ -3880,6 +3935,11 @@ ${veri}`;
             React.createElement("option", { value: 30 }, "Son 30 g\xFCn"),
             React.createElement("option", { value: 90 }, "Son 90 g\xFCn"),
             React.createElement("option", { value: 365 }, "Son 12 ay")
+          ),
+          React.createElement("select", { style: { ...S.sel, width: "auto" }, value: raporKarsilastirma, onChange: (e) => setRaporKarsilastirma(e.target.value) },
+            React.createElement("option", { value: "onceki_donem" }, "\xD6nceki D\xF6nemle Karşılaştır"),
+            React.createElement("option", { value: "gecen_ay" }, "Ge\xE7en Ay Aynı D\xF6nemle Karşılaştır"),
+            React.createElement("option", { value: "gecen_yil" }, "Ge\xE7en Yıl Aynı D\xF6nemle Karşılaştır")
           )
         ),
         React.createElement(Grid4, null,
@@ -5482,6 +5542,12 @@ function asServisDurumDegistir(aksiyon, islem) {
     const yeni = servisler.map((x) => x.id === hedef.id ? guncel : x);
     LS.set("servisIsleri", yeni);
     faturaOlustur("servis", hedef.id, hedef.musteriId, today(), `${hedef.isEmriNo} — ${HIZMET_TIP_LABEL[hedef.hizmetTuru] || ""}`, hedef.kalemler, hedef.tutar);
+    if (hedef.garantili) {
+      const araclar = LS.get("araclar");
+      const musteri = cariler.find((c) => c.id === hedef.musteriId);
+      const arac = araclar.find((a) => a.id === hedef.aracId);
+      garantiSertifikasiYazdir(guncel, musteri ? musteri.ad : "", arac ? arac.plaka : hedef.aracPlaka || "");
+    }
     whatsappTeslimBildir(guncel, cariler, yeni);
     return `✅ ${hedef.isEmriNo || ""} teslim edildi olarak işaretlendi.`;
   }
