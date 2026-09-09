@@ -1,4 +1,4 @@
-const CACHE_ADI = "atolyepro-v65";
+const CACHE_ADI = "atolyepro-v66";
 const TEMEL_DOSYALAR = ["./", "./index.html", "./app.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {

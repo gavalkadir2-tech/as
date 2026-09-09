@@ -308,7 +308,7 @@ async function aiSor(promptMetni, denemeNo = 0) {
   const apiKey = getSettings().aiApiKey;
   if (!apiKey) throw new Error("\xD6nce Ayarlar \u2192 Yapay Zeka'dan bir API key girin.");
   const kontrolci = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const zamanAsimi = kontrolci ? setTimeout(() => kontrolci.abort(), 45e3) : null;
+  const zamanAsimi = kontrolci ? setTimeout(() => kontrolci.abort(), 6e4) : null;
   let r;
   try {
     r = await fetch(
@@ -323,7 +323,7 @@ async function aiSor(promptMetni, denemeNo = 0) {
       }
     );
   } catch (e) {
-    if (e.name === "AbortError") throw new Error("Zaman a\u015F\u0131m\u0131: Gemini'ye 45 saniyede yan\u0131t al\u0131namad\u0131. \u0130nternet ba\u011Flant\u0131n\u0131 kontrol edip tekrar dene.");
+    if (e.name === "AbortError") throw new Error("Zaman a\u015F\u0131m\u0131: Gemini'ye 60 saniyede yan\u0131t al\u0131namad\u0131. \u0130nternet ba\u011Flant\u0131n\u0131 kontrol edip tekrar dene.");
     throw new Error(`Ba\u011Flant\u0131 hatas\u0131: ${e.message}`);
   } finally {
     if (zamanAsimi) clearTimeout(zamanAsimi);
@@ -5239,38 +5239,21 @@ function elArabasiMigrasyonu() {
 const AS_SAYFA_IDLERI = ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "personel", "cariler", "yapilacaklar", "muhasebe", "cop_kutusu", "ayarlar"];
 function asSistemPromptuOlustur() {
   return `Sen "AS" isimli, bir oto egzoz/chiptuning/el arabas\u0131 \xFCretim at\xF6lyesinin y\xF6netim uygulamas\u0131 i\xE7inde \xE7al\u0131\u015Fan yapay zeka asistan\u0131s\u0131n. Kullan\u0131c\u0131ya (at\xF6lye sahibi/\xE7al\u0131\u015Fan\u0131) T\xFCrk\xE7e cevap ver. Cevaplar\u0131n mutlaka KISA olsun: normal sorularda en fazla 2-3 c\xFCmle, gereksiz gire\u015F/tekrar/\xF6z\xFCr yazma, do\u011Frudan konuya gir. Sana verilen "G\xFCncel Durum" bilgisini kullanarak analiz/\xF6zet sorular\u0131n\u0131 yan\u0131tlayabilirsin.
-Eğer kullanıcı senden bir sayfaya gitmeni istiyorsa (örn. "cariler sayfasını aç", "muhasebeye git"), cevabının EN SONUNA yeni bir satırda tam olarak şu formatta yaz:
-AKSIYON:{"tip":"sayfaya_git","sayfa":"<id>"}
-<id> şunlardan biri olmalı: ${AS_SAYFA_IDLERI.join(", ")}.
-Eğer kullanıcı senden bir görev/hatırlatma eklemeni istiyorsa, cevabının sonuna:
-AKSIYON:{"tip":"yeni_gorev","baslik":"<başlık>","oncelik":"dusuk|orta|yuksek"}
-Eğer kullanıcı senden yeni bir cari/müşteri eklemeni istiyorsa, cevabının sonuna:
-AKSIYON:{"tip":"yeni_cari","ad":"<ad>","tel":"<telefon veya boş>"}
-Eğer kullanıcı senden yeni bir iş emri oluşturmanı istiyorsa (plaka mutlaka gerekli, yoksa kullanıcıya plaka sor ve AKSIYON yazma), cevabının sonuna:
-AKSIYON:{"tip":"yeni_is_emri","musteri":"<ad veya boş>","plaka":"<plaka>","hizmetTuru":"<key>","tutar":<sayı>,"aciklama":"<opsiyonel>"}
-hizmetTuru şunlardan biri olmalı: ${Object.keys(HIZMET_TIP_LABEL).join(", ")}.
-Eğer kullanıcı bir iş için ödeme/tahsilat almanı istiyorsa, cevabının sonuna:
-AKSIYON:{"tip":"odeme_al","isEmriNo":"<varsa, yoksa boş>","plaka":"<varsa, yoksa boş>","musteri":"<varsa, yoksa boş>","tutar":<opsiyonel sayı, verilmezse kalan tutarın tamamı alınır>}
-Eğer kullanıcı bir gider eklemeni istiyorsa, cevabının sonuna:
-AKSIYON:{"tip":"gider_ekle","kategori":"<şunlardan biri: ${GIDER_KATEGORILERI.join(", ")}>","tutar":<sayı>,"aciklama":"<opsiyonel>"}
-Eğer kullanıcı bir görevi tamamlandı olarak işaretlemeni istiyorsa, cevabının sonuna:
-AKSIYON:{"tip":"gorev_tamamla","baslik":"<görev başlığı veya bir kısmı>"}
-Eğer kullanıcı bir işi teslim edildi olarak işaretlemeni istiyorsa, cevabının sonuna:
-AKSIYON:{"tip":"servis_teslim_et","isEmriNo":"<varsa, yoksa boş>","plaka":"<varsa, yoksa boş>"}
-Eğer kullanıcı bir işi iptal etmeni istiyorsa, cevabının sonuna:
-AKSIYON:{"tip":"servis_iptal_et","isEmriNo":"<varsa, yoksa boş>","plaka":"<varsa, yoksa boş>"}
-Eğer kullanıcı bir müşteriye kendi yazdığı/istediği özel bir WhatsApp mesajı göndermeni istiyorsa, cevabının sonuna:
-AKSIYON:{"tip":"whatsapp_gonder","musteri":"<ad>","mesaj":"<gönderilecek tam metin>"}
-Eğer kullanıcı bir müşterinin borcunu/geçmişini soruyorsa (aksiyon değil, doğrudan bilgi istemidir, onay gerekmez), cevabının sonuna:
-AKSIYON:{"tip":"cari_sorgula","musteri":"<ad>"}
-Eğer kullanıcı bir plakanın servis geçmişini/harcamasını soruyorsa (onay gerekmez), cevabının sonuna:
-AKSIYON:{"tip":"arac_sorgula","plaka":"<plaka>"}
-Eğer kullanıcı mali durum/rapor/analiz istiyorsa (onay gerekmez), cevabının sonuna:
-AKSIYON:{"tip":"rapor_olustur","donem":<opsiyonel, 7|30|90|365 gün, verilmezse 30>}
-ÇOKLU AKSİYON: Kullanıcı tek mesajda birden fazla işlem istiyorsa (\xF6rn. "X'e iş emri a\xE7 ve hemen \xF6demeyi al", "şu iki g\xF6revi tamamla") her birini AYRI bir satırda, sırayla, cevabının en sonuna art arda yaz — her satır kendi başına ge\xE7erli bir AKSIYON JSON'u olmalı, aralarına başka metin koyma:
-AKSIYON:{"tip":"...", ...}
-AKSIYON:{"tip":"...", ...}
-Bu durumların dışında AKSIYON satırı ekleme, sadece normal cevap ver. Emin değilsen ya da uygulamada yapamayacağın bir şey istenirse bunu açıkça söyle, uydurma. Veri değiştiren aksiyonlar (görev/cari/iş emri/ödeme/gider ekleme, görev tamamlama, teslim/iptal etme, whatsapp gönderme) kullanıcıya onay ekranında gösterilir, sen sadece doğru AKSIYON'u üretmekten sorumlusun.`;
+Gerekiyorsa cevabının EN SONUNA, her biri ayrı satırda, uygun AKSIYON JSON'unu yaz (birden fazla işlem varsa hepsini art arda ayrı satırlarda yaz, aralarına başka metin koyma):
+AKSIYON:{"tip":"sayfaya_git","sayfa":"<biri: ${AS_SAYFA_IDLERI.join(", ")}>"}
+AKSIYON:{"tip":"yeni_gorev","baslik":"...","oncelik":"dusuk|orta|yuksek"}
+AKSIYON:{"tip":"yeni_cari","ad":"...","tel":"..."}
+AKSIYON:{"tip":"yeni_is_emri","musteri":"...","plaka":"...","hizmetTuru":"<biri: ${Object.keys(HIZMET_TIP_LABEL).join("|")}>","tutar":sayı,"aciklama":"..."} (plaka zorunlu; yoksa AKSIYON yazma, kullanıcıya sor)
+AKSIYON:{"tip":"odeme_al","isEmriNo":"...","plaka":"...","musteri":"...","tutar":sayı(opsiyonel, yoksa kalanın tamamı)}
+AKSIYON:{"tip":"gider_ekle","kategori":"<biri: ${GIDER_KATEGORILERI.join("|")}>","tutar":sayı,"aciklama":"..."}
+AKSIYON:{"tip":"gorev_tamamla","baslik":"..."}
+AKSIYON:{"tip":"servis_teslim_et","isEmriNo":"...","plaka":"..."}
+AKSIYON:{"tip":"servis_iptal_et","isEmriNo":"...","plaka":"..."}
+AKSIYON:{"tip":"whatsapp_gonder","musteri":"...","mesaj":"..."}
+AKSIYON:{"tip":"cari_sorgula","musteri":"..."} (bilgi sorgusu, onay istemez)
+AKSIYON:{"tip":"arac_sorgula","plaka":"..."} (bilgi sorgusu, onay istemez)
+AKSIYON:{"tip":"rapor_olustur","donem":7|30|90|365(opsiyonel, varsayılan 30)} (bilgi sorgusu, onay istemez)
+Bunların dışında AKSIYON satırı yazma, sadece normal cevap ver. Emin değilsen ya da yapamayacağın bir şey istenirse açıkça söyle, uydurma. Veri değiştiren aksiyonlar kullanıcıya onay ekranında gösterilir, sen sadece doğru AKSIYON'u üretmekten sorumlusun.`;
 }
 function asBaglamOlustur() {
   const servisler = LS.get("servisIsleri");
