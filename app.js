@@ -52,6 +52,7 @@ const TEMA_IOS = {
 };
 let RADIUS_OLCEK = 1;
 let GOLGE_AKTIF = false;
+let BUTON_METIN_RENGI = "#161311";
 function temaCssUygula() {
   const kok = document.documentElement.style;
   kok.setProperty("--bg", C.bg);
@@ -74,6 +75,7 @@ function temaUygula(mod) {
   Object.assign(C, iosMu ? TEMA_IOS : mod === "acik" ? TEMA_ACIK : TEMA_KOYU);
   RADIUS_OLCEK = iosMu ? 1.7 : 1;
   GOLGE_AKTIF = iosMu;
+  BUTON_METIN_RENGI = iosMu ? "#ffffff" : "#161311";
   temaCssUygula();
   if (typeof document !== "undefined") document.documentElement.setAttribute("data-tema", iosMu ? "ios" : mod || "koyu");
 }
@@ -1092,7 +1094,7 @@ const S = {
   main: { flex: 1, padding: "24px 28px", maxWidth: 1200, margin: "0 auto", width: "100%" },
   get card() { return { background: C.card, border: GOLGE_AKTIF ? "none" : `1px solid ${C.border}`, boxShadow: GOLGE_AKTIF ? "0 1px 3px rgba(0,0,0,0.08)" : "none", borderRadius: 12 * RADIUS_OLCEK, padding: 20, marginBottom: 16, overflowX: "auto", WebkitOverflowScrolling: "touch" }; },
   navBtn: (active) => ({ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8 * RADIUS_OLCEK, cursor: "pointer", fontSize: 13.5, marginBottom: 2, color: active ? C.white : C.muted, background: active ? C.accent + "22" : "transparent", border: active ? `1px solid ${C.accent}55` : "1px solid transparent", fontWeight: active ? 600 : 400 }),
-  btn: (bg = C.accent) => ({ background: bg, color: "#161311", border: "none", borderRadius: 8 * RADIUS_OLCEK, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }),
+  btn: (bg = C.accent) => ({ background: bg, color: BUTON_METIN_RENGI, border: "none", borderRadius: 8 * RADIUS_OLCEK, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }),
   get btnO() { return { background: "transparent", color: C.text, border: `1px solid ${C.border}`, borderRadius: 8 * RADIUS_OLCEK, padding: "9px 16px", fontSize: 13, cursor: "pointer" }; },
   get btnR() { return { background: "transparent", color: C.red, border: `1px solid ${C.red}55`, borderRadius: 8 * RADIUS_OLCEK, padding: "7px 12px", fontSize: 12, cursor: "pointer" }; },
   get inp() { return { width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8 * RADIUS_OLCEK, padding: "9px 12px", color: C.white, fontSize: 13.5 }; },
@@ -1139,7 +1141,7 @@ function Grid4({ children }) {
 }
 function TabBar({ tabs, active, onChange }) {
   return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" } }, tabs.map(
-    ([k, l]) => /* @__PURE__ */ React.createElement("button", { key: k, onClick: () => onChange(k), style: { ...S.btn(active === k ? C.accent : "transparent"), color: active === k ? "#161311" : C.muted, border: `1px solid ${active === k ? C.accent : C.border}` } }, l)
+    ([k, l]) => /* @__PURE__ */ React.createElement("button", { key: k, onClick: () => onChange(k), style: { ...S.btn(active === k ? C.accent : "transparent"), color: active === k ? BUTON_METIN_RENGI : C.muted, border: `1px solid ${active === k ? C.accent : C.border}` } }, l)
   ));
 }
 function csvIndir(columns, rows, dosyaAdi) {
@@ -4808,7 +4810,7 @@ function Ayarlar() {
       { style: { display: "flex", gap: 10 } },
       React.createElement("button", { type: "button", style: (form.tema || "koyu") === "koyu" ? S.btn() : S.btnO, onClick: () => temaDegistir("koyu") }, "\u{1F319} Koyu Mod"),
       React.createElement("button", { type: "button", style: form.tema === "acik" ? S.btn() : S.btnO, onClick: () => temaDegistir("acik") }, "\u2600\uFE0F A\xE7\u0131k Mod"),
-      React.createElement("button", { type: "button", style: form.tema === "sistem" ? S.btn() : S.btnO, onClick: () => temaDegistir("sistem") }, "\u{1F4F1} iOS G\xF6r\xFCn\xFCm\xFC")
+      React.createElement("button", { type: "button", style: form.tema === "sistem" ? S.btn() : S.btnO, onClick: () => temaDegistir("sistem") }, "\u{1F4F1} iOS Mod")
     )), React.createElement(KatlanirKart, { title: "\u{1F510} Roller ve Yetkiler" }, React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14 } }, "Usta ve Kasiyer rol\xFCndeki personelin hangi sayfalar\u0131 g\xF6rebilece\u011Fini se\xE7in. Patron her zaman t\xFcm sayfalara eri\u015Fir."),
     ["usta", "kasiyer"].map((rol) => React.createElement("div", { key: rol, style: { marginBottom: 14 } },
       React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.white, marginBottom: 8 } }, ROL_LABEL[rol]),
@@ -6164,7 +6166,7 @@ ${sonuc}`;
     /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 } },
       mesajlar.map((m, i) => {
         const hataMi = m.rol === "asistan" && m.metin.startsWith("⚠️");
-        return /* @__PURE__ */ React.createElement("div", { key: i, style: { alignSelf: m.rol === "kullanici" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.rol === "kullanici" ? C.accent : hataMi ? C.red + "18" : C.surface, color: m.rol === "kullanici" ? "#161311" : hataMi ? C.red : C.text, padding: "8px 12px", borderRadius: 10, fontSize: 12.5, whiteSpace: "pre-wrap" } }, m.metin);
+        return /* @__PURE__ */ React.createElement("div", { key: i, style: { alignSelf: m.rol === "kullanici" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.rol === "kullanici" ? C.accent : hataMi ? C.red + "18" : C.surface, color: m.rol === "kullanici" ? BUTON_METIN_RENGI : hataMi ? C.red : C.text, padding: "8px 12px", borderRadius: 10, fontSize: 12.5, whiteSpace: "pre-wrap" } }, m.metin);
       }),
       yukleniyor && /* @__PURE__ */ React.createElement("div", { style: { alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 8, background: C.surface, color: C.muted, fontSize: 12, padding: "8px 12px", borderRadius: 10 } }, "AS yazıyor …", React.createElement("button", { type: "button", onClick: istegiIptalEt, style: { background: "none", border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 10.5, padding: "2px 8px", cursor: "pointer" } }, "İptal")),
       bekleyenAksiyonlar.length > 1 && React.createElement(
@@ -6338,7 +6340,7 @@ function App() {
     ),
     /* @__PURE__ */ React.createElement("div", { className: "fp-navlist" }, gorunurSayfalar.filter((s) => !s.gizli).map(
     (s) => /* @__PURE__ */ React.createElement("div", { key: s.id, className: "fp-navitem", style: S.navBtn(sayfa === s.id), onClick: () => sayfayaGit(s.id) }, /* @__PURE__ */ React.createElement("span", { className: "fp-navicon" }, s.icon), /* @__PURE__ */ React.createElement("span", { className: "fp-navlabel" }, s.label))
-  )), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-spacer", style: { flex: 1 } }), kullanici && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "10px", display: "flex", alignItems: "center", gap: 8, borderTop: `1px solid ${C.border}`, marginTop: 12, paddingTop: 14 } }, kullanici.foto && /* @__PURE__ */ React.createElement("img", { src: kullanici.foto, alt: "", style: { width: 28, height: 28, borderRadius: "50%" } }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, kullanici.ad)), /* @__PURE__ */ React.createElement("button", { onClick: cikisYap, title: "\xC7\u0131k\u0131\u015F Yap", style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 14 } }, "\u23FB")), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "12px 10px", fontSize: 10.5, color: C.muted, borderTop: kullanici ? "none" : `1px solid ${C.border}`, marginTop: kullanici ? 0 : 12, paddingTop: kullanici ? 4 : 14 } }, "As v1.0 \u2014 Yerel veri deposu")), /* @__PURE__ */ React.createElement("div", { className: "fp-main", style: S.main }, yeniVeriVar && /* @__PURE__ */ React.createElement("div", { className: "fp-yeni-veri-uyari", style: { position: "sticky", top: 0, zIndex: 50, background: C.accent, color: "#161311", padding: "10px 16px", borderRadius: 8, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700 } }, "\u{1F504} Ba\u015Fka bir cihazda de\u011Fi\u015Fiklik yap\u0131ld\u0131.", /* @__PURE__ */ React.createElement("button", { style: { background: "#161311", color: C.white, border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700 }, onClick: async () => {
+  )), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-spacer", style: { flex: 1 } }), kullanici && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "10px", display: "flex", alignItems: "center", gap: 8, borderTop: `1px solid ${C.border}`, marginTop: 12, paddingTop: 14 } }, kullanici.foto && /* @__PURE__ */ React.createElement("img", { src: kullanici.foto, alt: "", style: { width: 28, height: 28, borderRadius: "50%" } }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, kullanici.ad)), /* @__PURE__ */ React.createElement("button", { onClick: cikisYap, title: "\xC7\u0131k\u0131\u015F Yap", style: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 14 } }, "\u23FB")), /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-footer", style: { padding: "12px 10px", fontSize: 10.5, color: C.muted, borderTop: kullanici ? "none" : `1px solid ${C.border}`, marginTop: kullanici ? 0 : 12, paddingTop: kullanici ? 4 : 14 } }, "As v1.0 \u2014 Yerel veri deposu")), /* @__PURE__ */ React.createElement("div", { className: "fp-main", style: S.main }, yeniVeriVar && /* @__PURE__ */ React.createElement("div", { className: "fp-yeni-veri-uyari", style: { position: "sticky", top: 0, zIndex: 50, background: C.accent, color: BUTON_METIN_RENGI, padding: "10px 16px", borderRadius: 8, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700 } }, "\u{1F504} Ba\u015Fka bir cihazda de\u011Fi\u015Fiklik yap\u0131ld\u0131.", /* @__PURE__ */ React.createElement("button", { style: { background: "#161311", color: "#ffffff", border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700 }, onClick: async () => {
     for (const anahtar of ALL_DATA_KEYS) {
       const veri = await buluttanOku(anahtar);
       if (veri !== null) localStorage.setItem(anahtar, JSON.stringify(veri));
