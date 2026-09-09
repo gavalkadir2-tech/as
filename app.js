@@ -5493,7 +5493,7 @@ function CopKutusu() {
 }
 const SAYFALAR = [
   { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
-  { id: "takvim", label: "Randevu Takvimi", icon: "\u{1F4C5}", comp: Takvim, gizli: true },
+  { id: "takvim", label: "Randevu Takvimi", icon: "\u{1F4C5}", comp: Takvim },
   { id: "servis", label: "\u0130\u015F Emri", icon: "\u{1F527}", comp: ServisIsleri },
   { id: "araclar", label: "Ara\xE7 Kay\u0131tlar\u0131", icon: "\u{1F697}", comp: Araclar },
   { id: "el_arabasi", label: "El Arabas\u0131", icon: "\u{1F6D2}", comp: ElArabasi },
