@@ -5584,23 +5584,13 @@ function elArabasiMigrasyonu() {
   if (degisti) LS.set("faturalar", yeniFaturalar);
   localStorage.setItem("fp_el_arabasi_migrasyon_v1", "1");
 }
-const AS_SAYFA_IDLERI = ["dashboard", "servis", "takvim", "araclar", "el_arabasi", "personel", "cariler", "yapilacaklar", "muhasebe", "cop_kutusu", "ayarlar"];
 function asSistemPromptuOlustur() {
   return `Sen "AS" isimli, bir oto egzoz/chiptuning/el arabas\u0131 \xFCretim at\xF6lyesinin y\xF6netim uygulamas\u0131 i\xE7inde \xE7al\u0131\u015Fan yapay zeka asistan\u0131s\u0131n. Kullan\u0131c\u0131ya (at\xF6lye sahibi/\xE7al\u0131\u015Fan\u0131) T\xFCrk\xE7e cevap ver. Cevaplar\u0131n mutlaka KISA olsun: normal sorularda en fazla 2-3 c\xFCmle, gereksiz gire\u015F/tekrar/\xF6z\xFCr yazma, do\u011Frudan konuya gir. Sana verilen "G\xFCncel Durum" bilgisini kullanarak analiz/\xF6zet sorular\u0131n\u0131 yan\u0131tlayabilirsin.
+Sadece şu üç işlemi yapabilirsin, başka HİÇBİR AKSIYON üretme: yeni iş emri oluşturma, ödeme/tahsilat alma, yeni el arabası satışı ekleme. Kullanıcı bunların dışında bir şey istiyorsa (görev ekleme, cari ekleme, gider ekleme, teslim/iptal etme, whatsapp gönderme, sayfa değiştirme, rapor oluşturma, sorgulama vb.) AKSIYON yazma, bunu yapamayacağını kısaca söyle ve ilgili sayfadan elle yapmasını öner.
 Gerekiyorsa cevabının EN SONUNA, her biri ayrı satırda, uygun AKSIYON JSON'unu yaz (birden fazla işlem varsa hepsini art arda ayrı satırlarda yaz, aralarına başka metin koyma):
-AKSIYON:{"tip":"sayfaya_git","sayfa":"<biri: ${AS_SAYFA_IDLERI.join(", ")}>"}
-AKSIYON:{"tip":"yeni_gorev","baslik":"...","oncelik":"dusuk|orta|yuksek"}
-AKSIYON:{"tip":"yeni_cari","ad":"...","tel":"..."}
 AKSIYON:{"tip":"yeni_is_emri","musteri":"...","plaka":"...","hizmetTuru":"<biri: ${Object.keys(HIZMET_TIP_LABEL).join("|")}>","tutar":sayı,"aciklama":"..."} (plaka zorunlu; yoksa AKSIYON yazma, kullanıcıya sor)
 AKSIYON:{"tip":"odeme_al","isEmriNo":"...","plaka":"...","musteri":"...","tutar":sayı(opsiyonel, yoksa kalanın tamamı)}
-AKSIYON:{"tip":"gider_ekle","kategori":"<biri: ${GIDER_KATEGORILERI.join("|")}>","tutar":sayı,"aciklama":"..."}
-AKSIYON:{"tip":"gorev_tamamla","baslik":"..."}
-AKSIYON:{"tip":"servis_teslim_et","isEmriNo":"...","plaka":"..."}
-AKSIYON:{"tip":"servis_iptal_et","isEmriNo":"...","plaka":"..."}
-AKSIYON:{"tip":"whatsapp_gonder","musteri":"...","mesaj":"..."}
-AKSIYON:{"tip":"cari_sorgula","musteri":"..."} (bilgi sorgusu, onay istemez)
-AKSIYON:{"tip":"arac_sorgula","plaka":"..."} (bilgi sorgusu, onay istemez)
-AKSIYON:{"tip":"rapor_olustur","donem":7|30|90|365(opsiyonel, varsayılan 30)} (bilgi sorgusu, onay istemez)
+AKSIYON:{"tip":"el_arabasi_satisi_ekle","musteri":"...","tur":"<biri: ${Object.keys(EL_ARABASI_TUR_LABEL).join("|")}>","tutar":sayı,"aciklama":"..."} (müşteri zorunlu; yoksa AKSIYON yazma, kullanıcıya sor)
 Bunların dışında AKSIYON satırı yazma, sadece normal cevap ver. Emin değilsen ya da yapamayacağın bir şey istenirse açıkça söyle, uydurma. Veri değiştiren aksiyonlar kullanıcıya onay ekranında gösterilir, sen sadece doğru AKSIYON'u üretmekten sorumlusun.`;
 }
 function asBaglamOlustur() {
@@ -5647,85 +5637,29 @@ function asAksiyonAyristir(metin) {
 }
 function asAksiyonOzetle(aksiyon) {
   if (!aksiyon || !aksiyon.tip) return "";
-  if (aksiyon.tip === "yeni_gorev") {
-    const oncelikLabel = { dusuk: "d\xFCş\xFCk", orta: "orta", yuksek: "y\xFCksek" }[aksiyon.oncelik] || "orta";
-    return `\u{1F4CB} Yeni g\xF6rev eklenecek: "${aksiyon.baslik || ""}" (\xF6ncelik: ${oncelikLabel})`;
-  }
-  if (aksiyon.tip === "yeni_cari") {
-    return `\u{1F465} Yeni cari eklenecek: ${aksiyon.ad || ""}${aksiyon.tel ? " — " + aksiyon.tel : ""}`;
-  }
   if (aksiyon.tip === "yeni_is_emri") {
     return `\u{1F527} Yeni iş emri oluşturulacak: ${aksiyon.plaka || ""}${aksiyon.musteri ? " — " + aksiyon.musteri : ""} — ${HIZMET_TIP_LABEL[aksiyon.hizmetTuru] || aksiyon.hizmetTuru || ""} — ${fmtTL(aksiyon.tutar)}`;
   }
   if (aksiyon.tip === "odeme_al") {
     return `\u{1F4B0} \xD6deme alınacak: ${aksiyon.isEmriNo || aksiyon.plaka || aksiyon.musteri || ""}${aksiyon.tutar ? " — " + fmtTL(aksiyon.tutar) : " (kalan tutarın tamamı)"}`;
   }
-  if (aksiyon.tip === "gider_ekle") {
-    return `\u{1F4B8} Yeni gider eklenecek: ${aksiyon.kategori || ""} — ${fmtTL(aksiyon.tutar)}${aksiyon.aciklama ? " — " + aksiyon.aciklama : ""}`;
-  }
-  if (aksiyon.tip === "gorev_tamamla") {
-    return `✅ Görev tamamlandı işaretlenecek: "${aksiyon.baslik || ""}"`;
-  }
-  if (aksiyon.tip === "servis_teslim_et") {
-    return `✅ İş teslim edildi işaretlenecek: ${aksiyon.isEmriNo || aksiyon.plaka || ""}`;
-  }
-  if (aksiyon.tip === "servis_iptal_et") {
-    return `❌ İş iptal edilecek: ${aksiyon.isEmriNo || aksiyon.plaka || ""}`;
-  }
-  if (aksiyon.tip === "whatsapp_gonder") {
-    return `\u{1F4AC} WhatsApp mesajı gönderilecek: ${aksiyon.musteri || ""} — "${aksiyon.mesaj || ""}"`;
+  if (aksiyon.tip === "el_arabasi_satisi_ekle") {
+    return `\u{1F6D2} Yeni el arabası satışı eklenecek: ${aksiyon.musteri || ""} — ${EL_ARABASI_TUR_LABEL[aksiyon.tur] || aksiyon.tur || ""} — ${fmtTL(aksiyon.tutar)}`;
   }
   return "Bu işlem uygulanacak.";
 }
-const AS_ONAY_GEREKTIREN_AKSIYONLAR = ["yeni_gorev", "yeni_cari", "yeni_is_emri", "odeme_al", "gider_ekle", "gorev_tamamla", "servis_teslim_et", "servis_iptal_et", "whatsapp_gonder"];
-const AS_ALAN_LABEL = { baslik: "Başlık", oncelik: "\xD6ncelik", ad: "Ad", tel: "Telefon", musteri: "M\xFCşteri", plaka: "Plaka", hizmetTuru: "Hizmet T\xFCr\xFC", tutar: "Tutar", aciklama: "A\xE7ıklama", isEmriNo: "İş Emri No", kategori: "Kategori", mesaj: "Mesaj" };
+const AS_ONAY_GEREKTIREN_AKSIYONLAR = ["yeni_is_emri", "odeme_al", "el_arabasi_satisi_ekle"];
+const AS_ALAN_LABEL = { baslik: "Başlık", oncelik: "\xD6ncelik", ad: "Ad", tel: "Telefon", musteri: "M\xFCşteri", plaka: "Plaka", hizmetTuru: "Hizmet T\xFCr\xFC", tutar: "Tutar", aciklama: "A\xE7ıklama", isEmriNo: "İş Emri No", kategori: "Kategori", mesaj: "Mesaj", tur: "T\xFCr" };
 async function asAksiyonUygula(aksiyon, sayfayaGit) {
   if (!aksiyon || !aksiyon.tip) return null;
-  if (aksiyon.tip === "sayfaya_git" && AS_SAYFA_IDLERI.includes(aksiyon.sayfa)) {
-    sayfayaGit && sayfayaGit(aksiyon.sayfa);
-    return `\u{1F4CD} ${aksiyon.sayfa} sayfasına gidildi.`;
-  }
-  if (aksiyon.tip === "yeni_gorev" && aksiyon.baslik) {
-    const liste = LS.get("yapilacaklar");
-    const kayit = { id: uid(), baslik: aksiyon.baslik, oncelik: ["dusuk", "orta", "yuksek"].includes(aksiyon.oncelik) ? aksiyon.oncelik : "orta", olusturmaTarihi: today(), tamamlandi: false };
-    LS.set("yapilacaklar", [...liste, kayit]);
-    return `✅ G\xF6rev eklendi: ${aksiyon.baslik}`;
-  }
-  if (aksiyon.tip === "yeni_cari" && aksiyon.ad) {
-    const liste = LS.get("cariler");
-    const kayit = { id: uid(), ad: aksiyon.ad, tel: aksiyon.tel || "", adres: "" };
-    LS.set("cariler", [...liste, kayit]);
-    return `✅ Cari eklendi: ${aksiyon.ad}`;
-  }
   if (aksiyon.tip === "yeni_is_emri") {
     return asYeniIsEmriOlustur(aksiyon);
   }
   if (aksiyon.tip === "odeme_al") {
     return asOdemeAl(aksiyon);
   }
-  if (aksiyon.tip === "gider_ekle") {
-    return asGiderEkle(aksiyon);
-  }
-  if (aksiyon.tip === "gorev_tamamla") {
-    return asGorevTamamla(aksiyon);
-  }
-  if (aksiyon.tip === "servis_teslim_et") {
-    return asServisDurumDegistir(aksiyon, "teslim_et");
-  }
-  if (aksiyon.tip === "servis_iptal_et") {
-    return asServisDurumDegistir(aksiyon, "iptal_et");
-  }
-  if (aksiyon.tip === "whatsapp_gonder") {
-    return asWhatsappGonder(aksiyon);
-  }
-  if (aksiyon.tip === "cari_sorgula") {
-    return asCariSorgula(aksiyon);
-  }
-  if (aksiyon.tip === "arac_sorgula") {
-    return asAracSorgula(aksiyon);
-  }
-  if (aksiyon.tip === "rapor_olustur") {
-    return await asRaporOlustur(aksiyon);
+  if (aksiyon.tip === "el_arabasi_satisi_ekle") {
+    return asElArabasiSatisiEkle(aksiyon);
   }
   return null;
 }
@@ -5822,160 +5756,27 @@ function asOdemeAl(aksiyon) {
   const yeniKalan = servisKalanTutar({ ...hedefIs, odemeler: yeniOdemeler });
   return `✅ ${hedefIs.isEmriNo || ""} i\xE7in ${fmtTL(girilenTutar)} ödeme alındı (${hesap.ad}, Nakit).${yeniKalan > 0 ? ` Kalan: ${fmtTL(yeniKalan)}` : ""}`;
 }
-function asGiderEkle(aksiyon) {
-  if (!(+aksiyon.tutar > 0)) return "⚠️ Gider eklenemedi: tutar 0'dan büyük olmalı.";
-  const giderler = LS.get("giderler");
-  const kategori = GIDER_KATEGORILERI.includes(aksiyon.kategori) ? aksiyon.kategori : GIDER_KATEGORILERI[0];
-  const kayit = { id: uid(), tarih: today(), kategori, aciklama: aksiyon.aciklama || "AS asistan ile eklendi", tutar: +aksiyon.tutar };
-  LS.set("giderler", [...giderler, kayit]);
-  return `✅ Gider eklendi: ${kategori} — ${fmtTL(kayit.tutar)}`;
-}
-function asGorevTamamla(aksiyon) {
-  if (!(aksiyon.baslik || "").trim()) return "⚠️ Hangi görevi tamamlayacağımı anlayamadım.";
-  const gorevler = LS.get("yapilacaklar");
-  const norm = aksiyon.baslik.trim().toLocaleLowerCase("tr-TR");
-  const acikGorevler = gorevler.filter((g) => !g.tamamlandi);
-  const hedef = acikGorevler.find((g) => (g.baslik || "").toLocaleLowerCase("tr-TR").includes(norm));
-  if (!hedef) return `⚠️ "${aksiyon.baslik}" ile eşleşen açık bir görev bulunamadı.`;
-  const yeni = gorevler.map((g) => g.id === hedef.id ? { ...g, tamamlandi: true } : g);
-  LS.set("yapilacaklar", yeni);
-  return `✅ Görev tamamlandı: ${hedef.baslik}`;
-}
-function asServisBul(aksiyon) {
-  const servisler = LS.get("servisIsleri");
-  const araclar = LS.get("araclar");
-  let adaylar = servisler.filter((s) => s.durum !== "iptal");
-  if ((aksiyon.isEmriNo || "").trim()) {
-    const norm = aksiyon.isEmriNo.trim().toLocaleLowerCase("tr-TR");
-    adaylar = adaylar.filter((s) => (s.isEmriNo || "").toLocaleLowerCase("tr-TR") === norm);
-  } else if ((aksiyon.plaka || "").trim()) {
-    const normalize = plakaNormalize(aksiyon.plaka);
-    adaylar = adaylar.filter((s) => {
-      const a = araclar.find((x) => x.id === s.aracId);
-      return a && plakaNormalize(a.plaka) === normalize || plakaNormalize(s.aracPlaka || "") === normalize;
-    });
-  } else {
-    return null;
-  }
-  adaylar.sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""));
-  return adaylar[0] || null;
-}
-function asServisDurumDegistir(aksiyon, islem) {
-  const hedef = asServisBul(aksiyon);
-  if (!hedef) return "⚠️ Eşleşen bir iş emri bulunamadı.";
-  const servisler = LS.get("servisIsleri");
+function asElArabasiSatisiEkle(aksiyon) {
+  if (!(aksiyon.musteri || "").trim()) return "⚠️ El arabası satışı eklemek için müşteri bilgisi gerekli.";
+  if (!(+aksiyon.tutar > 0)) return "⚠️ Satış eklenemedi: tutar 0'dan büyük olmalı.";
+  const tur = EL_ARABASI_TUR_LABEL[aksiyon.tur] ? aksiyon.tur : Object.keys(EL_ARABASI_TUR_LABEL)[0];
   const cariler = LS.get("cariler");
-  if (islem === "teslim_et") {
-    if (hedef.asama === "teslim_edildi") return `⚠️ ${hedef.isEmriNo || ""} zaten teslim edilmiş.`;
-    const guncel = { ...hedef, asama: "teslim_edildi", durum: "tamamlandi", durumGecmisi: [...(hedef.durumGecmisi || []), { tarih: today(), asama: "teslim_edildi", not: "AS asistan ile teslim edildi olarak işaretlendi." }] };
-    const yeni = servisler.map((x) => x.id === hedef.id ? guncel : x);
-    LS.set("servisIsleri", yeni);
-    faturaOlustur("servis", hedef.id, hedef.musteriId, today(), `${hedef.isEmriNo} — ${HIZMET_TIP_LABEL[hedef.hizmetTuru] || ""}`, hedef.kalemler, hedef.tutar);
-    if (hedef.garantili) {
-      const araclar = LS.get("araclar");
-      const musteri = cariler.find((c) => c.id === hedef.musteriId);
-      const arac = araclar.find((a) => a.id === hedef.aracId);
-      garantiSertifikasiYazdir(guncel, musteri ? musteri.ad : "", arac ? arac.plaka : hedef.aracPlaka || "");
-    }
-    return `✅ ${hedef.isEmriNo || ""} teslim edildi olarak işaretlendi.`;
-  }
-  if (hedef.asama === "iptal") return `⚠️ ${hedef.isEmriNo || ""} zaten iptal edilmiş.`;
-  const yeni = servisler.map((x) => x.id === hedef.id ? { ...x, asama: "iptal", durum: "iptal", durumGecmisi: [...(x.durumGecmisi || []), { tarih: today(), asama: "iptal", not: "AS asistan ile iptal edildi." }] } : x);
-  LS.set("servisIsleri", yeni);
-  return `✅ ${hedef.isEmriNo || ""} iptal edildi.`;
-}
-function asMusteriBul(cariler, adMetni) {
-  const norm = (adMetni || "").trim().toLocaleLowerCase("tr-TR");
-  if (!norm) return null;
-  return cariler.find((c) => (c.ad || "").trim().toLocaleLowerCase("tr-TR") === norm) || cariler.find((c) => (c.ad || "").toLocaleLowerCase("tr-TR").includes(norm)) || null;
-}
-function asWhatsappGonder(aksiyon) {
-  const cariler = LS.get("cariler");
-  const musteri = asMusteriBul(cariler, aksiyon.musteri);
-  if (!musteri) return `⚠️ "${aksiyon.musteri || ""}" isimli bir cari bulunamadı.`;
-  if (!musteri.tel) return `⚠️ ${musteri.ad} için telefon numarası kayıtlı değil.`;
-  if (!(aksiyon.mesaj || "").trim()) return "⚠️ Gönderilecek mesaj boş olamaz.";
-  whatsappLinkAc(musteri.tel, aksiyon.mesaj);
-  return `✅ ${musteri.ad} i\xE7in WhatsApp sekmesi açıldı, göndermek için oradan onaylaman gerekiyor.`;
-}
-function asCariSorgula(aksiyon) {
-  const cariler = LS.get("cariler");
-  const musteri = asMusteriBul(cariler, aksiyon.musteri);
-  if (!musteri) return `⚠️ "${aksiyon.musteri || ""}" isimli bir cari bulunamadı.`;
-  const servisler = LS.get("servisIsleri");
-  const musteriServisleri = servisler.filter((s) => s.musteriId === musteri.id && s.durum !== "iptal");
-  const acikBorc = musteriServisleri.reduce((t, s) => t + servisKalanTutar(s), 0);
-  const toplamHarcama = musteriServisleri.reduce((t, s) => t + (+s.tutar || 0), 0);
-  const sonIs = [...musteriServisleri].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""))[0];
-  return `\u{1F464} ${musteri.ad}${musteri.tel ? " (" + musteri.tel + ")" : ""}: toplam ${musteriServisleri.length} iş, ${fmtTL(toplamHarcama)} harcama, ${fmtTL(acikBorc)} açık borç.${sonIs ? ` Son iş: ${fmtDate(sonIs.tarih)} — ${HIZMET_TIP_LABEL[sonIs.hizmetTuru] || ""}.` : ""}`;
-}
-function asAracSorgula(aksiyon) {
-  const araclar = LS.get("araclar");
-  const cariler = LS.get("cariler");
-  const normalize = plakaNormalize(aksiyon.plaka || "");
-  const arac = araclar.find((a) => plakaNormalize(a.plaka) === normalize);
-  if (!arac) return `⚠️ "${aksiyon.plaka || ""}" plakalı bir araç bulunamadı.`;
-  const servisler = LS.get("servisIsleri").filter((s) => s.aracId === arac.id && s.durum !== "iptal");
-  const toplamHarcama = servisler.reduce((t, s) => t + (+s.tutar || 0), 0);
-  const sahibi = cariler.find((c) => c.id === arac.musteriId);
-  const sonServisler = [...servisler].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || "")).slice(0, 3);
-  return `\u{1F697} ${arac.plaka}${arac.marka ? " — " + arac.marka + " " + (arac.model || "") : ""}${sahibi ? ` — Sahibi: ${sahibi.ad}` : ""}: toplam ${servisler.length} servis kaydı, ${fmtTL(toplamHarcama)} harcama.${sonServisler.length > 0 ? " Son işler: " + sonServisler.map((s) => `${fmtDate(s.tarih)} ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`).join(", ") + "." : ""}`;
-}
-function asMaliOzetHesapla(gunSayisi) {
-  const servisler = LS.get("servisIsleri");
   const satislar = LS.get("satislar");
-  const giderler = LS.get("giderler");
-  const cariler = LS.get("cariler");
-  const hesaplar = LS.get("hesaplar");
-  const bugun = today();
-  const baslangicTarih = /* @__PURE__ */ new Date();
-  baslangicTarih.setDate(baslangicTarih.getDate() - gunSayisi);
-  const baslangic = baslangicTarih.toISOString().slice(0, 10);
-  const donemServisler = servisler.filter((s) => s.tarih >= baslangic && s.tarih <= bugun && s.durum !== "iptal");
-  const donemSatislar = satislar.filter((s) => s.tarih >= baslangic && s.tarih <= bugun);
-  const donemGiderler = giderler.filter((g) => g.tarih >= baslangic && g.tarih <= bugun);
-  const servisGeliri = donemServisler.reduce((t, s) => t + (+s.tutar || 0), 0);
-  const satisGeliri = donemSatislar.reduce((t, s) => t + (+s.toplam || 0), 0);
-  const toplamGelir = servisGeliri + satisGeliri;
-  const toplamGider = donemGiderler.reduce((t, g) => t + (+g.tutar || 0), 0);
-  const netKar = toplamGelir - toplamGider;
-  const hizmetDagilimi = {};
-  donemServisler.forEach((s) => {
-    const l = HIZMET_TIP_LABEL[s.hizmetTuru] || s.hizmetTuru;
-    hizmetDagilimi[l] = (hizmetDagilimi[l] || 0) + (+s.tutar || 0);
-  });
-  const giderKategoriDagilimi = {};
-  donemGiderler.forEach((g) => {
-    giderKategoriDagilimi[g.kategori] = (giderKategoriDagilimi[g.kategori] || 0) + (+g.tutar || 0);
-  });
-  const acikBorclular = cariler.map((c) => ({ ad: c.ad, borc: servisler.filter((s) => s.musteriId === c.id).reduce((t, s) => t + servisKalanTutar(s), 0) })).filter((c) => c.borc > 0).sort((a, b) => b.borc - a.borc).slice(0, 5);
-  const toplamHesapBakiye = hesaplar.reduce((t, h) => t + (+h.bakiye || 0), 0);
-  return { baslangic, bugun, donemServisler, donemSatislar, servisGeliri, satisGeliri, toplamGelir, toplamGider, netKar, hizmetDagilimi, giderKategoriDagilimi, acikBorclular, toplamHesapBakiye };
-}
-async function asRaporOlustur(aksiyon) {
-  const gunSayisi = [7, 30, 90, 365].includes(+aksiyon.donem) ? +aksiyon.donem : 30;
-  const o = asMaliOzetHesapla(gunSayisi);
-  const veri = `D\xF6nem: son ${gunSayisi} g\xFCn (${o.baslangic} — ${o.bugun}).
-Toplam Gelir: ${fmtTL(o.toplamGelir)} (Servis: ${fmtTL(o.servisGeliri)}, El Arabası: ${fmtTL(o.satisGeliri)}).
-Toplam Gider: ${fmtTL(o.toplamGider)}.
-Net K\xE2r/Zarar: ${fmtTL(o.netKar)}.
-Hizmet T\xFCr\xFCne G\xF6re Gelir Dağılımı: ${Object.entries(o.hizmetDagilimi).map(([k, v]) => `${k}: ${fmtTL(v)}`).join(", ") || "veri yok"}.
-Gider Kategorisine G\xF6re Dağılım: ${Object.entries(o.giderKategoriDagilimi).map(([k, v]) => `${k}: ${fmtTL(v)}`).join(", ") || "veri yok"}.
-En \xC7ok Bor\xE7lu M\xFCşteriler: ${o.acikBorclular.map((c) => `${c.ad} (${fmtTL(c.borc)})`).join(", ") || "yok"}.
-Toplam Kasa/Banka Bakiyesi: ${fmtTL(o.toplamHesapBakiye)}.
-İş Sayısı: ${o.donemServisler.length} servis işi, ${o.donemSatislar.length} el arabası satışı.`;
-  const prompt = `Sen bir oto egzoz/chiptuning/el arabası \xFCretim at\xF6lyesi i\xE7in mali analiz yapan bir muhasebe danışmanısın. Aşağıdaki verilere dayanarak T\xFCrk\xE7e, kısa (en fazla 5-6 c\xFCmle) bir mali analiz \xF6zeti yaz: genel durum, dikkat \xE7eken bir risk, ve tek bir somut \xF6neri. Uydurma sayı kullanma, sadece verilen verileri yorumla.
-
-Veri:
-${veri}`;
-  try {
-    const cevap = await aiSor(prompt);
-    return `\u{1F4CA} ${cevap || "Rapor oluşturulamadı."}
-
-(Detaylı grafik ve PDF i\xE7in Muhasebe → Raporlar sekmesine bakabilirsin.)`;
-  } catch (e) {
-    return `⚠️ Rapor oluşturulamadı: ${e.message}`;
+  const musteriAdi = aksiyon.musteri.trim();
+  const norm = musteriAdi.toLocaleLowerCase("tr-TR");
+  let bulunanCari = cariler.find((c) => (c.ad || "").trim().toLocaleLowerCase("tr-TR") === norm);
+  let musteriId;
+  if (bulunanCari) {
+    musteriId = bulunanCari.id;
+  } else {
+    const yeniCari = { id: uid(), ad: musteriAdi, tel: "", adres: "" };
+    LS.set("cariler", [...cariler, yeniCari]);
+    musteriId = yeniCari.id;
   }
+  const kayit = { id: uid(), tarih: today(), musteriId, tur, aciklama: aksiyon.aciklama || "", toplam: +aksiyon.tutar, kdvOrani: 0, garantili: false };
+  LS.set("satislar", [...satislar, kayit]);
+  faturaOlustur("el_arabasi", kayit.id, musteriId, kayit.tarih, kayit.aciklama || EL_ARABASI_TUR_LABEL[tur], [], kayit.toplam, kayit.kdvOrani);
+  return `✅ El arabası satışı eklendi: ${musteriAdi} — ${EL_ARABASI_TUR_LABEL[tur]} — ${fmtTL(kayit.toplam)}`;
 }
 function asProaktifOzet() {
   const bugun = today();
@@ -6243,7 +6044,7 @@ ${sonuc}`;
             "div",
             { key: k, style: { display: "flex", alignItems: "center", gap: 6 } },
             React.createElement("label", { style: { fontSize: 11, color: C.muted, width: 78, flexShrink: 0 } }, AS_ALAN_LABEL[k] || k),
-            k === "hizmetTuru" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }, Object.entries(HIZMET_TIP_LABEL).map(([key, label]) => React.createElement("option", { key, value: key }, label))) : k === "oncelik" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] || "orta", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }, React.createElement("option", { value: "dusuk" }, "D\xFCş\xFCk"), React.createElement("option", { value: "orta" }, "Orta"), React.createElement("option", { value: "yuksek" }, "Y\xFCksek")) : k === "kategori" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }, GIDER_KATEGORILERI.map((kat) => React.createElement("option", { key: kat, value: kat }, kat))) : k === "mesaj" ? React.createElement("textarea", { style: { ...S.inp, flex: 1, fontSize: 12, padding: "5px 8px", minHeight: 60, fontFamily: "inherit" }, value: item.taslak[k] ?? "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }) : React.createElement("input", { type: k === "tutar" ? "number" : "text", style: { ...S.inp, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] ?? "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) })
+            k === "hizmetTuru" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }, Object.entries(HIZMET_TIP_LABEL).map(([key, label]) => React.createElement("option", { key, value: key }, label))) : k === "oncelik" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] || "orta", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }, React.createElement("option", { value: "dusuk" }, "D\xFCş\xFCk"), React.createElement("option", { value: "orta" }, "Orta"), React.createElement("option", { value: "yuksek" }, "Y\xFCksek")) : k === "kategori" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }, GIDER_KATEGORILERI.map((kat) => React.createElement("option", { key: kat, value: kat }, kat))) : k === "tur" ? React.createElement("select", { style: { ...S.sel, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] || "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }, Object.entries(EL_ARABASI_TUR_LABEL).map(([key, label]) => React.createElement("option", { key, value: key }, label))) : k === "mesaj" ? React.createElement("textarea", { style: { ...S.inp, flex: 1, fontSize: 12, padding: "5px 8px", minHeight: 60, fontFamily: "inherit" }, value: item.taslak[k] ?? "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) }) : React.createElement("input", { type: k === "tutar" ? "number" : "text", style: { ...S.inp, flex: 1, fontSize: 12, padding: "5px 8px" }, value: item.taslak[k] ?? "", onChange: (e) => aksiyonTaslakGuncelle(item.id, k, e.target.value) })
           )),
           React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
             React.createElement("button", { type: "button", style: { ...S.btn(), padding: "5px 12px", fontSize: 11.5 }, onClick: () => aksiyonOnayla(item.id) }, "✅ Uygula"),
