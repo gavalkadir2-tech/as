@@ -317,8 +317,7 @@ async function aiSor(promptMetni, denemeNo = 0) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptMetni }] }],
-          generationConfig: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: 1024 }
+          contents: [{ parts: [{ text: promptMetni }] }]
         }),
         signal: kontrolci ? kontrolci.signal : void 0
       }
@@ -353,8 +352,7 @@ async function aiSorGorsel(promptMetni, base64Veri, mimeType = "image/jpeg") {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptMetni }, { inline_data: { mime_type: mimeType, data: base64Veri } }] }],
-          generationConfig: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: 1024 }
+          contents: [{ parts: [{ text: promptMetni }, { inline_data: { mime_type: mimeType, data: base64Veri } }] }]
         }),
         signal: kontrolci ? kontrolci.signal : void 0
       }
