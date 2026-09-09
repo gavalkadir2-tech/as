@@ -317,7 +317,8 @@ async function aiSor(promptMetni, denemeNo = 0) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptMetni }] }]
+          contents: [{ parts: [{ text: promptMetni }] }],
+          generationConfig: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: 1024 }
         }),
         signal: kontrolci ? kontrolci.signal : void 0
       }
@@ -352,7 +353,8 @@ async function aiSorGorsel(promptMetni, base64Veri, mimeType = "image/jpeg") {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptMetni }, { inline_data: { mime_type: mimeType, data: base64Veri } }] }]
+          contents: [{ parts: [{ text: promptMetni }, { inline_data: { mime_type: mimeType, data: base64Veri } }] }],
+          generationConfig: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: 1024 }
         }),
         signal: kontrolci ? kontrolci.signal : void 0
       }
@@ -4417,7 +4419,7 @@ function Ayarlar() {
         React.createElement("button", { type: "button", style: S.btnR, onClick: () => resmiHatirlaticiSil(r.id) }, "\u{1F5D1}\ufe0f")
       ))
     ),
-    React.createElement("button", { type: "button", style: S.btnO, onClick: resmiHatirlaticiEkle }, "\u2795 Yeni Hat\u0131rlat\u0131c\u0131 Ekle"))), sekme === "wp_sablon" && React.createElement(React.Fragment, null, React.createElement(KatlanirKart, { title: "💬 WhatsApp Mesaj Şablonları" },
+    React.createElement("button", { type: "button", style: S.btnO, onClick: resmiHatirlaticiEkle }, "\u2795 Yeni Hat\u0131rlat\u0131c\u0131 Ekle"))), sekme === "wp_sablon" && React.createElement(React.Fragment, null, React.createElement(KatlanirKart, { title: "💬 WhatsApp Mesaj Şablonları", varsayilanAcik: true },
       React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.6 } }, "Aşağıdaki şablonlardaki süslü parantez içindeki değişkenler ({musteri}, {tutar} gibi) gönderirken otomatik dolar. Değişkenleri silmeden metni istediğin gibi düzenleyebilirsin."),
       Object.keys(MESAJ_SABLONU_LABEL).map((key) => React.createElement(
         "div",
