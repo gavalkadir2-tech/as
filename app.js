@@ -908,6 +908,19 @@ async function dosyaMigrasyonuYap() {
   }
   localStorage.setItem("fp_dosya_migrasyon_v1", "1");
 }
+function faturaOnarimiYap() {
+  if (localStorage.getItem("fp_fatura_onarim_v1")) return;
+  try {
+    const servisler = LS.get("servisIsleri");
+    const faturalar = LS.get("faturalar");
+    const eksikler = servisler.filter((s) => s.durum === "tamamlandi" && (+s.tutar || 0) > 0 && !faturalar.some((f) => f.kaynakId === s.id));
+    eksikler.forEach((s) => {
+      faturaOlustur("servis", s.id, s.musteriId || "", s.tarih, `${s.isEmriNo || ""} — ${HIZMET_TIP_LABEL[s.hizmetTuru] || ""}`, s.kalemler, s.tutar);
+    });
+  } catch {
+  }
+  localStorage.setItem("fp_fatura_onarim_v1", "1");
+}
 const fmtDate = (d) => {
   if (!d) return "\u2014";
   const [y, m, g] = d.split("-");
@@ -6086,6 +6099,7 @@ function App() {
   urunMigrasyonu();
   servisMigrasyonu();
   faturaMigrasyonu();
+  faturaOnarimiYap();
   elArabasiMigrasyonu();
   dosyaMigrasyonuYap();
   copKutusuTemizle();
