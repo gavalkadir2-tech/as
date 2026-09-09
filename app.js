@@ -308,7 +308,7 @@ async function aiSor(promptMetni, denemeNo = 0) {
   const apiKey = getSettings().aiApiKey;
   if (!apiKey) throw new Error("\xD6nce Ayarlar \u2192 Yapay Zeka'dan bir API key girin.");
   const kontrolci = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const zamanAsimi = kontrolci ? setTimeout(() => kontrolci.abort(), 2e4) : null;
+  const zamanAsimi = kontrolci ? setTimeout(() => kontrolci.abort(), 45e3) : null;
   let r;
   try {
     r = await fetch(
@@ -323,7 +323,7 @@ async function aiSor(promptMetni, denemeNo = 0) {
       }
     );
   } catch (e) {
-    if (e.name === "AbortError") throw new Error("Zaman a\u015F\u0131m\u0131: Gemini'ye 20 saniyede yan\u0131t al\u0131namad\u0131. \u0130nternet ba\u011Flant\u0131n\u0131 kontrol edip tekrar dene.");
+    if (e.name === "AbortError") throw new Error("Zaman a\u015F\u0131m\u0131: Gemini'ye 45 saniyede yan\u0131t al\u0131namad\u0131. \u0130nternet ba\u011Flant\u0131n\u0131 kontrol edip tekrar dene.");
     throw new Error(`Ba\u011Flant\u0131 hatas\u0131: ${e.message}`);
   } finally {
     if (zamanAsimi) clearTimeout(zamanAsimi);
@@ -5772,7 +5772,7 @@ function AsAsistani({ sayfayaGit }) {
     setGirdi("");
     setYukleniyor(true);
     try {
-      const gecmis = yeniMesajlar.slice(-8).map((m) => `${m.rol === "kullanici" ? "Kullanıcı" : "AS"}: ${m.metin}`).join("\n");
+      const gecmis = yeniMesajlar.slice(-5).map((m) => `${m.rol === "kullanici" ? "Kullanıcı" : "AS"}: ${m.metin}`).join("\n");
       const tamPrompt = `${asSistemPromptuOlustur()}
 
 G\xFCncel Durum:
