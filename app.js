@@ -3720,12 +3720,17 @@ function Muhasebe() {
   const [hareketler, setHareketler] = useState(LS.get("kasaHareketleri"));
   const [giderler, setGiderler] = useState(LS.get("giderler"));
   const [cariler] = useState(LS.get("cariler"));
+  const [araclar] = useState(LS.get("araclar"));
   const [sekme, setSekme] = useState("faturalar");
   const [arama, setArama] = useState("");
   const [giderModal, setGiderModal] = useState(false);
   const [giderForm, setGiderForm] = useState({});
   const [fisOkunuyor, setFisOkunuyor] = useState(false);
   const [fisHata, setFisHata] = useState("");
+  const [dogalSoru, setDogalSoru] = useState("");
+  const [dogalCevap, setDogalCevap] = useState("");
+  const [dogalYukleniyor, setDogalYukleniyor] = useState(false);
+  const [dogalHata, setDogalHata] = useState("");
   const fisOku = async (e) => {
     const dosya = e.target.files && e.target.files[0];
     e.target.value = "";
@@ -3786,9 +3791,33 @@ Tarihi okuyamazsan bug\xFCn\xFCn tarihini (${today()}) kullan. Kategori tam eşl
     const toplamGider = donemGiderler.reduce((t, g) => t + (+g.tutar || 0), 0);
     const netKar = toplamGelir - toplamGider;
     const hizmetDagilimi = {};
+    const hizmetIsSayisi = {};
     donemServisler.forEach((s) => {
       const l = HIZMET_TIP_LABEL[s.hizmetTuru] || s.hizmetTuru;
       hizmetDagilimi[l] = (hizmetDagilimi[l] || 0) + (+s.tutar || 0);
+      hizmetIsSayisi[l] = (hizmetIsSayisi[l] || 0) + 1;
+    });
+    const musteriDetay = {};
+    donemServisler.forEach((s) => {
+      if (!s.musteriId) return;
+      const l = HIZMET_TIP_LABEL[s.hizmetTuru] || s.hizmetTuru;
+      if (!musteriDetay[s.musteriId]) musteriDetay[s.musteriId] = { sayi: 0, tutar: 0, hizmetler: {} };
+      musteriDetay[s.musteriId].sayi++;
+      musteriDetay[s.musteriId].tutar += +s.tutar || 0;
+      musteriDetay[s.musteriId].hizmetler[l] = (musteriDetay[s.musteriId].hizmetler[l] || 0) + 1;
+    });
+    const enCokIslemYaptiranMusteriler = Object.entries(musteriDetay).map(([id, d]) => ({ ad: cariAd(cariler, id), sayi: d.sayi, tutar: d.tutar, hizmetler: Object.entries(d.hizmetler).map(([h, s]) => `${h}: ${s}`).join(", ") })).sort((a, b) => b.sayi - a.sayi).slice(0, 10);
+    const elArabasiTurDagilimi = {};
+    donemSatislar.forEach((s) => {
+      const l = EL_ARABASI_TUR_LABEL[s.tur] || s.tur || "Diğer";
+      if (!elArabasiTurDagilimi[l]) elArabasiTurDagilimi[l] = { sayi: 0, tutar: 0 };
+      elArabasiTurDagilimi[l].sayi++;
+      elArabasiTurDagilimi[l].tutar += +s.toplam || 0;
+    });
+    const aracMarkaDagilimi = {};
+    araclar.forEach((a) => {
+      const m = a.marka || "Belirtilmemiş";
+      aracMarkaDagilimi[m] = (aracMarkaDagilimi[m] || 0) + 1;
     });
     const giderKategoriDagilimi = {};
     donemGiderler.forEach((g) => {
@@ -3853,7 +3882,7 @@ Tarihi okuyamazsan bug\xFCn\xFCn tarihini (${today()}) kullan. Kategori tam eşl
       const bGider = giderler.filter((g) => g.tarih >= bBaslangic && g.tarih < bBitis).reduce((t, g) => t + (+g.tutar || 0), 0);
       trendVerisi.push({ etiket: bucketGunSayisi <= 1 ? fmtDate(bBitis) : `${fmtDate(bBaslangic)}—${fmtDate(bBitis)}`, gelir: bGelir, gider: bGider });
     }
-    return { baslangic, bugun, donemServisler, donemSatislar, donemGiderler, servisGeliri, satisGeliri, toplamGelir, toplamGider, netKar, hizmetDagilimi, giderKategoriDagilimi, acikBorclular, enIyiMusteriler, toplamHesapBakiye, oncekiGelir, oncekiGider, oncekiNetKar, gelirDegisim, giderDegisim, netKarDegisim, trendVerisi, anomaliler };
+    return { baslangic, bugun, donemServisler, donemSatislar, donemGiderler, servisGeliri, satisGeliri, toplamGelir, toplamGider, netKar, hizmetDagilimi, hizmetIsSayisi, giderKategoriDagilimi, acikBorclular, enIyiMusteriler, enCokIslemYaptiranMusteriler, elArabasiTurDagilimi, aracMarkaDagilimi, toplamHesapBakiye, oncekiGelir, oncekiGider, oncekiNetKar, gelirDegisim, giderDegisim, netKarDegisim, trendVerisi, anomaliler };
   };
   const raporOlustur = async () => {
     setRaporYukleniyor(true);
@@ -3896,6 +3925,41 @@ ${veri}`;
       <div style="white-space:pre-wrap;font-size:13px;line-height:1.7;border-top:1px solid #ddd;padding-top:14px;">${(raporMetni || "").replace(/</g, "&lt;")}</div>
     </div>`;
     htmlBelgeIndir(html, `mali-analiz-raporu-${today()}.pdf`);
+  };
+  const dogalSorgulaCalistir = async () => {
+    if (!dogalSoru.trim()) {
+      setDogalHata("\xD6nce bir soru yaz.");
+      return;
+    }
+    setDogalYukleniyor(true);
+    setDogalHata("");
+    setDogalCevap("");
+    try {
+      const o = raporOzetHesapla(raporDonemi, raporKarsilastirma);
+      const veri = `D\xF6nem: son ${raporDonemi} g\xFCn (${o.baslangic} — ${o.bugun}).
+Toplam Gelir: ${fmtTL(o.toplamGelir)} (Servis: ${fmtTL(o.servisGeliri)}, El Arabası: ${fmtTL(o.satisGeliri)}).
+Toplam Gider: ${fmtTL(o.toplamGider)}. Net K\xE2r/Zarar: ${fmtTL(o.netKar)}.
+Hizmet T\xFCr\xFCne G\xF6re Gelir ve İş Sayısı: ${Object.keys(o.hizmetDagilimi).map((k) => `${k}: ${o.hizmetIsSayisi[k]} iş, ${fmtTL(o.hizmetDagilimi[k])}`).join(", ") || "veri yok"}.
+Gider Kategorisine G\xF6re Dağılım: ${Object.entries(o.giderKategoriDagilimi).map(([k, v]) => `${k}: ${fmtTL(v)}`).join(", ") || "veri yok"}.
+En \xC7ok İşlem Yaptıran M\xFCşteriler: ${o.enCokIslemYaptiranMusteriler.map((m) => `${m.ad} (${m.sayi} iş, ${fmtTL(m.tutar)}, hizmetler: ${m.hizmetler})`).join(" | ") || "veri yok"}.
+En \xC7ok Bor\xE7lu M\xFCşteriler: ${o.acikBorclular.map((c) => `${c.ad} (${fmtTL(c.borc)})`).join(", ") || "yok"}.
+El Arabası Satış T\xFCr\xFCne G\xF6re Dağılım: ${Object.entries(o.elArabasiTurDagilimi).map(([k, v]) => `${k}: ${v.sayi} adet, ${fmtTL(v.tutar)}`).join(", ") || "veri yok"}.
+Kayıtlı Ara\xE7 Marka Dağılımı (t\xFCm zamanlar): ${Object.entries(o.aracMarkaDagilimi).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, v]) => `${k}: ${v}`).join(", ") || "veri yok"}.
+Toplam Kasa/Banka Bakiyesi: ${fmtTL(o.toplamHesapBakiye)}.
+İş Sayısı: ${o.donemServisler.length} servis işi, ${o.donemSatislar.length} el arabası satışı. Toplam kayıtlı m\xFCşteri: ${cariler.length}, toplam kayıtlı ara\xE7: ${araclar.length}.`;
+      const prompt = `Sen bir oto egzoz/chiptuning/el arabası \xFCretim at\xF6lyesi i\xE7in veri analisti asistanısın. Aşağıdaki \xF6zet verilere dayanarak kullanıcının sorusunu T\xFCrk\xE7e, kısa ve net cevapla. SADECE verilen verilere dayan, veri yoksa "bu veriyle cevaplayamıyorum" de, uydurma sayı \xFCretme.
+
+Veri (se\xE7ilen d\xF6nem: son ${raporDonemi} g\xFCn):
+${veri}
+
+Soru: ${dogalSoru.trim()}`;
+      const cevap = await aiSor(prompt);
+      setDogalCevap(cevap || "Cevap oluşturulamadı.");
+    } catch (e) {
+      setDogalHata(e.message);
+    } finally {
+      setDogalYukleniyor(false);
+    }
   };
   const yeniFaturaKaydet = () => {
     if (!yeniFaturaForm.musteriId) {
@@ -4394,6 +4458,18 @@ ${veri}`;
           ),
           raporHata && React.createElement("div", { style: { padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5, marginBottom: 12 } }, "⚠️ ", raporHata),
           raporMetni && React.createElement("div", { style: { padding: "14px 16px", background: C.surface, borderRadius: 8, fontSize: 13, color: C.text, whiteSpace: "pre-wrap", lineHeight: 1.7 } }, raporMetni)
+        ),
+        React.createElement(
+          "div",
+          { style: { ...S.card, marginTop: 14 } },
+          React.createElement("div", { style: S.secTitle }, "\u{1F50E} Doğal Dilde Sorgu"),
+          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.7 } }, "Se\xE7ilen d\xF6nemin verilerine dayanarak serbest bir soru sor. \xD6rn: \"Bu d\xF6nem en \xE7ok chiptuning yaptıran m\xFCşteriler kim?\", \"En \xE7ok hangi markadan aracımız var?\", \"Ge\xE7en d\xF6neme g\xF6re gider neden arttı?\""),
+          React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 } },
+            React.createElement("input", { style: { ...S.inp, flex: "1 1 260px" }, placeholder: "Sorunu yaz…", value: dogalSoru, onChange: (e) => setDogalSoru(e.target.value), onKeyDown: (e) => { if (e.key === "Enter" && !dogalYukleniyor) dogalSorgulaCalistir(); } }),
+            React.createElement("button", { style: S.btn(), onClick: dogalSorgulaCalistir, disabled: dogalYukleniyor }, dogalYukleniyor ? "⏳ Sorgulanıyor..." : "\u{1F50E} Sor")
+          ),
+          dogalHata && React.createElement("div", { style: { padding: "10px 14px", background: C.red + "18", borderRadius: 8, color: C.red, fontSize: 12.5, marginBottom: 12 } }, "⚠️ ", dogalHata),
+          dogalCevap && React.createElement("div", { style: { padding: "14px 16px", background: C.surface, borderRadius: 8, fontSize: 13, color: C.text, whiteSpace: "pre-wrap", lineHeight: 1.7 } }, dogalCevap)
         )
       );
     })(),
