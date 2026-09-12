@@ -3288,10 +3288,14 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
             const garantiAktif = s.garantili && (!s.garantiBitis || s.garantiBitis >= today());
             return s.garantili ? React.createElement("span", { style: S.badge(garantiAktif ? C.green : C.muted) }, garantiAktif ? "🛡️ Garantide" : "Garanti bitti") : "—";
           } },
-          { key: "islemler", baslik: "", render: (s) => React.createElement("div", { style: { display: "flex", gap: 6 } },
-            React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => fisYazdir(EL_ARABASI_TUR_LABEL[s.tur] || "Satış Fişi", [{ aciklama: s.aciklama || EL_ARABASI_TUR_LABEL[s.tur], tutar: s.toplam }], s.toplam, cariAd(cariler, s.musteriId), s.kdvOrani) }, "📄"),
-            React.createElement("button", { style: S.btnR, onClick: () => sil(s.id) }, "🗑️")
-          ) }
+          { key: "islemler", baslik: "", render: (s) => {
+            const musteri = cariler.find((c) => c.id === s.musteriId);
+            return React.createElement("div", { style: { display: "flex", gap: 6 } },
+              React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "PDF indir", onClick: () => fisYazdir(EL_ARABASI_TUR_LABEL[s.tur] || "Satış Fişi", [{ aciklama: s.aciklama || EL_ARABASI_TUR_LABEL[s.tur], tutar: s.toplam }], s.toplam, cariAd(cariler, s.musteriId), s.kdvOrani) }, "📄"),
+              React.createElement("button", { style: S.btnR, onClick: () => sil(s.id) }, "🗑️"),
+              musteri && musteri.tel && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "WhatsApp ile g\xF6nder", onClick: () => whatsappLinkAc(musteri.tel, `Merhaba ${musteri.ad}, ${EL_ARABASI_TUR_LABEL[s.tur] || ""} satın alımınız i\xE7in teşekk\xFCr ederiz. — As Egzoz & Makine`) }, React.createElement(WhatsAppIkon, null))
+            );
+          } }
         ],
         topluIslem: {
           onSil: topluSil,
@@ -3595,7 +3599,7 @@ function Cariler({ hedef, hedefTemizle } = {}) {
           risk && React.createElement("div", { title: risk.aciklama, style: { fontSize: 10.5, color: risk.renk, marginTop: 2 } }, risk.etiket)
         );
       } },
-      { key: "tel", baslik: "Telefon", sirala: (c) => c.tel || "", render: (c) => c.tel || "—" },
+      { key: "tel", baslik: "Telefon", sirala: (c) => c.tel || "", render: (c) => c.tel ? React.createElement("span", { style: { cursor: "pointer", color: C.blue, textDecoration: "underline" }, title: "Bu numarayla ara", onClick: () => setArama(c.tel) }, c.tel) : "—" },
       { key: "adres", baslik: "Adres", sirala: (c) => c.adres || "", render: (c) => c.adres || "—" },
       { key: "harcama", baslik: "Toplam İşlem", sirala: (c) => harcama(c.id), render: (c) => React.createElement("strong", { style: { color: C.accent } }, fmtTL(harcama(c.id))) },
       { key: "borc", baslik: "Açık Borç", sirala: (c) => borc(c.id), render: (c) => { const acikBorc = borc(c.id); return acikBorc > 0 ? React.createElement("strong", { style: { color: C.red } }, fmtTL(acikBorc)) : "—"; } },
@@ -3603,7 +3607,8 @@ function Cariler({ hedef, hedefTemizle } = {}) {
         React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => setEkstreId(c.id) }, "\u{1F4CB} Ekstre"),
         React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setFaturaForm({ tarih: today(), yon: "satis", kdvOrani: 0 }); setFaturaHata(""); setFaturaModal(c); } }, "\u{1F9FE} Fatura"),
         React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, onClick: () => { setForm(c); setModalAcik(true); } }, "✏️"),
-        React.createElement("button", { style: S.btnR, onClick: () => sil(c.id) }, "\u{1F5D1}️")
+        React.createElement("button", { style: S.btnR, onClick: () => sil(c.id) }, "\u{1F5D1}️"),
+        c.tel && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px" }, title: "WhatsApp ile g\xF6nder", onClick: () => whatsappLinkAc(c.tel, `Merhaba ${c.ad}, size ulaşmak istedik. — As Egzoz & Makine`) }, React.createElement(WhatsAppIkon, null))
       ) }
     ],
     topluIslem: {
@@ -4233,12 +4238,16 @@ ${veri}`;
             if (durum === "kismi") return React.createElement("div", null, React.createElement(Badge, { d: "devam", map: { devam: "Kısmi" }, renk: { devam: C.blue } }), React.createElement("div", { style: { fontSize: 10.5, color: C.muted, marginTop: 2 } }, "Kalan: ", fmtTL(faturaKalan(f))));
             return React.createElement(Badge, { d: "bekliyor", map: { bekliyor: "Bekliyor" }, renk: { bekliyor: C.yellow } });
           } },
-          { key: "islemler", baslik: "", render: (f) => React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
-            faturaKalan(f) > 0 && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setOdemeAlForm({ tutar: faturaKalan(f), hesapId: hesaplar[0] ? hesaplar[0].id : "" }); setOdemeHata(""); setOdemeAlModal(f); } }, f.tur === "alis" ? "💰 Ödeme Yap" : "💰 Ödeme Al"),
-            React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => faturaYazdir(f, cariAd(cariler, f.musteriId)) }, "📄 PDF"),
-            React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => faturaDuzenle(f) }, "✏️"),
-            React.createElement("button", { style: S.btnR, onClick: () => faturaSil(f.id) }, "🗑️")
-          ) }
+          { key: "islemler", baslik: "", render: (f) => {
+            const musteri = cariler.find((c) => c.id === f.musteriId);
+            return React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+              faturaKalan(f) > 0 && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => { setOdemeAlForm({ tutar: faturaKalan(f), hesapId: hesaplar[0] ? hesaplar[0].id : "" }); setOdemeHata(""); setOdemeAlModal(f); } }, f.tur === "alis" ? "💰 Ödeme Yap" : "💰 Ödeme Al"),
+              React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => faturaYazdir(f, cariAd(cariler, f.musteriId)) }, "📄 PDF"),
+              React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, onClick: () => faturaDuzenle(f) }, "✏️"),
+              React.createElement("button", { style: S.btnR, onClick: () => faturaSil(f.id) }, "🗑️"),
+              musteri && musteri.tel && React.createElement("button", { style: { ...S.btnO, padding: "5px 10px", fontSize: 11 }, title: "WhatsApp ile g\xF6nder", onClick: () => whatsappLinkAc(musteri.tel, `Merhaba ${musteri.ad}, ${f.faturaNo} numaralı faturanızla ilgili size ulaşmak istedik. — As Egzoz & Makine`) }, React.createElement(WhatsAppIkon, null))
+            );
+          } }
         ],
         topluIslem: { onSil: faturaTopluSil }
       })
