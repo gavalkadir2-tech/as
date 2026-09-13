@@ -2164,6 +2164,28 @@ function ServisIsleri({ hedef, hedefTemizle, sayfayaGit } = {}) {
     const siraliListe = Object.entries(sayac).sort((a, b) => b[1] - a[1]);
     return siraliListe.length > 0 ? siraliListe[0][0] : "";
   };
+  const enSikAciklamalarBul = (hizmetTuru) => {
+    if (!hizmetTuru) return [];
+    const sayac = {};
+    liste.forEach((s) => {
+      const metin = (s.aciklama || "").trim();
+      if (s.hizmetTuru === hizmetTuru && metin) sayac[metin] = (sayac[metin] || 0) + 1;
+    });
+    return Object.entries(sayac).filter(([, adet]) => adet > 1).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([metin]) => metin);
+  };
+  const garantiOnerisiVarMi = (hizmetTuru) => {
+    if (!hizmetTuru) return null;
+    const benzerIsler = liste.filter((s) => s.hizmetTuru === hizmetTuru && s.durum !== "iptal");
+    if (benzerIsler.length < 3) return null;
+    const garantiliSayisi = benzerIsler.filter((s) => s.garantili).length;
+    return garantiliSayisi / benzerIsler.length >= 0.5;
+  };
+  const sonServisBulAracIcin = (aracId) => {
+    if (!aracId) return null;
+    const gecmisIsler = liste.filter((s) => s.aracId === aracId && s.id !== form.id && s.durum !== "iptal");
+    if (gecmisIsler.length === 0) return null;
+    return [...gecmisIsler].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""))[0];
+  };
   const fiyatOnerisiHesapla = () => {
     if (!form.hizmetTuru) return null;
     const benzerIsler = liste.filter((s) => s.hizmetTuru === form.hizmetTuru && s.durum !== "iptal" && (+s.tutar || 0) > 0 && s.id !== form.id);
@@ -2615,7 +2637,11 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
         React.createElement(FG, { label: "Tarih" }, React.createElement("input", { type: "date", style: S.inp, value: form.tarih || "", onChange: (e) => setForm((f) => ({ ...f, tarih: e.target.value })) })),
         React.createElement(FG, { label: "Saat" }, React.createElement("input", { type: "time", style: S.inp, value: form.saat || "", onChange: (e) => setForm((f) => ({ ...f, saat: e.target.value })) }))
       ),
-      React.createElement(FG, { label: "Hizmet T\xFCr\xFC" }, React.createElement("select", { style: S.sel, value: form.hizmetTuru || "", onChange: (e) => { const yeniHizmet = e.target.value; setForm((f) => ({ ...f, hizmetTuru: yeniHizmet, personelId: f.personelId || enCokPersonelBul(yeniHizmet) })); } }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), Object.entries(HIZMET_TIP_LABEL).map(([k, l]) => React.createElement("option", { key: k, value: k }, l)))),
+      React.createElement(FG, { label: "Hizmet T\xFCr\xFC" }, React.createElement("select", { style: S.sel, value: form.hizmetTuru || "", onChange: (e) => {
+        const yeniHizmet = e.target.value;
+        const garantiOnerisi = garantiOnerisiVarMi(yeniHizmet);
+        setForm((f) => ({ ...f, hizmetTuru: yeniHizmet, personelId: f.personelId || enCokPersonelBul(yeniHizmet), garantili: garantiOnerisi === null ? f.garantili : garantiOnerisi, garantiBitis: garantiOnerisi && !f.garantiBitis ? birYilSonra() : f.garantiBitis }));
+      } }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), Object.entries(HIZMET_TIP_LABEL).map(([k, l]) => React.createElement("option", { key: k, value: k }, l)))),
       React.createElement(FG, { label: "Ara\xE7 (Plaka)" }, React.createElement(
         "div",
         { style: { display: "flex", gap: 8 } },
@@ -2631,9 +2657,15 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
         } }, "\u270F\uFE0F D\xFCzenle")),
         secilenAracSahibi ? React.createElement(React.Fragment, null, React.createElement("div", { style: { marginTop: 6 } }, secilenAracSahibi.ad), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.tel || "Telefon yok"), React.createElement("div", { style: { color: C.muted, marginTop: 2 } }, secilenAracSahibi.adres || "Adres yok")) : React.createElement("div", { style: { color: C.muted, marginTop: 6 } }, "Bilinmiyor")
       ),
+      (() => {
+        const sonServis = sonServisBulAracIcin(form.aracId);
+        if (!sonServis) return null;
+        return React.createElement("div", { style: { fontSize: 11.5, color: C.blue, marginTop: -8, marginBottom: 14, lineHeight: 1.6 } }, "💡 Son seferinde (", fmtDate(sonServis.tarih), "): ", React.createElement("strong", null, HIZMET_TIP_LABEL[sonServis.hizmetTuru] || sonServis.hizmetTuru), sonServis.aciklama ? ` — ${sonServis.aciklama}` : "");
+      })(),
       React.createElement(FG, { label: "Sorumlu Personel (opsiyonel)" }, React.createElement("select", { style: S.sel, value: form.personelId || "", onChange: (e) => setForm((f) => ({ ...f, personelId: e.target.value })) }, React.createElement("option", { value: "" }, "— Seçiniz —"), personelListesi.map((p) => React.createElement("option", { key: p.id, value: p.id }, p.ad, p.pozisyon ? ` (${p.pozisyon})` : "")))),
       React.createElement(FG, { label: "A\xE7\u0131klama" }, React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "flex-start" } }, React.createElement("textarea", { style: { ...S.inp, minHeight: 60, flex: 1 }, value: form.aciklama || "", onChange: (e) => setForm((f) => ({ ...f, aciklama: e.target.value })) }), React.createElement(SesliGirisButonu, { deger: form.aciklama, onDeger: (v) => setForm((f) => ({ ...f, aciklama: v })) }), React.createElement("button", { type: "button", title: "A\xE7ıklamadan temiz metin ve tutar \xF6ner", style: { ...S.btnO, padding: "6px 10px", flexShrink: 0 }, onClick: aciklamadanOner, disabled: aciklamaOneriDevam }, aciklamaOneriDevam ? "⏳" : "\u{1F916}"))),
       aciklamaOneriHata && React.createElement("div", { style: { color: C.red, fontSize: 11.5, marginBottom: 12 } }, "⚠️ ", aciklamaOneriHata),
+      enSikAciklamalarBul(form.hizmetTuru).length > 0 && React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: -8, marginBottom: 14 } }, enSikAciklamalarBul(form.hizmetTuru).map((metin, i) => React.createElement("button", { key: i, type: "button", style: { ...S.btnO, padding: "4px 10px", fontSize: 11 }, title: "A\xE7ıklama olarak kullan", onClick: () => setForm((f) => ({ ...f, aciklama: metin })) }, "\u{1F4CB} ", metin.length > 40 ? metin.slice(0, 40) + "…" : metin))),
 
       form.hizmetTuru === "chiptuning" && React.createElement(
         React.Fragment,
