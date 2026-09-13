@@ -5748,7 +5748,7 @@ function CopKutusu() {
   );
 }
 const SAYFALAR = [
-  { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard },
+  { id: "dashboard", label: "Genel Bak\u0131\u015F", icon: "\u{1F4CA}", comp: Dashboard, gizli: true },
   { id: "takvim", label: "Takvim", icon: "\u{1F4C5}", comp: Takvim },
   { id: "servis", label: "\u0130\u015F Emri", icon: "\u{1F527}", comp: ServisIsleri },
   { id: "araclar", label: "Ara\xE7 Kay\u0131tlar\u0131", icon: "\u{1F697}", comp: Araclar },
@@ -6461,7 +6461,7 @@ function App() {
       /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: C.white } }, aktifSayfaBilgi.icon, " ", aktifSayfaBilgi.label)
     ),
     sidebarAcik && /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-backdrop", onClick: () => setSidebarAcik(false) }),
-    /* @__PURE__ */ React.createElement("div", { className: sidebarAcik ? "fp-sidebar fp-sidebar-open" : "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center" } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 44 }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, getSettings().firmaAdi)),
+    /* @__PURE__ */ React.createElement("div", { className: sidebarAcik ? "fp-sidebar fp-sidebar-open" : "fp-sidebar", style: S.sidebar }, /* @__PURE__ */ React.createElement("div", { className: "fp-sidebar-brand", style: { padding: "6px 10px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, textAlign: "center", cursor: "pointer" }, title: "Genel Bakışa git", onClick: () => { sayfayaGit("dashboard"); setSidebarAcik(false); } }, /* @__PURE__ */ React.createElement(LogoImg, { size: 44 }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, color: C.white } }, getSettings().firmaAdi)),
     /* @__PURE__ */ React.createElement("div", { style: { padding: "0 4px 14px", display: "flex", gap: 6 } },
       /* @__PURE__ */ React.createElement("div", { style: { flex: 1, position: "relative" } },
         /* @__PURE__ */ React.createElement("input", { style: { ...S.inp, fontSize: 12.5, height: 38 }, placeholder: "\u{1F50D} Plaka, m\xFCşteri, iş emri ara…", value: globalArama, onChange: (e) => setGlobalArama(e.target.value) }),
