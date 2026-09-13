@@ -2155,6 +2155,15 @@ function ServisIsleri({ hedef, hedefTemizle, sayfayaGit } = {}) {
     return personelListesi.find((p) => (p.ad || "").trim().toLocaleLowerCase("tr-TR") === k.ad.trim().toLocaleLowerCase("tr-TR")) || null;
   })();
 
+  const enCokPersonelBul = (hizmetTuru) => {
+    if (!hizmetTuru) return "";
+    const sayac = {};
+    liste.forEach((s) => {
+      if (s.hizmetTuru === hizmetTuru && s.personelId) sayac[s.personelId] = (sayac[s.personelId] || 0) + 1;
+    });
+    const siraliListe = Object.entries(sayac).sort((a, b) => b[1] - a[1]);
+    return siraliListe.length > 0 ? siraliListe[0][0] : "";
+  };
   const fiyatOnerisiHesapla = () => {
     if (!form.hizmetTuru) return null;
     const benzerIsler = liste.filter((s) => s.hizmetTuru === form.hizmetTuru && s.durum !== "iptal" && (+s.tutar || 0) > 0 && s.id !== form.id);
@@ -2427,7 +2436,8 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
     const tarih = (on && on.tarih) || today();
     const saat = (on && on.saat) || nowTime();
     const ileriTarihli = tarih > today();
-    setForm({ tarih, saat, asama: ileriTarihli ? "alindi" : "teslim_edildi", tutar: 0, kdvOrani: 0, personelId: sonKullanilanPersonelId(), hizmetTuru: sonKullanilanHizmetTuru() });
+    const hizmetTuru = sonKullanilanHizmetTuru();
+    setForm({ tarih, saat, asama: ileriTarihli ? "alindi" : "teslim_edildi", tutar: 0, kdvOrani: 0, personelId: enCokPersonelBul(hizmetTuru) || sonKullanilanPersonelId(), hizmetTuru });
     setHata("");
     setModalAcik(true);
   };
@@ -2605,7 +2615,7 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
         React.createElement(FG, { label: "Tarih" }, React.createElement("input", { type: "date", style: S.inp, value: form.tarih || "", onChange: (e) => setForm((f) => ({ ...f, tarih: e.target.value })) })),
         React.createElement(FG, { label: "Saat" }, React.createElement("input", { type: "time", style: S.inp, value: form.saat || "", onChange: (e) => setForm((f) => ({ ...f, saat: e.target.value })) }))
       ),
-      React.createElement(FG, { label: "Hizmet T\xFCr\xFC" }, React.createElement("select", { style: S.sel, value: form.hizmetTuru || "", onChange: (e) => setForm((f) => ({ ...f, hizmetTuru: e.target.value })) }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), Object.entries(HIZMET_TIP_LABEL).map(([k, l]) => React.createElement("option", { key: k, value: k }, l)))),
+      React.createElement(FG, { label: "Hizmet T\xFCr\xFC" }, React.createElement("select", { style: S.sel, value: form.hizmetTuru || "", onChange: (e) => { const yeniHizmet = e.target.value; setForm((f) => ({ ...f, hizmetTuru: yeniHizmet, personelId: f.personelId || enCokPersonelBul(yeniHizmet) })); } }, React.createElement("option", { value: "" }, "\u2014 Se\xE7iniz \u2014"), Object.entries(HIZMET_TIP_LABEL).map(([k, l]) => React.createElement("option", { key: k, value: k }, l)))),
       React.createElement(FG, { label: "Ara\xE7 (Plaka)" }, React.createElement(
         "div",
         { style: { display: "flex", gap: 8 } },
@@ -3132,6 +3142,13 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
   const aramaMetni = arama.trim().toLocaleLowerCase("tr-TR");
   const filtreli = !aramaMetni ? satislar : satislar.filter((s) => (cariAd(cariler, s.musteriId) + " " + (EL_ARABASI_TUR_LABEL[s.tur] || "") + " " + (s.aciklama || "")).toLocaleLowerCase("tr-TR").includes(aramaMetni));
   const toplamCiro = satislar.reduce((t, s) => t + (+s.toplam || 0), 0);
+  const sonFiyatBul = (tur) => {
+    if (!tur) return null;
+    const benzerSatislar = satislar.filter((s) => s.tur === tur && (+s.toplam || 0) > 0);
+    if (benzerSatislar.length === 0) return null;
+    const sonSatis = [...benzerSatislar].sort((a, b) => (b.tarih || "").localeCompare(a.tarih || ""))[0];
+    return { tutar: +sonSatis.toplam || 0, tarih: sonSatis.tarih };
+  };
   const bolgeCikar = (musteriId) => {
     const c = cariler.find((x) => x.id === musteriId);
     if (!c || !(c.adres || "").trim()) return "Belirtilmemiş";
@@ -3316,12 +3333,17 @@ function ElArabasi({ hedef, hedefTemizle } = {}) {
         /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.musteriId || "", onChange: (e) => setForm((f) => ({ ...f, musteriId: e.target.value })) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "— Seçiniz —"), cariler.map((c) => /* @__PURE__ */ React.createElement("option", { key: c.id, value: c.id }, c.ad))),
         /* @__PURE__ */ React.createElement("button", { type: "button", style: S.btnO, onClick: () => setYeniCariAcik(true) }, "➕")
       )),
-      /* @__PURE__ */ React.createElement(FG, { label: "El Arabası Türü" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.tur || "", onChange: (e) => setForm((f) => ({ ...f, tur: e.target.value })) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "— Seçiniz —"), Object.entries(EL_ARABASI_TUR_LABEL).map(([k, l]) => /* @__PURE__ */ React.createElement("option", { key: k, value: k }, l)))),
+      /* @__PURE__ */ React.createElement(FG, { label: "El Arabası Türü" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.tur || "", onChange: (e) => { const yeniTur = e.target.value; const oneri = sonFiyatBul(yeniTur); setForm((f) => ({ ...f, tur: yeniTur, tutar: (+f.tutar || 0) > 0 ? f.tutar : (oneri ? oneri.tutar : f.tutar) })); } }, /* @__PURE__ */ React.createElement("option", { value: "" }, "— Seçiniz —"), Object.entries(EL_ARABASI_TUR_LABEL).map(([k, l]) => /* @__PURE__ */ React.createElement("option", { key: k, value: k }, l)))),
       /* @__PURE__ */ React.createElement(FG, { label: "Açıklama (opsiyonel)" }, /* @__PURE__ */ React.createElement("textarea", { style: { ...S.inp, minHeight: 60 }, value: form.aciklama || "", onChange: (e) => setForm((f) => ({ ...f, aciklama: e.target.value })) })),
       /* @__PURE__ */ React.createElement(Grid2, null,
         /* @__PURE__ */ React.createElement(FG, { label: "Fiyat (₺)" }, /* @__PURE__ */ React.createElement("input", { type: "number", style: S.inp, value: form.tutar ?? "", onChange: (e) => setForm((f) => ({ ...f, tutar: +e.target.value })) })),
         /* @__PURE__ */ React.createElement(FG, { label: "KDV Oranı" }, /* @__PURE__ */ React.createElement("select", { style: S.sel, value: form.kdvOrani ?? 0, onChange: (e) => setForm((f) => ({ ...f, kdvOrani: +e.target.value })) }, kdvOranlariGetir().map((o) => /* @__PURE__ */ React.createElement("option", { key: o, value: o }, "%", o))))
       ),
+      (() => {
+        const oneri = sonFiyatBul(form.tur);
+        if (!oneri) return null;
+        return /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.blue, marginTop: -8, marginBottom: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } }, "💡 En son bu t\xFCrde satılan fiyat (", fmtDate(oneri.tarih), "): ", /* @__PURE__ */ React.createElement("strong", null, fmtTL(oneri.tutar)), /* @__PURE__ */ React.createElement("button", { type: "button", style: { ...S.btnO, padding: "3px 10px", fontSize: 11 }, onClick: () => setForm((f) => ({ ...f, tutar: oneri.tutar })) }, "Uygula"));
+      })(),
       /* @__PURE__ */ React.createElement(
         "div",
         { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "10px 14px", background: C.surface, borderRadius: 8 } },
