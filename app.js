@@ -2443,7 +2443,7 @@ Tutar hakkında yeterli bilgi yoksa tutarOnerisi'ni null yap.`;
     }
     LS.set("cariler", yeniCariler);
     setCariler(yeniCariler);
-    const yeniAraclar = araclar.map((a) => a.id === secilenArac.id ? { ...a, musteriId: cariId } : a);
+    const yeniAraclar = LS.get("araclar").map((a) => a.id === secilenArac.id ? { ...a, musteriId: cariId } : a);
     LS.set("araclar", yeniAraclar);
     setAraclar(yeniAraclar);
     setForm((f) => ({ ...f, musteriId: cariId }));
@@ -5359,7 +5359,8 @@ function Araclar({ hedef, hedefTemizle } = {}) {
     delete kayit.plakaIl;
     delete kayit.plakaHarf;
     delete kayit.plakaRakam;
-    const yeni = form.id ? liste.map((x) => x.id === form.id ? kayit : x) : [...liste, kayit];
+    const guncelListe = LS.get("araclar");
+    const yeni = form.id ? guncelListe.map((x) => x.id === form.id ? kayit : x) : [...guncelListe, kayit];
     LS.set("araclar", yeni);
     setListe(yeni);
     setModalAcik(false);
@@ -5371,7 +5372,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
     }
     if (!confirm("Bu araç silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)")) return;
     const silinen = liste.find((x) => x.id === id);
-    const yeni = liste.filter((x) => x.id !== id);
+    const yeni = LS.get("araclar").filter((x) => x.id !== id);
     LS.set("araclar", yeni);
     setListe(yeni);
     if (silinen) coplendir("araclar", silinen);
@@ -5386,7 +5387,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
     if (!confirm(`${silinebilenler.length} araç silinsin mi? (Çöp kutusundan geri yükleyebilirsiniz)`)) return;
     const silinebilenIdler = new Set(silinebilenler.map((x) => x.id));
     silinebilenler.forEach((x) => coplendir("araclar", x));
-    const yeni = liste.filter((x) => !silinebilenIdler.has(x.id));
+    const yeni = LS.get("araclar").filter((x) => !silinebilenIdler.has(x.id));
     LS.set("araclar", yeni);
     setListe(yeni);
   };
@@ -5397,7 +5398,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
     setModalAcik(true);
   };
   const aracGuncelle = (aracId, patch) => {
-    const yeni = liste.map((x) => x.id === aracId ? { ...x, ...patch } : x);
+    const yeni = LS.get("araclar").map((x) => x.id === aracId ? { ...x, ...patch } : x);
     LS.set("araclar", yeni);
     setListe(yeni);
   };
@@ -5418,7 +5419,7 @@ function Araclar({ hedef, hedefTemizle } = {}) {
       }
       yeniKayitlar.push({ id: uid(), plaka: normalize, marka: k.marka || "", model: k.model || "", yil: k.yil || "" });
     });
-    const yeni = [...liste, ...yeniKayitlar];
+    const yeni = [...LS.get("araclar"), ...yeniKayitlar];
     LS.set("araclar", yeni);
     setListe(yeni);
     alert(`${yeniKayitlar.length} araç eklendi.${atlanan > 0 ? ` ${atlanan} kayıt (plaka boş veya zaten kayıtlı) atlandı.` : ""}`);
